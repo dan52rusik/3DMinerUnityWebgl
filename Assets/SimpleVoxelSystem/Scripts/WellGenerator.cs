@@ -10,6 +10,7 @@ namespace SimpleVoxelSystem
         public int width = 5;
         public int length = 5;
         public int depth = 10;
+        public int padding = 5; // Размер участка земли вокруг
         public float blockSize = 1f;
 
         [Header("Config")]
@@ -37,6 +38,30 @@ namespace SimpleVoxelSystem
         {
             blockGrid = new Block[width, depth, length];
             Vector3 startPos = transform.position;
+
+            // Генерация окружающего террейна (земли)
+            for (int x = -padding; x < width + padding; x++)
+            {
+                for (int z = -padding; z < length + padding; z++)
+                {
+                    // Пропускаем зону самого колодца, так как там свои блоки
+                    if (x >= 0 && x < width && z >= 0 && z < length) continue;
+
+                    Vector3 pos = startPos + new Vector3(x * blockSize, 0, z * blockSize);
+                    
+                    GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    obj.transform.position = pos;
+                    obj.transform.SetParent(transform);
+                    
+                    Block block = obj.AddComponent<Block>();
+                    BlockData data = blockDataConfig.Find(d => d.type == BlockType.Dirt);
+                    
+                    if (data != null)
+                    {
+                        block.Initialize(data, x, 0, z);
+                    }
+                }
+            }
 
             for (int y = 0; y < depth; y++)
             {
@@ -69,20 +94,33 @@ namespace SimpleVoxelSystem
         }
 
         // Вызовем из кирки
-        public void MineBlockAt(int x, int y, int z)
+        public void MineBlockAndPool(Block block)
         {
-            Block b = blockGrid[x, y, z];
-            if (b != null && b.gameObject.activeSelf)
+            if (block != null && block.gameObject.activeSelf)
             {
-                b.gameObject.SetActive(false);
+                block.gameObject.SetActive(false);
                 
-                // Здесь в будущем можно сдвигать колонны вниз
-                // Или переносить отключенный блок под слой игрока с новым типом (пулинг)
+                int x = block.gridX;
+                int y = block.gridY;
+                int z = block.gridZ;
+
+                // Если сломанный блок находился внутри колодца, применяем логику сдвига
+                if (x >= 0 && x < width && y >= 0 && y < depth && z >= 0 && z < length)
+                {
+                    // В будущем: сдвигать колонну вниз
+                    // Или переносить отключенный блок под слой с новым типом (пулинг)
+                }
             }
         }
 
         private BlockType DetermineBlockTypeForDepth(int depthIndex)
         {
+            // Самый верхний слой (индекс 0) - всегда только Земля
+            if (depthIndex == 0)
+            {
+                return BlockType.Dirt;
+            }
+
             float rand = Random.value;
 
             if (depthIndex < topLayerDepth)

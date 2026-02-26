@@ -45,7 +45,7 @@ namespace SimpleVoxelSystem
                 // Если есть ссылка на генератор, отключаем через него для Object Pooling
                 if (wellGenerator != null)
                 {
-                    wellGenerator.MineBlockAt(block.gridX, block.gridY, block.gridZ);
+                    wellGenerator.MineBlockAndPool(block);
                 }
                 else
                 {
