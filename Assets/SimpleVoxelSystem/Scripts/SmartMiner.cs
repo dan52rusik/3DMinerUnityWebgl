@@ -154,6 +154,13 @@ namespace SimpleVoxelSystem
 
                 if (island.TryGetBlockType(gx, gy, gz, out _))
                 {
+                    if (wellGenerator != null && !wellGenerator.CanMineVoxel(gx, gy, gz))
+                    {
+                        if (highlightInstance != null && highlightInstance.activeSelf)
+                            highlightInstance.SetActive(false);
+                        return;
+                    }
+
                     currentTargetGridPos = new Vector3Int(gx, gy, gz);
                     hasTarget = true;
 

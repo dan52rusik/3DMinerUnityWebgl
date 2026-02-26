@@ -15,11 +15,17 @@ namespace SimpleVoxelSystem
         public float topY;
         public bool autoStartOnEnter = true;
         public bool allowKeyStart = true;
+        public WellGenerator wellGenerator;
+        public VoxelIsland island;
+        public int shaftGridX;
+        public int shaftGridZ;
+        public float platformHalfHeight = 0.125f;
 
         private Vector3 targetPos;
         private bool isMoving;
         private Transform rider;
         private Collider[] selfColliders;
+        private bool playerInsideTrigger;
 
         void Awake()
         {
@@ -29,7 +35,11 @@ namespace SimpleVoxelSystem
         void Update()
         {
             if (!isMoving)
+            {
+                if (rider == null && !playerInsideTrigger)
+                    TryAutoLowerToClearedDepth();
                 return;
+            }
 
             transform.position = Vector3.MoveTowards(transform.position, targetPos, speed * Time.deltaTime);
 
@@ -42,10 +52,14 @@ namespace SimpleVoxelSystem
 
         private void OnTriggerEnter(Collider other)
         {
-            if (!autoStartOnEnter || !other.CompareTag("Player") || isMoving)
+            if (!other.CompareTag("Player"))
                 return;
 
-            StartMoveWith(other.transform);
+            playerInsideTrigger = true;
+            if (!autoStartOnEnter || isMoving)
+                return;
+
+            StartRideToTop(other.transform);
         }
 
         private void OnTriggerStay(Collider other)
@@ -56,24 +70,23 @@ namespace SimpleVoxelSystem
             if (!IsInteractPressedDown())
                 return;
 
-            StartMoveWith(other.transform);
+            StartRideToTop(other.transform);
         }
 
         private void OnTriggerExit(Collider other)
         {
+            if (other.CompareTag("Player"))
+                playerInsideTrigger = false;
+
             if (rider != null && other.transform == rider)
                 ReleaseRider();
         }
 
-        private void StartMoveWith(Transform player)
+        private void StartRideToTop(Transform player)
         {
             rider = player;
             rider.SetParent(transform, true);
-
-            if (Mathf.Abs(transform.position.y - topY) < 0.5f)
-                FindBottomAndMove();
-            else
-                MoveToTop();
+            MoveToTop();
         }
 
         private void MoveToTop()
@@ -112,6 +125,27 @@ namespace SimpleVoxelSystem
 
             targetPos = new Vector3(transform.position.x, bestPoint.y + 0.125f, transform.position.z);
             isMoving = true;
+        }
+
+        private void TryAutoLowerToClearedDepth()
+        {
+            if (wellGenerator == null || island == null)
+                return;
+
+            int clearedDepth = wellGenerator.GetContiguousClearedDepth();
+            float desiredY = GetWorldYForDepth(clearedDepth);
+
+            if (Mathf.Abs(transform.position.y - desiredY) < 0.02f)
+                return;
+
+            targetPos = new Vector3(transform.position.x, desiredY, transform.position.z);
+            isMoving = true;
+        }
+
+        private float GetWorldYForDepth(int depthIndex)
+        {
+            Vector3 local = island.GridToLocal(shaftGridX, depthIndex, shaftGridZ) + new Vector3(0.5f, platformHalfHeight, 0.5f);
+            return island.transform.TransformPoint(local).y;
         }
 
         private bool IsSelfCollider(Collider c)

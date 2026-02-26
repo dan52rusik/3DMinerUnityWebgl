@@ -58,21 +58,11 @@ namespace SimpleVoxelSystem
         {
             for (int x = 0; x < island.TotalX; x++)
             for (int z = 0; z < island.TotalZ; z++)
-            {
-                bool inWell = (x >= padding && x < padding + wellWidth) &&
-                              (z >= padding && z < padding + wellLength);
-                if (!inWell)
-                    island.SetVoxel(x, 0, z, BlockType.Dirt);
-            }
-
-            for (int lx = 0; lx < wellWidth; lx++)
-            for (int lz = 0; lz < wellLength; lz++)
             for (int y = 0; y < wellDepth; y++)
             {
-                int wx = lx + padding;
-                int wz = lz + padding;
-                BlockType t = DetermineBlockType(y);
-                island.SetVoxel(wx, y, wz, t);
+                bool inWell = IsInsideWellArea(x, z);
+                BlockType t = inWell ? DetermineBlockType(y) : BlockType.Dirt;
+                island.SetVoxel(x, y, z, t);
             }
 
             island.RebuildMesh();
@@ -93,6 +83,12 @@ namespace SimpleVoxelSystem
 
         public bool CanMineVoxel(int gx, int gy, int gz)
         {
+            if (gy < 0 || gy >= wellDepth)
+                return false;
+
+            if (!IsInsideWellArea(gx, gz) && !IsOnWellRimSurface(gx, gy, gz))
+                return false;
+
             if (!lockDeeperLayersUntilCleared)
                 return true;
 
@@ -103,6 +99,18 @@ namespace SimpleVoxelSystem
                 return true;
 
             return IsWellLayerCleared(gy - 1);
+        }
+
+        public int GetContiguousClearedDepth()
+        {
+            int cleared = 0;
+            for (int y = 0; y < wellDepth; y++)
+            {
+                if (!IsWellLayerCleared(y))
+                    break;
+                cleared++;
+            }
+            return cleared;
         }
 
         public void GeneratePlotExtension(int offsetX, int offsetZ, int width, int length)
@@ -244,6 +252,10 @@ namespace SimpleVoxelSystem
 
             SimpleElevator elevatorScript = elevatorObj.AddComponent<SimpleElevator>();
             elevatorScript.topY = elevatorObj.transform.position.y;
+            elevatorScript.wellGenerator = this;
+            elevatorScript.island = island;
+            elevatorScript.shaftGridX = gridX;
+            elevatorScript.shaftGridZ = gridZ;
 
             MeshRenderer renderer = elevatorObj.GetComponent<MeshRenderer>();
             if (renderer != null)
@@ -258,6 +270,20 @@ namespace SimpleVoxelSystem
         {
             return gx >= padding && gx < padding + wellWidth &&
                    gz >= padding && gz < padding + wellLength;
+        }
+
+        private bool IsOnWellRimSurface(int gx, int gy, int gz)
+        {
+            if (gy != 0)
+                return false;
+
+            int minX = padding - 1;
+            int maxX = padding + wellWidth;
+            int minZ = padding - 1;
+            int maxZ = padding + wellLength;
+
+            bool inExpanded = gx >= minX && gx <= maxX && gz >= minZ && gz <= maxZ;
+            return inExpanded && !IsInsideWellArea(gx, gz);
         }
 
         private bool IsWellLayerCleared(int depthIndex)
