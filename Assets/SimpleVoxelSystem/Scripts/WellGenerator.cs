@@ -133,7 +133,10 @@ namespace SimpleVoxelSystem
                 return;
             }
 
-            Vector3 spawnPos = island.GridToLocal(gx, 0, gz) + new Vector3(0.5f, playerSpawnHeight, 0.5f);
+            Vector3 baseWorldPos = island.transform.TransformPoint(island.GridToLocal(gx, 0, gz) + new Vector3(0.5f, 0f, 0.5f));
+            float groundY = GetGroundYAt(baseWorldPos.x, baseWorldPos.z);
+            float spawnY = ComputePlayerSpawnY(player, groundY);
+            Vector3 spawnPos = new Vector3(baseWorldPos.x, spawnY, baseWorldPos.z);
 
             CharacterController cc = player.GetComponent<CharacterController>();
             if (cc != null)
@@ -151,6 +154,46 @@ namespace SimpleVoxelSystem
 
             if (cc != null)
                 cc.enabled = true;
+        }
+
+        private float GetGroundYAt(float worldX, float worldZ)
+        {
+            MeshCollider islandCollider = island.GetComponent<MeshCollider>();
+            Vector3 rayOrigin = new Vector3(worldX, island.transform.position.y + wellDepth + 10f, worldZ);
+            Ray ray = new Ray(rayOrigin, Vector3.down);
+
+            if (islandCollider != null && islandCollider.Raycast(ray, out RaycastHit hit, wellDepth + 30f))
+                return hit.point.y;
+
+            return island.transform.position.y;
+        }
+
+        private float ComputePlayerSpawnY(Transform player, float groundY)
+        {
+            const float clearance = 0.03f;
+
+            CharacterController cc = player.GetComponent<CharacterController>();
+            if (cc != null)
+            {
+                float bottomOffset = cc.center.y - (cc.height * 0.5f);
+                return groundY + clearance - bottomOffset;
+            }
+
+            CapsuleCollider capsule = player.GetComponent<CapsuleCollider>();
+            if (capsule != null)
+            {
+                float bottomOffset = capsule.center.y - (capsule.height * 0.5f);
+                return groundY + clearance - bottomOffset;
+            }
+
+            Collider col = player.GetComponent<Collider>();
+            if (col != null)
+            {
+                float bottomOffset = col.bounds.min.y - player.position.y;
+                return groundY + clearance - bottomOffset;
+            }
+
+            return groundY + playerSpawnHeight;
         }
 
         private Transform ResolveOrSpawnPlayer()

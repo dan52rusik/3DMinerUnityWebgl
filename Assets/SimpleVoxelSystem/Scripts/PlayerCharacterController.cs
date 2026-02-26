@@ -14,6 +14,7 @@ namespace SimpleVoxelSystem
         public float jumpHeight = 1.2f;
         public float gravity = -25f;
         public float autoMoveTurnSpeed = 480f;
+        public bool rotateCharacterDuringAutoMove = false;
 
         [Header("View")]
         public Transform cameraHolder;
@@ -21,17 +22,24 @@ namespace SimpleVoxelSystem
         public float minPitch = -80f;
         public float maxPitch = 80f;
         public bool lockCursorOnStart = false;
+        public bool keepPlayerAlwaysInFrame = true;
+        public float playerFocusHeight = 1.1f;
 
         [Header("Zoom")]
         public bool enableZoomWhileLooking = true;
         public float zoomSpeed = 2.0f;
         public float minZoomDistance = 2.5f;
         public float maxZoomDistance = 20f;
+        public float zoomVerticalRatio = 0.55f;
+        public float minCameraHeight = 1.6f;
+        public float closeZoomMinPitch = 8f;
+        public float closeZoomMaxPitch = 68f;
+        public float farZoomMinPitch = -30f;
+        public float farZoomMaxPitch = 78f;
 
         private CharacterController controller;
         private float verticalVelocity;
         private float pitch;
-        private Vector3 zoomDirectionLocal;
         private float currentZoomDistance;
 
         private bool autoMoveActive;
@@ -62,14 +70,13 @@ namespace SimpleVoxelSystem
 
         void Update()
         {
-            if (WasLookButtonPressedDown())
-                SetCursorLocked(true);
-            else if (WasLookButtonReleased())
-                SetCursorLocked(false);
+            SetCursorLocked(IsLookButtonHeld());
 
             HandleLook();
             HandleZoom();
             HandleMove();
+            if (keepPlayerAlwaysInFrame)
+                UpdateCameraFraming();
         }
 
         void HandleMove()
@@ -96,8 +103,11 @@ namespace SimpleVoxelSystem
                 else
                 {
                     Vector3 dir = toTarget / Mathf.Max(dist, 0.0001f);
-                    Quaternion targetRot = Quaternion.LookRotation(dir, Vector3.up);
-                    transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, autoMoveTurnSpeed * Time.deltaTime);
+                    if (rotateCharacterDuringAutoMove)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(dir, Vector3.up);
+                        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, autoMoveTurnSpeed * Time.deltaTime);
+                    }
                     horizontal = dir * walkSpeed;
                 }
             }
@@ -130,7 +140,16 @@ namespace SimpleVoxelSystem
             Vector2 look = ReadLookDelta();
             transform.Rotate(0f, look.x * lookSensitivity, 0f);
 
-            pitch = Mathf.Clamp(pitch - look.y * lookSensitivity, minPitch, maxPitch);
+            if (keepPlayerAlwaysInFrame)
+                return;
+
+            float t = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, currentZoomDistance);
+            float dynamicMinPitch = Mathf.Lerp(closeZoomMinPitch, farZoomMinPitch, t);
+            float dynamicMaxPitch = Mathf.Lerp(closeZoomMaxPitch, farZoomMaxPitch, t);
+            float clampedMin = Mathf.Max(minPitch, dynamicMinPitch);
+            float clampedMax = Mathf.Min(maxPitch, dynamicMaxPitch);
+
+            pitch = Mathf.Clamp(pitch - look.y * lookSensitivity, clampedMin, clampedMax);
             if (cameraHolder != null)
                 cameraHolder.localRotation = Quaternion.Euler(pitch, 0f, 0f);
         }
@@ -144,18 +163,17 @@ namespace SimpleVoxelSystem
         void InitializeZoomState()
         {
             Vector3 localPos = cameraHolder.localPosition;
-            float magnitude = localPos.magnitude;
-            if (magnitude < 0.001f)
+            float forwardDist = Mathf.Abs(localPos.z);
+            if (forwardDist < 0.001f)
             {
-                zoomDirectionLocal = new Vector3(0f, 0.4f, -1f).normalized;
                 currentZoomDistance = Mathf.Clamp(8f, minZoomDistance, maxZoomDistance);
-                cameraHolder.localPosition = zoomDirectionLocal * currentZoomDistance;
+                cameraHolder.localPosition = BuildZoomLocalPosition(currentZoomDistance);
                 return;
             }
 
-            zoomDirectionLocal = localPos / magnitude;
-            currentZoomDistance = Mathf.Clamp(magnitude, minZoomDistance, maxZoomDistance);
-            cameraHolder.localPosition = zoomDirectionLocal * currentZoomDistance;
+            zoomVerticalRatio = Mathf.Clamp(localPos.y / forwardDist, 0.15f, 2f);
+            currentZoomDistance = Mathf.Clamp(forwardDist, minZoomDistance, maxZoomDistance);
+            cameraHolder.localPosition = BuildZoomLocalPosition(currentZoomDistance);
         }
 
         void HandleZoom()
@@ -170,7 +188,26 @@ namespace SimpleVoxelSystem
                 return;
 
             currentZoomDistance = Mathf.Clamp(currentZoomDistance - zoomInput * zoomSpeed, minZoomDistance, maxZoomDistance);
-            cameraHolder.localPosition = zoomDirectionLocal * currentZoomDistance;
+            cameraHolder.localPosition = BuildZoomLocalPosition(currentZoomDistance);
+        }
+
+        Vector3 BuildZoomLocalPosition(float distance)
+        {
+            float y = Mathf.Max(minCameraHeight, distance * zoomVerticalRatio);
+            return new Vector3(0f, y, -distance);
+        }
+
+        void UpdateCameraFraming()
+        {
+            if (cameraHolder == null)
+                return;
+
+            Vector3 focus = transform.position + Vector3.up * playerFocusHeight;
+            Vector3 dir = focus - cameraHolder.position;
+            if (dir.sqrMagnitude < 0.0001f)
+                return;
+
+            cameraHolder.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
         }
 
         public void SetAutoMoveTarget(Vector3 worldTarget, float stopDistance = 1.5f)
@@ -245,28 +282,6 @@ namespace SimpleVoxelSystem
             return Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
 #elif ENABLE_LEGACY_INPUT_MANAGER
             return Input.GetKeyDown(KeyCode.Space);
-#else
-            return false;
-#endif
-        }
-
-        bool WasLookButtonPressedDown()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.middleButton.wasPressedThisFrame;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButtonDown(2);
-#else
-            return false;
-#endif
-        }
-
-        bool WasLookButtonReleased()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.middleButton.wasReleasedThisFrame;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButtonUp(2);
 #else
             return false;
 #endif
