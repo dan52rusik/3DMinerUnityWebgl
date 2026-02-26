@@ -4,139 +4,156 @@ using SimpleVoxelSystem.Data;
 
 namespace SimpleVoxelSystem
 {
+    /// <summary>
+    /// Генератор острова. Заполняет VoxelIsland данными — никаких отдельных GameObject-ов.
+    /// Весь остров рисуется за 1 draw call.
+    /// </summary>
+    [RequireComponent(typeof(VoxelIsland))]
     public class WellGenerator : MonoBehaviour
     {
-        [Header("Grid Settings")]
-        public int width = 5;
-        public int length = 5;
-        public int depth = 10;
-        public int padding = 5; // Размер участка земли вокруг
-        public float blockSize = 1f;
+        [Header("Размер Колодца")]
+        public int wellWidth  = 5;
+        public int wellLength = 5;
+        public int wellDepth  = 10;
 
-        [Header("Config")]
-        // Настройте в инспекторе данные для Dirt, Stone, Iron, Gold
-        public List<BlockData> blockDataConfig; 
+        [Header("Паддинг — земля вокруг колодца")]
+        public int padding = 5;
 
-        // Логика слоев
-        private int topLayerDepth = 3;
-        private int midLayerDepth = 7;
+        [Header("Блоки")]
+        public List<BlockData> blockDataConfig;
 
-        // Пул (трехмерный массив)
-        private Block[,,] blockGrid;
+        // Слои
+        private const int TopLayerDepth = 3;
+        private const int MidLayerDepth = 7;
 
+        private VoxelIsland island;
+
+        // ──────────────────────────────────────────────────────────────────────
         void Start()
         {
             if (blockDataConfig == null || blockDataConfig.Count == 0)
             {
-                Debug.LogWarning("Создайте настройки для блоков (BlockDataConfig) в инспекторе Generator!");
+                Debug.LogWarning("[WellGenerator] Нет blockDataConfig в инспекторе!");
                 return;
             }
-            GenerateWell();
+
+            island = GetComponent<VoxelIsland>();
+
+            // Передаём цвета блоков в VoxelIsland
+            SyncColorsToIsland();
+
+            // Инициализируем сетку (только один раз)
+            island.Init(
+                wellWidth,
+                wellDepth,
+                wellLength,
+                padding,
+                padding
+            );
+
+            // Генерируем стартовый остров
+            GenerateStartIsland();
         }
 
-        void GenerateWell()
+        // ──────────────────────────────────────────────────────────────────────
+        // Генерация
+
+        void GenerateStartIsland()
         {
-            blockGrid = new Block[width, depth, length];
-            Vector3 startPos = transform.position;
-
-            // Генерация окружающего террейна (земли)
-            for (int x = -padding; x < width + padding; x++)
+            // 1) Поверхность земли вокруг колодца (y=0, весь TotalX × TotalZ)
+            for (int x = 0; x < island.TotalX; x++)
+            for (int z = 0; z < island.TotalZ; z++)
             {
-                for (int z = -padding; z < length + padding; z++)
-                {
-                    // Пропускаем зону самого колодца, так как там свои блоки
-                    if (x >= 0 && x < width && z >= 0 && z < length) continue;
-
-                    Vector3 pos = startPos + new Vector3(x * blockSize, 0, z * blockSize);
-                    
-                    GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    obj.transform.position = pos;
-                    obj.transform.SetParent(transform);
-                    
-                    Block block = obj.AddComponent<Block>();
-                    BlockData data = blockDataConfig.Find(d => d.type == BlockType.Dirt);
-                    
-                    if (data != null)
-                    {
-                        block.Initialize(data, x, 0, z);
-                    }
-                }
+                // В зоне колодца поверхность не ставим — там провал
+                bool inWell = (x >= padding && x < padding + wellWidth) &&
+                              (z >= padding && z < padding + wellLength);
+                if (!inWell)
+                    island.SetVoxel(x, 0, z, BlockType.Dirt);
             }
 
-            for (int y = 0; y < depth; y++)
+            // 2) Колонны блоков внутри колодца (x/z идут со смещением padding)
+            for (int lx = 0; lx < wellWidth;  lx++)
+            for (int lz = 0; lz < wellLength; lz++)
+            for (int y  = 0; y  < wellDepth;  y++)
             {
-                for (int x = 0; x < width; x++)
-                {
-                    for (int z = 0; z < length; z++)
-                    {
-                        Vector3 pos = startPos + new Vector3(x * blockSize, -y * blockSize, z * blockSize);
-                        
-                        // Создаем куб средствами Unity
-                        GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                        obj.transform.position = pos;
-                        obj.transform.SetParent(transform);
-                        
-                        // Добавляем наш компонент Block
-                        Block block = obj.AddComponent<Block>();
-                        
-                        BlockType typeToSpawn = DetermineBlockTypeForDepth(y);
-                        BlockData data = blockDataConfig.Find(d => d.type == typeToSpawn);
-                        
-                        if (data != null)
-                        {
-                            block.Initialize(data, x, y, z);
-                        }
-
-                        blockGrid[x, y, z] = block;
-                    }
-                }
+                int wx = lx + padding;
+                int wz = lz + padding;
+                BlockType t = DetermineBlockType(y);
+                island.SetVoxel(wx, y, wz, t);
             }
+
+            island.RebuildMesh();
+
+            Debug.Log($"[WellGenerator] Остров построен. Статистика: " +
+                      $"{island.TotalX}x{island.TotalY}x{island.TotalZ} вокселей → 1 draw call.");
         }
 
-        // Вызовем из кирки
-        public void MineBlockAndPool(Block block)
-        {
-            if (block != null && block.gameObject.activeSelf)
-            {
-                block.gameObject.SetActive(false);
-                
-                int x = block.gridX;
-                int y = block.gridY;
-                int z = block.gridZ;
+        // ──────────────────────────────────────────────────────────────────────
+        // Публичное API
 
-                // Если сломанный блок находился внутри колодца, применяем логику сдвига
-                if (x >= 0 && x < width && y >= 0 && y < depth && z >= 0 && z < length)
-                {
-                    // В будущем: сдвигать колонну вниз
-                    // Или переносить отключенный блок под слой с новым типом (пулинг)
-                }
-            }
+        /// <summary>
+        /// Добыча блока: удалить вокель и перестроить меш.
+        /// Вызывается из PlayerPickaxe.
+        /// </summary>
+        public void MineVoxel(int gx, int gy, int gz)
+        {
+            island.RemoveVoxel(gx, gy, gz);
         }
 
-        private BlockType DetermineBlockTypeForDepth(int depthIndex)
+        /// <summary>
+        /// Расширение острова (через LandPlot). Добавляет новый ряд/участок.
+        /// offsetX/offsetZ — смещение в воксельных координатах.
+        /// </summary>
+        public void GeneratePlotExtension(int offsetX, int offsetZ, int width, int length)
         {
-            // Самый верхний слой (индекс 0) - всегда только Земля
-            if (depthIndex == 0)
-            {
-                return BlockType.Dirt;
-            }
+            // TODO: при реализации «Пути А» — расширяем массив через island.Resize()
+            // и добавляем новые воксели здесь.
+            Debug.Log($"[WellGenerator] Покупка участка +[{offsetX},{offsetZ}] size {width}x{length}");
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
+        // Вспомогательные
+
+        private BlockType DetermineBlockType(int depthIndex)
+        {
+            if (depthIndex == 0)             return BlockType.Dirt;
 
             float rand = Random.value;
-
-            if (depthIndex < topLayerDepth)
-            {
+            if (depthIndex < TopLayerDepth)
                 return rand < 0.9f ? BlockType.Dirt : BlockType.Stone;
-            }
-            else if (depthIndex < midLayerDepth)
+
+            if (depthIndex < MidLayerDepth)
             {
                 if (rand < 0.5f) return BlockType.Stone;
                 if (rand < 0.8f) return BlockType.Dirt;
                 return BlockType.Iron;
             }
-            else
+
+            return rand < 0.8f ? BlockType.Stone : BlockType.Gold;
+        }
+
+        private void SyncColorsToIsland()
+        {
+            int typeCount = System.Enum.GetValues(typeof(BlockType)).Length;
+
+            // Начинаем с дефолтных цветов из VoxelIsland (они всегда корректны)
+            Color[] cols = new Color[typeCount];
+            for (int i = 0; i < typeCount && i < island.blockColors.Length; i++)
+                cols[i] = island.blockColors[i];
+
+            // Перезаписываем только те блоки, у которых задан ненулевой цвет в инспекторе
+            foreach (var bd in blockDataConfig)
             {
-                return rand < 0.8f ? BlockType.Stone : BlockType.Gold;
+                int idx = (int)bd.type;
+                if (idx < typeCount && bd.blockColor.a > 0.01f)
+                    cols[idx] = bd.blockColor;
             }
+
+            island.blockColors = cols;
+
+            // Дебаг: выводим цвета в консоль для проверки
+            for (int i = 0; i < cols.Length; i++)
+                Debug.Log($"[WellGenerator] BlockColor[{(BlockType)i}] = {cols[i]}");
         }
     }
 }
