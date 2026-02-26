@@ -164,7 +164,7 @@ MonoBehaviour:
   verboseLogs: 0
   enableManualRaycastMining: 1
   currentBackpackLoad: 0
-  maxBackpackCapacity: 10
+  maxBackpackCapacity: 1000
   totalValueInBackpack: 0
   dirtCount: 0
   stoneCount: 0
@@ -187,15 +187,37 @@ MonoBehaviour:
   jumpHeight: 1.2
   gravity: -25
   autoMoveTurnSpeed: 480
+  rotateCharacterDuringAutoMove: 0
   cameraHolder: {fileID: 0}
   lookSensitivity: 2.2
   minPitch: -80
   maxPitch: 80
   lockCursorOnStart: 1
+  keepPlayerAlwaysInFrame: 1
+  playerFocusHeight: 1.1
   enableZoomWhileLooking: 1
   zoomSpeed: 2
   minZoomDistance: 2.5
   maxZoomDistance: 20
+  zoomVerticalRatio: 0.55
+  minCameraHeight: 1.6
+  closeZoomMinPitch: 8
+  closeZoomMaxPitch: 68
+  farZoomMinPitch: -30
+  farZoomMaxPitch: 78
+  avoidCameraObstruction: 1
+  cameraObstructionMask:
+    serializedVersion: 2
+    m_Bits: 51
+  cameraCollisionRadius: 0.2
+  cameraCollisionBuffer: 0.12
+  cameraPositionSmooth: 18
+  cameraLiftSpeed: 3
+  minCameraLift: -0.5
+  maxCameraLift: 6
+  autoRaiseWhenObstructed: 1
+  obstructionLiftMax: 2
+  obstructionLiftSmooth: 8
 --- !u!143 &270235594
 CharacterController:
   m_ObjectHideFlags: 0
@@ -215,7 +237,7 @@ CharacterController:
   m_Enabled: 1
   serializedVersion: 3
   m_Height: 2
-  m_Radius: 0.5
+  m_Radius: 0.35
   m_SlopeLimit: 45
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
@@ -240,7 +262,7 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.5
+  m_Radius: 0.35
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}

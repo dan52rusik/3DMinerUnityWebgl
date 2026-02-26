@@ -37,6 +37,21 @@ namespace SimpleVoxelSystem
         public float farZoomMinPitch = -30f;
         public float farZoomMaxPitch = 78f;
 
+        [Header("Obstruction")]
+        public bool avoidCameraObstruction = true;
+        public LayerMask cameraObstructionMask = Physics.DefaultRaycastLayers;
+        public float cameraCollisionRadius = 0.2f;
+        public float cameraCollisionBuffer = 0.12f;
+        public float cameraPositionSmooth = 18f;
+
+        [Header("Vertical Offset")]
+        public float cameraLiftSpeed = 1.6f;
+        public float minCameraLift = -0.5f;
+        public float maxCameraLift = 6f;
+        public bool autoRaiseWhenObstructed = true;
+        public float obstructionLiftMax = 2.0f;
+        public float obstructionLiftSmooth = 8f;
+
         private CharacterController controller;
         private float verticalVelocity;
         private float pitch;
@@ -45,6 +60,8 @@ namespace SimpleVoxelSystem
         private bool autoMoveActive;
         private Vector3 autoMoveTarget;
         private float autoMoveStopDistance = 1.5f;
+        private float cameraLiftOffset;
+        private float obstructionLiftOffset;
 
         void Awake()
         {
@@ -75,8 +92,7 @@ namespace SimpleVoxelSystem
             HandleLook();
             HandleZoom();
             HandleMove();
-            if (keepPlayerAlwaysInFrame)
-                UpdateCameraFraming();
+            UpdateCameraRig();
         }
 
         void HandleMove()
@@ -141,7 +157,10 @@ namespace SimpleVoxelSystem
             transform.Rotate(0f, look.x * lookSensitivity, 0f);
 
             if (keepPlayerAlwaysInFrame)
+            {
+                cameraLiftOffset = Mathf.Clamp(cameraLiftOffset + look.y * cameraLiftSpeed, minCameraLift, maxCameraLift);
                 return;
+            }
 
             float t = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, currentZoomDistance);
             float dynamicMinPitch = Mathf.Lerp(closeZoomMinPitch, farZoomMinPitch, t);
@@ -188,7 +207,6 @@ namespace SimpleVoxelSystem
                 return;
 
             currentZoomDistance = Mathf.Clamp(currentZoomDistance - zoomInput * zoomSpeed, minZoomDistance, maxZoomDistance);
-            cameraHolder.localPosition = BuildZoomLocalPosition(currentZoomDistance);
         }
 
         Vector3 BuildZoomLocalPosition(float distance)
@@ -197,18 +215,84 @@ namespace SimpleVoxelSystem
             return new Vector3(0f, y, -distance);
         }
 
-        void UpdateCameraFraming()
+        void UpdateCameraRig()
         {
             if (cameraHolder == null)
                 return;
 
             Vector3 focus = transform.position + Vector3.up * playerFocusHeight;
-            Vector3 dir = focus - cameraHolder.position;
-            if (dir.sqrMagnitude < 0.0001f)
+            Vector3 desiredWorldPos = transform.TransformPoint(BuildZoomLocalPosition(currentZoomDistance));
+            float desiredObstructionLift = 0f;
+
+            if (avoidCameraObstruction)
+                desiredWorldPos = ResolveObstructionAdjustedPosition(focus, desiredWorldPos, out desiredObstructionLift);
+
+            if (!autoRaiseWhenObstructed)
+                desiredObstructionLift = 0f;
+
+            float smoothLiftT = 1f - Mathf.Exp(-obstructionLiftSmooth * Time.deltaTime);
+            obstructionLiftOffset = Mathf.Lerp(obstructionLiftOffset, desiredObstructionLift, smoothLiftT);
+            float totalLift = cameraLiftOffset + obstructionLiftOffset;
+            desiredWorldPos += Vector3.up * totalLift;
+
+            float smoothT = 1f - Mathf.Exp(-cameraPositionSmooth * Time.deltaTime);
+            cameraHolder.position = Vector3.Lerp(cameraHolder.position, desiredWorldPos, smoothT);
+
+            if (!keepPlayerAlwaysInFrame)
                 return;
 
-            cameraHolder.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+            Vector3 dir = focus - cameraHolder.position;
+            if (dir.sqrMagnitude > 0.0001f)
+                cameraHolder.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
         }
+
+        Vector3 ResolveObstructionAdjustedPosition(Vector3 focus, Vector3 desiredWorldPos, out float obstructionLift)
+        {
+            obstructionLift = 0f;
+            Vector3 toCam = desiredWorldPos - focus;
+            float dist = toCam.magnitude;
+            if (dist < 0.001f)
+                return desiredWorldPos;
+
+            Vector3 dir = toCam / dist;
+            RaycastHit[] hits = Physics.SphereCastAll(
+                focus,
+                cameraCollisionRadius,
+                dir,
+                dist,
+                cameraObstructionMask,
+                QueryTriggerInteraction.Ignore
+            );
+
+            float nearest = float.MaxValue;
+            bool blocked = false;
+            for (int i = 0; i < hits.Length; i++)
+            {
+                RaycastHit h = hits[i];
+                if (h.collider == null || IsSelfCollider(h.collider))
+                    continue;
+
+                if (h.distance < nearest)
+                {
+                    nearest = h.distance;
+                    blocked = true;
+                }
+            }
+
+            if (!blocked)
+                return desiredWorldPos;
+
+            float safeDist = Mathf.Max(0.6f, nearest - cameraCollisionBuffer);
+            float blockedFactor = Mathf.Clamp01(1f - (safeDist / Mathf.Max(dist, 0.001f)));
+            obstructionLift = blockedFactor * obstructionLiftMax;
+            return focus + dir * safeDist;
+        }
+
+        bool IsSelfCollider(Collider c)
+        {
+            return c.transform == transform || c.transform.IsChildOf(transform);
+        }
+
 
         public void SetAutoMoveTarget(Vector3 worldTarget, float stopDistance = 1.5f)
         {
@@ -313,5 +397,6 @@ namespace SimpleVoxelSystem
             return 0f;
 #endif
         }
+
     }
 }
