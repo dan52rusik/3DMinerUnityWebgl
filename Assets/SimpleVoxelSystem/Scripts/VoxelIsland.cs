@@ -85,9 +85,15 @@ namespace SimpleVoxelSystem
 
         public void RemoveVoxel(int x, int y, int z)
         {
+            RemoveVoxel(x, y, z, true);
+        }
+
+        public void RemoveVoxel(int x, int y, int z, bool rebuildMesh)
+        {
             if (!InBounds(x, y, z)) return;
             voxels[x, y, z] = 0;
-            RebuildMesh();
+            if (rebuildMesh)
+                RebuildMesh();
         }
 
         public bool IsSolid(int x, int y, int z)

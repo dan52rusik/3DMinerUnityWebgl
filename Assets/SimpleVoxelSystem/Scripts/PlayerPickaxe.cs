@@ -20,6 +20,7 @@ namespace SimpleVoxelSystem
         public LayerMask miningLayers = Physics.DefaultRaycastLayers;
         public WellGenerator wellGenerator;
         public bool verboseLogs = false;
+        public bool enableManualRaycastMining = true;
 
         [Header("Inventory")]
         public int currentBackpackLoad = 0;
@@ -49,6 +50,9 @@ namespace SimpleVoxelSystem
 
         void Update()
         {
+            if (!enableManualRaycastMining)
+                return;
+
             if (!IsMinePressedDown())
                 return;
 
@@ -59,6 +63,51 @@ namespace SimpleVoxelSystem
             }
 
             MineRaycast();
+        }
+
+        public bool TryMineGridTarget(int gx, int gy, int gz, VoxelIsland islandOverride = null)
+        {
+            if (currentBackpackLoad >= maxBackpackCapacity)
+            {
+                Debug.Log("Рюкзак полон! Нужно разгрузиться на складе.");
+                return false;
+            }
+
+            VoxelIsland island = islandOverride;
+            if (island == null)
+            {
+                if (wellGenerator != null)
+                    island = wellGenerator.GetComponent<VoxelIsland>();
+
+                if (island == null)
+                    island = FindFirstObjectByType<VoxelIsland>();
+            }
+
+            if (island == null)
+                return false;
+
+            if (!island.TryGetBlockType(gx, gy, gz, out BlockType blockType))
+            {
+                blockHealth.Remove(new Vector3Int(gx, gy, gz));
+                return false;
+            }
+
+            if (wellGenerator != null && !wellGenerator.CanMineVoxel(gx, gy, gz))
+            {
+                if (verboseLogs)
+                    Debug.Log($"[Pickaxe] Сначала очистите предыдущий слой. Заблокирована глубина y={gy}.", this);
+                return false;
+            }
+
+            if (wellGenerator == null)
+            {
+                wellGenerator = island.GetComponent<WellGenerator>();
+                RebuildDataCache();
+            }
+
+            BlockData data = GetBlockData(blockType);
+            MineBlock(gx, gy, gz, data, island);
+            return true;
         }
 
         void MineRaycast()
