@@ -16,12 +16,21 @@ namespace SimpleVoxelSystem
     public class LobbyVoxelEntry
     {
         public int x, y, z;
-        public int blockTypeId; // -1 = удалён из пола
+        public int blockTypeId;
     }
 
     [System.Serializable]
     public class LobbyLayoutSaveData
     {
+        public List<LobbyVoxelEntry> entries = new List<LobbyVoxelEntry>();
+    }
+
+    // ─── Данные одного чанка ──────────────────────────────────────────────────
+
+    [System.Serializable]
+    public class ChunkSaveData
+    {
+        public int chunkX, chunkZ;   // координаты чанка в чанковом пространстве
         public List<LobbyVoxelEntry> entries = new List<LobbyVoxelEntry>();
     }
 
@@ -65,6 +74,10 @@ namespace SimpleVoxelSystem
         public float placementRange = 200f;
         public LayerMask miningLayers = Physics.DefaultRaycastLayers;
 
+        [Header("Дебаг чанков")]
+        [Tooltip("Показывать границы чанков 16×16 в режиме редактора.")]
+        public bool showChunkDebug = true;
+
         public Color previewColorPlace  = new Color(0.2f, 1f, 0.5f,  0.40f);
         public Color previewColorRemove = new Color(1f,   0.2f, 0.2f, 0.40f);
         public Color previewColorShop   = new Color(0.3f, 0.6f, 1.0f, 0.45f);
@@ -81,10 +94,16 @@ namespace SimpleVoxelSystem
         private Vector3?    pendingShopWorldPos;  // мировая позиция для shop
         private ShopZone    hoveredZone;          // зона под курсором
 
-        // ─── Сохранение вокселей ─────────────────────────────────────────────
-        private static string VoxelSavePath =>
-            Path.Combine(Application.persistentDataPath, "lobby_layout.json");
-        private LobbyLayoutSaveData saveData = new LobbyLayoutSaveData();
+        // ─── Чанковое сохранение вокселей ────────────────────────────────────
+        private const int ChunkSize = 16;
+        private static string ChunkDir =>
+            Path.Combine(Application.persistentDataPath, "lobby_chunks");
+        private readonly HashSet<Vector2Int> dirtyChunks = new HashSet<Vector2Int>();
+
+        private static Vector2Int VoxelToChunk(int x, int z)
+            => new Vector2Int(x / ChunkSize, z / ChunkSize);
+        private static string ChunkFilePath(int cx, int cz)
+            => Path.Combine(ChunkDir, $"chunk_{cx}_{cz}.json");
 
         // ─── Сохранение зон магазина ─────────────────────────────────────────
         private static string ShopSavePath =>
@@ -155,6 +174,8 @@ namespace SimpleVoxelSystem
 
             UpdateHover();
             HandleInput();
+
+            if (showChunkDebug) DrawChunkDebug();
         }
 
         private void OnFlatPlotReady()
@@ -166,8 +187,77 @@ namespace SimpleVoxelSystem
         }
 
         // ══════════════════════════════════════════════════════════════════════
-        // Hover
+        // Визуализация чанков (Debug.DrawLine — видно в Scene view во время Play)
         // ══════════════════════════════════════════════════════════════════════
+
+        void DrawChunkDebug()
+        {
+            if (island == null || wellGenerator == null) return;
+
+            int totalX = island.TotalX;
+            int totalZ = island.TotalZ;
+
+            // Y поверхности пола = localY = -(lobbyFloorY) + 1 (на 1 блок выше поверхности пола)
+            float ly = -(wellGenerator.LobbyFloorY - 1) + 0.05f;
+
+            int ccX = Mathf.CeilToInt((float)totalX / ChunkSize);
+            int ccZ = Mathf.CeilToInt((float)totalZ / ChunkSize);
+
+            // Голубые линии — вся сетка чанков
+            Color gridColor = new Color(0f, 0.9f, 1f, 0.9f); // циан
+
+            // Линии по X
+            for (int cx = 0; cx <= ccX; cx++)
+            {
+                int gx = Mathf.Min(cx * ChunkSize, totalX);
+                Vector3 p0 = island.transform.TransformPoint(new Vector3(gx, ly, 0));
+                Vector3 p1 = island.transform.TransformPoint(new Vector3(gx, ly, totalZ));
+                Debug.DrawLine(p0, p1, gridColor);
+            }
+
+            // Линии по Z
+            for (int cz = 0; cz <= ccZ; cz++)
+            {
+                int gz = Mathf.Min(cz * ChunkSize, totalZ);
+                Vector3 p0 = island.transform.TransformPoint(new Vector3(0,      ly, gz));
+                Vector3 p1 = island.transform.TransformPoint(new Vector3(totalX, ly, gz));
+                Debug.DrawLine(p0, p1, gridColor);
+            }
+
+            // Жёлтый/оранжевый — dirty-чанки (изменёны, ещё уже записаны авто)
+            foreach (var cc in dirtyChunks)
+                DrawChunkRect(cc.x, cc.y, ly, new Color(1f, 0.75f, 0f, 1f));
+
+            // Зелёный — чанки с файлом на диске
+            for (int cx = 0; cx < ccX; cx++)
+            for (int cz = 0; cz < ccZ; cz++)
+                if (dirtyChunks.Contains(new Vector2Int(cx, cz)) == false
+                    && File.Exists(ChunkFilePath(cx, cz)))
+                    DrawChunkRect(cx, cz, ly, new Color(0.2f, 1f, 0.3f, 1f));
+        }
+
+        /// <summary>
+        /// Рисует рамку чанка цветными линиями + диагональ для хорошей видимости.
+        /// </summary>
+        void DrawChunkRect(int cx, int cz, float localY, Color color)
+        {
+            if (island == null) return;
+            int x0 = cx * ChunkSize,      x1 = Mathf.Min(x0 + ChunkSize, island.TotalX);
+            int z0 = cz * ChunkSize,      z1 = Mathf.Min(z0 + ChunkSize, island.TotalZ);
+
+            Vector3 a = island.transform.TransformPoint(new Vector3(x0, localY, z0));
+            Vector3 b = island.transform.TransformPoint(new Vector3(x1, localY, z0));
+            Vector3 c = island.transform.TransformPoint(new Vector3(x1, localY, z1));
+            Vector3 d = island.transform.TransformPoint(new Vector3(x0, localY, z1));
+
+            Debug.DrawLine(a, b, color);
+            Debug.DrawLine(b, c, color);
+            Debug.DrawLine(c, d, color);
+            Debug.DrawLine(d, a, color);
+            // Диагонали
+            Debug.DrawLine(a, c, color * 0.7f);
+            Debug.DrawLine(b, d, color * 0.7f);
+        }
 
         void UpdateHover()
         {
@@ -303,7 +393,7 @@ namespace SimpleVoxelSystem
             if (island == null || island.IsSolid(pos.x, pos.y, pos.z)) return;
             island.SetVoxel(pos.x, pos.y, pos.z, selectedBlockType);
             island.RebuildMesh();
-            UpsertSave(pos.x, pos.y, pos.z, (int)selectedBlockType);
+            dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
             SaveLayout();
         }
 
@@ -311,11 +401,7 @@ namespace SimpleVoxelSystem
         {
             if (island == null || !island.IsSolid(pos.x, pos.y, pos.z)) return;
             island.RemoveVoxel(pos.x, pos.y, pos.z, true);
-            int floorY = wellGenerator != null ? wellGenerator.LobbyFloorY : 0;
-            if (pos.y == floorY)
-                UpsertSave(pos.x, pos.y, pos.z, -1);
-            else
-                saveData.entries.RemoveAll(e => e.x == pos.x && e.y == pos.y && e.z == pos.z);
+            dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
             SaveLayout();
         }
 
@@ -409,37 +495,117 @@ namespace SimpleVoxelSystem
             return int.TryParse(s, out int v) ? v : def;
         }
 
-        // ══════════════════════════════════════════════════════════════════════
-        // Save / Load вокселей
-        // ══════════════════════════════════════════════════════════════════════
+        // ──────────────────────────────────────────────────────────────────────
+        //  Чанковое сохранение — Minecraft-стиль
+        //  Каждый чанк 16×16 хранится в lobby_chunks/chunk_cx_cz.json.
+        //  При изменении блока помечается только его чанк (dirty).
+        //  SaveLayout() пишет только dirty-чанки на диск.
+        //  LoadAndApplyLayout() читает все файлы и перекрывает именно их область;
+        //  чанки без файла сохраняют базовый пол из GenerateFlatPlot().         
+        // ──────────────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Сохраняет на диск только изменённые (dirty) чанки.
+        /// Помечает все чанки как чистые после записи.
+        /// </summary>
         public void SaveLayout()
         {
-            try { File.WriteAllText(VoxelSavePath, JsonUtility.ToJson(saveData, true)); }
-            catch (System.Exception ex) { Debug.LogError($"[LobbyEditor] Сохранение карты: {ex.Message}"); }
+            if (island == null || dirtyChunks.Count == 0) return;
+
+            try { Directory.CreateDirectory(ChunkDir); }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[LobbyEditor] Не удалось создать папку чанков: {ex.Message}");
+                return;
+            }
+
+            foreach (var cc in dirtyChunks)
+                SaveChunk(cc.x, cc.y);
+
+            Debug.Log($"[LobbyEditor] Сброшено {dirtyChunks.Count} чанк(ов) на диск.");
+            dirtyChunks.Clear();
         }
 
+        /// <summary>
+        /// Принудительно сохраняет ВСЕ чанки острова (например, по кнопке «Сохранить»).
+        /// </summary>
+        public void SaveLayoutFull()
+        {
+            if (island == null) return;
+            // Помечаем все чанки грязными
+            int chunkCountX = Mathf.CeilToInt((float)island.TotalX / ChunkSize);
+            int chunkCountZ = Mathf.CeilToInt((float)island.TotalZ / ChunkSize);
+            for (int cx = 0; cx < chunkCountX; cx++)
+            for (int cz = 0; cz < chunkCountZ; cz++)
+                dirtyChunks.Add(new Vector2Int(cx, cz));
+            SaveLayout();
+        }
+
+        private void SaveChunk(int cx, int cz)
+        {
+            var data = new ChunkSaveData { chunkX = cx, chunkZ = cz };
+
+            int x0 = cx * ChunkSize, x1 = Mathf.Min(x0 + ChunkSize, island.TotalX);
+            int z0 = cz * ChunkSize, z1 = Mathf.Min(z0 + ChunkSize, island.TotalZ);
+
+            for (int x = x0; x < x1; x++)
+            for (int y = 0; y < island.TotalY; y++)
+            for (int z = z0; z < z1; z++)
+            {
+                if (island.TryGetBlockType(x, y, z, out BlockType bt))
+                    data.entries.Add(new LobbyVoxelEntry { x = x, y = y, z = z, blockTypeId = (int)bt });
+            }
+
+            try { File.WriteAllText(ChunkFilePath(cx, cz), JsonUtility.ToJson(data, true)); }
+            catch (System.Exception ex)
+            { Debug.LogError($"[LobbyEditor] Ошибка записи чанка {cx},{cz}: {ex.Message}"); }
+        }
+
+        /// <summary>
+        /// Загружает все сохранённые чанки и накладывает их поверх базового пола.
+        /// Чанки без файла НЕ трогаются — базовый пол из GenerateFlatPlot остаётся.
+        /// </summary>
         public void LoadAndApplyLayout()
         {
-            if (!File.Exists(VoxelSavePath)) { saveData = new LobbyLayoutSaveData(); return; }
-            try { saveData = JsonUtility.FromJson<LobbyLayoutSaveData>(File.ReadAllText(VoxelSavePath)) ?? new LobbyLayoutSaveData(); }
-            catch { saveData = new LobbyLayoutSaveData(); return; }
             if (island == null) return;
-            bool changed = false;
-            foreach (var e in saveData.entries)
-            {
-                if (e.blockTypeId < 0) island.RemoveVoxel(e.x, e.y, e.z, false);
-                else island.SetVoxel(e.x, e.y, e.z, (BlockType)e.blockTypeId);
-                changed = true;
-            }
-            if (changed) island.RebuildMesh();
-        }
+            if (!Directory.Exists(ChunkDir)) return;
 
-        void UpsertSave(int x, int y, int z, int tid)
-        {
-            var ex = saveData.entries.Find(e => e.x == x && e.y == y && e.z == z);
-            if (ex != null) ex.blockTypeId = tid;
-            else saveData.entries.Add(new LobbyVoxelEntry { x=x, y=y, z=z, blockTypeId=tid });
+            string[] files;
+            try { files = Directory.GetFiles(ChunkDir, "chunk_*.json"); }
+            catch { return; }
+
+            if (files.Length == 0) return;
+
+            int loaded = 0;
+            foreach (string file in files)
+            {
+                ChunkSaveData data;
+                try { data = JsonUtility.FromJson<ChunkSaveData>(File.ReadAllText(file)); }
+                catch { continue; }
+                if (data == null) continue;
+
+                // Очищаем только область этого чанка
+                int x0 = data.chunkX * ChunkSize, x1 = Mathf.Min(x0 + ChunkSize, island.TotalX);
+                int z0 = data.chunkZ * ChunkSize, z1 = Mathf.Min(z0 + ChunkSize, island.TotalZ);
+
+                for (int x = x0; x < x1; x++)
+                for (int y = 0; y < island.TotalY; y++)
+                for (int z = z0; z < z1; z++)
+                    island.RemoveVoxel(x, y, z, false);
+
+                // Восстанавливаем из файла
+                if (data.entries != null)
+                    foreach (var e in data.entries)
+                        island.SetVoxel(e.x, e.y, e.z, (BlockType)e.blockTypeId);
+
+                loaded++;
+            }
+
+            if (loaded > 0)
+            {
+                island.RebuildMesh();
+                Debug.Log($"[LobbyEditor] Загружено {loaded} чанк(ов).");
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -611,7 +777,7 @@ namespace SimpleVoxelSystem
                 new Color(0.2f, 0.45f, 0.9f, 1f),
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 10f), new Vector2(148f, 38f));
-            saveBtn.onClick.AddListener(() => { SaveLayout(); SaveShopZones(); });
+            saveBtn.onClick.AddListener(() => { SaveLayoutFull(); SaveShopZones(); });
 
             editorPanel.SetActive(false);
         }

@@ -106,7 +106,7 @@ namespace SimpleVoxelSystem
                 island.SetVoxel(x, floorY, z, BlockType.Dirt);
 
             island.RebuildMesh();
-            SpawnPlayerOnGround();
+            SpawnPlayerOnGround(lobbyBuildAbove);
 
             Debug.Log($"[WellGenerator] Лобби-площадка создана ({island.TotalX}х{island.TotalZ}). Ожидание покупки шахты.");
 
@@ -160,7 +160,7 @@ namespace SimpleVoxelSystem
 
             island.RebuildMesh();
             CreateElevator(padding, padding);
-            SpawnPlayerOnGround();
+            SpawnPlayerOnGround(0);
 
             Debug.Log($"[WellGenerator] Шахта '{mine.shopData.displayName}' построена. " +
                       $"Глубина: {mine.rolledDepth}, блоков: {blockCount}. " +
@@ -238,7 +238,7 @@ namespace SimpleVoxelSystem
             Debug.Log($"[WellGenerator] Покупка участка +[{offsetX},{offsetZ}] size {width}x{length}");
         }
 
-        private void SpawnPlayerOnGround()
+        private void SpawnPlayerOnGround(int surfaceY = 0)
         {
             Transform player = ResolveOrSpawnPlayer();
             if (player == null)
@@ -247,13 +247,13 @@ namespace SimpleVoxelSystem
                 return;
             }
 
-            if (!TryFindGroundSpawnCell(out int gx, out int gz))
+            if (!TryFindGroundSpawnCell(surfaceY, out int gx, out int gz))
             {
                 Debug.LogWarning("[WellGenerator] Не удалось найти клетку земли для спавна игрока.");
                 return;
             }
 
-            Vector3 baseWorldPos = island.transform.TransformPoint(island.GridToLocal(gx, 0, gz) + new Vector3(0.5f, 0f, 0.5f));
+            Vector3 baseWorldPos = island.transform.TransformPoint(island.GridToLocal(gx, surfaceY, gz) + new Vector3(0.5f, 0f, 0.5f));
             float groundY = GetGroundYAt(baseWorldPos.x, baseWorldPos.z);
             float spawnY = ComputePlayerSpawnY(player, groundY);
             Vector3 spawnPos = new Vector3(baseWorldPos.x, spawnY, baseWorldPos.z);
@@ -342,7 +342,7 @@ namespace SimpleVoxelSystem
             return spawned.transform;
         }
 
-        private bool TryFindGroundSpawnCell(out int gx, out int gz)
+        private bool TryFindGroundSpawnCell(int surfaceY, out int gx, out int gz)
         {
             int centerX = padding + wellWidth / 2;
             int centerZ = padding + wellLength / 2;
@@ -365,7 +365,7 @@ namespace SimpleVoxelSystem
                 int z = preferred[i].y;
                 if (x < 0 || x >= island.TotalX || z < 0 || z >= island.TotalZ)
                     continue;
-                if (island.IsSolid(x, 0, z))
+                if (island.IsSolid(x, surfaceY, z))
                 {
                     gx = x;
                     gz = z;
@@ -376,7 +376,7 @@ namespace SimpleVoxelSystem
             for (int x = 0; x < island.TotalX; x++)
             for (int z = 0; z < island.TotalZ; z++)
             {
-                if (island.IsSolid(x, 0, z))
+                if (island.IsSolid(x, surfaceY, z))
                 {
                     gx = x;
                     gz = z;

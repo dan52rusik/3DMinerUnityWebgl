@@ -123,9 +123,8 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
             #pragma fragment ShadowFrag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShadowCasterPass.hlsl"
-            // ShadowCasterPass.hlsl содержит ShadowPassVertex / ShadowPassFragment
-            // с собственными структурами — мы просто пробрасываем:
+            // Core.hlsl даёт TransformObjectToWorld, ApplyShadowBias, TransformWorldToHClip.
+            // ShadowCasterPass.hlsl не включаем — он конфликтует с ручными структурами ниже.
 
             // Входная структура для shadow (минимальная)
             struct ShadowIn
