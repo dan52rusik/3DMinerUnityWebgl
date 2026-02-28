@@ -377,6 +377,7 @@ GameObject:
   - component: {fileID: 461077784}
   - component: {fileID: 461077783}
   - component: {fileID: 461077782}
+  - component: {fileID: 461077786}
   m_Layer: 0
   m_Name: WellGenerator
   m_TagString: Untagged
@@ -400,6 +401,9 @@ MonoBehaviour:
   wellLength: 5
   wellDepth: 10
   padding: 5
+  lobbyWidth: 50
+  lobbyLength: 50
+  lobbyBuildAbove: 8
   blockDataConfig:
   - type: 0
     maxHealth: 1
@@ -418,9 +422,7 @@ MonoBehaviour:
     reward: 50
     blockColor: {r: 0.9511088, g: 1, b: 0, a: 0}
   lockDeeperLayersUntilCleared: 1
-  createElevatorOnStart: 1
   elevatorColor: {r: 0.6, g: 0.3, b: 0.1, a: 1}
-  spawnPlayerOnStart: 1
   playerPrefab: {fileID: 0}
   playerToPlace: {fileID: 0}
   playerSpawnHeight: 1.05
@@ -540,6 +542,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 461077779}
   m_Mesh: {fileID: 0}
+--- !u!114 &461077786
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 461077779}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba2a61bc417f93e4baca1cc5a84d1531, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleVoxelSystem.LobbyEditor
+  wellGenerator: {fileID: 0}
+  editorCamera: {fileID: 0}
+  toggleKey: 283
+  placementRange: 200
+  miningLayers:
+    serializedVersion: 2
+    m_Bits: 51
+  previewColorPlace: {r: 0.2, g: 1, b: 0.5, a: 0.4}
+  previewColorRemove: {r: 1, g: 0.2, b: 0.2, a: 0.4}
 --- !u!1 &646674685
 GameObject:
   m_ObjectHideFlags: 0
@@ -667,6 +690,37 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &1101904499
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1101904501}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1101904501
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1101904499}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 6.58928, y: -8.12171, z: 5.87505}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1228761404
 GameObject:
   m_ObjectHideFlags: 0
@@ -1253,3 +1307,4 @@ SceneRoots:
   - {fileID: 1691313762}
   - {fileID: 1770644504}
   - {fileID: 270235598}
+  - {fileID: 1101904501}

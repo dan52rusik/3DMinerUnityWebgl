@@ -119,6 +119,7 @@ namespace SimpleVoxelSystem
                 "🛒 Купить шахту", ColBtnShop,
                 new Vector2(190, 7), new Vector2(140, 40));
             openShopBtn.onClick.AddListener(TogglePanel);
+            openShopBtn.gameObject.SetActive(false); // Скрыта, так как теперь используется триггер B
 
             // ── Статусная строка (снизу) ─────────────────────────────────────
             GameObject statusBar = MakePanel("StatusBar", rootCanvas.transform,
@@ -289,7 +290,7 @@ namespace SimpleVoxelSystem
             if (cancelBtn   != null) cancelBtn.gameObject.SetActive(placing);
         }
 
-        void TogglePanel()
+        public void TogglePanel()
         {
             if (shopPanel == null) return;
             bool next = !shopPanel.activeSelf;
@@ -297,7 +298,7 @@ namespace SimpleVoxelSystem
             SetPanelVisible(next);
         }
 
-        void SetPanelVisible(bool v)
+        public void SetPanelVisible(bool v)
         {
             if (shopPanel != null) shopPanel.SetActive(v);
         }
