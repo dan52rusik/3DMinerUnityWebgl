@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace SimpleVoxelSystem.Data
 {
-    public enum BlockType { Dirt, Stone, Iron, Gold }
+    public enum BlockType { Air = 0, Dirt = 1, Stone = 2, Iron = 3, Gold = 4, Grass = 5 }
 
     [Serializable]
     public class BlockData 

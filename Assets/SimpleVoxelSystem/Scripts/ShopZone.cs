@@ -109,6 +109,7 @@ namespace SimpleVoxelSystem
 
         void Update()
         {
+            // B работает только если игрок внутри зоны магазина
             if (!playerInside) return;
             if (!IsKeyPressed()) return;
             if (shopUI != null) shopUI.TogglePanel();

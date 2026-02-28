@@ -14,6 +14,9 @@ namespace SimpleVoxelSystem
         public int          totalBlocks;    // Сколько блоков было при генерации
         public int          minedBlocks;    // Сколько уже добыто
 
+        public System.Collections.Generic.HashSet<Vector3Int> minedPositions = new System.Collections.Generic.HashSet<Vector3Int>();
+
+        public int originX, originZ; // координаты размещения на острове
         public bool IsExhausted => minedBlocks >= totalBlocks;
 
         /// <summary>Цена продажи истощённой шахты.</summary>
@@ -27,6 +30,13 @@ namespace SimpleVoxelSystem
             minedBlocks = 0;
         }
 
-        public void RegisterMinedBlock() => minedBlocks++;
+        public void RegisterMinedBlock(int x, int y, int z)
+        {
+            // Сохраняем локальные координаты (относительно начала шахты)
+            if (minedPositions.Add(new Vector3Int(x - originX, y, z - originZ)))
+                minedBlocks++;
+        }
+
+        public bool IsVoxelMined(int x, int y, int z) => minedPositions.Contains(new Vector3Int(x - originX, y, z - originZ));
     }
 }

@@ -180,6 +180,8 @@ namespace SimpleVoxelSystem
 
         private void OnFlatPlotReady()
         {
+            if (wellGenerator != null && !wellGenerator.IsInLobbyMode) return; // Не грузим лобби на остров
+
             if (wellGenerator != null)
                 island = wellGenerator.GetComponent<VoxelIsland>();
             LoadAndApplyLayout();

@@ -26,7 +26,8 @@ namespace SimpleVoxelSystem
         // ─── Runtime ────────────────────────────────────────────────────────
         public bool IsPlacementMode { get; private set; }
 
-        private WellGenerator   wellGenerator;
+        [Header("Ссылки")]
+        public WellGenerator WellGen { get; private set; }
         private MineInstance    pendingMine;       // шахта, ожидающая размещения
         private GameObject      previewInstance;   // призрак-превью
 
@@ -39,14 +40,117 @@ namespace SimpleVoxelSystem
 
         void Awake()
         {
-            wellGenerator = GetComponent<WellGenerator>();
-            if (wellGenerator == null)
-                wellGenerator = GetComponentInParent<WellGenerator>();
+            WellGen = GetComponent<WellGenerator>();
+            if (WellGen == null)
+                WellGen = GetComponentInParent<WellGenerator>();
+
+            CreateDefaultMinesIfEmpty();
+            EnsureShopUI();
+        }
+
+        /// <summary>
+        /// Создаёт MineShopUI в сцене если его ещё нет.
+        /// Ищет существующий Canvas — добавляет туда; если Canvas нет — создаёт пустой GO.
+        /// </summary>
+        void EnsureShopUI()
+        {
+            if (FindFirstObjectByType<MineShopUI>() != null) return;
+
+            Canvas canvas = FindFirstObjectByType<Canvas>();
+            GameObject host;
+            if (canvas != null)
+                host = canvas.gameObject;
+            else
+            {
+                host = new GameObject("MineShopUI_Host");
+                Debug.Log("[MineMarket] Canvas не найден, создан отдельный GO для MineShopUI.");
+            }
+
+            var shopUI = host.AddComponent<MineShopUI>();
+            shopUI.mineMarket = this;
+            Debug.Log("[MineMarket] MineShopUI автоздан на «" + host.name + "».");
+        }
+
+        /// <summary>
+        /// Создаёт дефолтный набор шахт в рантайме если список пуст или не назначен.
+        /// Позволяет обойтись без редакторского сетапа (Tools → Mine System → Setup Scene).
+        /// </summary>
+        void CreateDefaultMinesIfEmpty()
+        {
+            if (availableMines != null && availableMines.Count > 0) return;
+
+            availableMines = new List<MineShopData>();
+
+            // Бронзовая
+            var bronze = ScriptableObject.CreateInstance<MineShopData>();
+            bronze.displayName  = "Бронзовая шахта";
+            bronze.description  = "Небольшая, преимущественно земля и камень.";
+            bronze.labelColor   = new Color(0.80f, 0.50f, 0.20f);
+            bronze.buyPrice     = 300;
+            bronze.sellBackRatio= 0.5f;
+            bronze.depthMin     = 3;  bronze.depthMax = 5;
+            bronze.wellWidth    = 5;  bronze.wellLength = 5; bronze.padding = 3;
+            bronze.layers       = new BlockLayer[]
+            {
+                new BlockLayer { maxDepth=2,  dirtWeight=90, stoneWeight=10, ironWeight=0,  goldWeight=0 },
+                new BlockLayer { maxDepth=30, dirtWeight=40, stoneWeight=55, ironWeight=5,  goldWeight=0 },
+            };
+            availableMines.Add(bronze);
+
+            // Серебряная
+            var silver = ScriptableObject.CreateInstance<MineShopData>();
+            silver.displayName  = "Серебряная шахта";
+            silver.description  = "Средняя. Железо и немного золота в глубине.";
+            silver.labelColor   = new Color(0.70f, 0.70f, 0.80f);
+            silver.buyPrice     = 800;
+            silver.sellBackRatio= 0.5f;
+            silver.depthMin     = 5;  silver.depthMax = 9;
+            silver.wellWidth    = 5;  silver.wellLength = 5; silver.padding = 3;
+            silver.layers       = new BlockLayer[]
+            {
+                new BlockLayer { maxDepth=2,  dirtWeight=70, stoneWeight=30, ironWeight=0,  goldWeight=0 },
+                new BlockLayer { maxDepth=6,  dirtWeight=20, stoneWeight=55, ironWeight=25, goldWeight=0 },
+                new BlockLayer { maxDepth=30, dirtWeight=5,  stoneWeight=55, ironWeight=35, goldWeight=5 },
+            };
+            availableMines.Add(silver);
+
+            // Золотая
+            var gold = ScriptableObject.CreateInstance<MineShopData>();
+            gold.displayName  = "Золотая шахта";
+            gold.description  = "Глубокая. Много железа и золота.";
+            gold.labelColor   = new Color(1.00f, 0.84f, 0.10f);
+            gold.buyPrice     = 2000;
+            gold.sellBackRatio= 0.5f;
+            gold.depthMin     = 10; gold.depthMax = 15;
+            gold.wellWidth    = 5;  gold.wellLength = 5; gold.padding = 3;
+            gold.layers       = new BlockLayer[]
+            {
+                new BlockLayer { maxDepth=2,  dirtWeight=50, stoneWeight=50, ironWeight=0,  goldWeight=0  },
+                new BlockLayer { maxDepth=6,  dirtWeight=10, stoneWeight=50, ironWeight=35, goldWeight=5  },
+                new BlockLayer { maxDepth=30, dirtWeight=5,  stoneWeight=35, ironWeight=35, goldWeight=25 },
+            };
+            availableMines.Add(gold);
+
+            Debug.Log("[MineMarket] Созданы дефолтные шахты (3 вида).");
         }
 
         void Update()
         {
+            if (pendingMine == null) 
+            {
+                IsPlacementMode = false;
+                ShowPreview(false);
+                return;
+            }
+
+            // В лобби превью скрыто, на острове — активно
+            bool shouldShowPreview = WellGen != null && !WellGen.IsInLobbyMode;
+            IsPlacementMode = shouldShowPreview;
+            ShowPreview(shouldShowPreview);
+
             if (!IsPlacementMode) return;
+
+            UpdatePlacementPreview();
 
             // Нажали Escape — отмена
             if (IsCancelPressed())
@@ -62,6 +166,39 @@ namespace SimpleVoxelSystem
             }
         }
 
+        private Vector3 lastValidPlacementPos;
+
+        void UpdatePlacementPreview()
+        {
+            if (previewInstance == null) return;
+
+            // Рейкаст от камеры в мир
+            Ray ray = Camera.main.ScreenPointToRay(GetMousePosition());
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                // Находим точку на сетке (Snap)
+                Vector3 p = hit.point;
+                // Сдвигаем на полблока если нужно, но для 5x5 шахты лучше на целые числа
+                float x = Mathf.Round(p.x);
+                float z = Mathf.Round(p.z);
+                
+                // Высота: чуть выше поверхности острова (LobbyFloorY)
+                float y = (WellGen != null) ? WellGen.LobbyFloorY : p.y;
+                
+                previewInstance.transform.position = new Vector3(x, y + 0.5f, z);
+                lastValidPlacementPos = previewInstance.transform.position;
+            }
+        }
+
+        Vector2 GetMousePosition()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return UnityEngine.InputSystem.Mouse.current != null ? UnityEngine.InputSystem.Mouse.current.position.ReadValue() : Vector2.zero;
+#else
+            return Input.mousePosition;
+#endif
+        }
+
         // ════════════════════════════════════════════════════════════════════
         // Публичное API (вызывается из UI)
         // ════════════════════════════════════════════════════════════════════
@@ -74,7 +211,7 @@ namespace SimpleVoxelSystem
         {
             if (data == null) return false;
 
-            if (wellGenerator != null && wellGenerator.IsMineGenerated)
+            if (WellGen != null && WellGen.IsMineGenerated)
             {
                 Debug.Log("[MineMarket] На участке уже стоит шахта. Сначала продайте текущую.");
                 return false;
@@ -93,9 +230,10 @@ namespace SimpleVoxelSystem
             pendingMine = new MineInstance(data, depth, 0);
 
             Debug.Log($"[MineMarket] Куплена '{data.displayName}' (глубина {depth}). " +
-                      $"Выберите место для установки. Остаток: {GlobalEconomy.Money}₽.");
+                      $"Она добавлена в инвентарь. Отправляйтесь на свой Остров, чтобы разместить её.");
 
-            EnterPlacementMode();
+            // Включаем режим, но Update() сам решит когда показать превью
+            IsPlacementMode = true; 
             return true;
         }
 
@@ -104,13 +242,13 @@ namespace SimpleVoxelSystem
         /// </summary>
         public void SellCurrentMine()
         {
-            if (wellGenerator == null || !wellGenerator.IsMineGenerated || wellGenerator.ActiveMine == null)
+            if (WellGen == null || !WellGen.IsMineGenerated || WellGen.ActiveMine == null)
             {
                 Debug.Log("[MineMarket] Нет активной шахты для продажи.");
                 return;
             }
 
-            MineInstance mine = wellGenerator.ActiveMine;
+            MineInstance mine = WellGen.ActiveMine;
             int price = mine.SellPrice;
 
             GlobalEconomy.Money += price;
@@ -118,14 +256,14 @@ namespace SimpleVoxelSystem
                       $"Добыто: {mine.minedBlocks}/{mine.totalBlocks} блоков.");
 
             OnMineSold?.Invoke(mine);
-            wellGenerator.DemolishMine();
+            WellGen.DemolishMine();
         }
 
         /// <summary>Публичная отмена размещения (для UI-кнопки).</summary>
         public void CancelPlacementPublic() => CancelPlacement();
 
         /// <summary>Проверить, стоит ли сейчас шахта на участке.</summary>
-        public bool IsMineGenerated() => wellGenerator != null && wellGenerator.IsMineGenerated;
+        public bool IsMineGenerated() => WellGen != null && WellGen.IsMineGenerated;
 
         // ════════════════════════════════════════════════════════════════════
         // Внутренняя логика размещения
@@ -140,17 +278,30 @@ namespace SimpleVoxelSystem
         void ConfirmPlacement()
         {
             if (pendingMine == null) return;
+            if (WellGen != null && WellGen.IsInLobbyMode)
+            {
+                Debug.Log("[MineMarket] Нельзя разместить шахту в Лобби. Отправляйтесь на свой Остров!");
+                return;
+            }
 
             IsPlacementMode = false;
             ShowPreview(false);
 
-            if (wellGenerator == null)
+            if (WellGen == null)
             {
-                Debug.LogError("[MineMarket] WellGenerator не найден!");
+                Debug.LogError("[MineMarket] WellGen не найден!");
                 return;
             }
 
-            wellGenerator.GenerateMine(pendingMine);
+            // Находим локальные координаты в острове из позиции превью
+            Vector3 worldPos = previewInstance.transform.position;
+            Vector3 localPos = WellGen.transform.InverseTransformPoint(worldPos);
+            
+            // Округляем до индекса вокселя
+            int gx = Mathf.RoundToInt(localPos.x);
+            int gz = Mathf.RoundToInt(localPos.z);
+
+            WellGen.GenerateMineAt(pendingMine, gx, gz);
             OnMinePlaced?.Invoke(pendingMine);
             pendingMine = null;
         }
@@ -219,15 +370,12 @@ namespace SimpleVoxelSystem
 
             if (pendingMine != null)
             {
-                float w = pendingMine.shopData.wellWidth;
-                float d = pendingMine.rolledDepth;
-                float l = pendingMine.shopData.wellLength;
+                // Для превью используем размер шахты + паддинг (чтобы видеть зону влияния)
+                float w = pendingMine.shopData.wellWidth  + pendingMine.shopData.padding * 2;
+                float d = 0.5f; // Плоское превью для выбора места
+                float l = pendingMine.shopData.wellLength + pendingMine.shopData.padding * 2;
                 previewInstance.transform.localScale = new Vector3(w, d, l);
             }
-
-            // Позиционируем превью над WellGenerator
-            if (wellGenerator != null)
-                previewInstance.transform.position = wellGenerator.transform.position + new Vector3(2f, 1f, 0f);
 
             previewInstance.SetActive(true);
         }
