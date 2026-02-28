@@ -19,10 +19,12 @@ namespace SimpleVoxelSystem
         public int padding = 5;
 
         [Header("Лобби (спавн-зона)")] 
-        [Tooltip("Ширина (X) плоской лобби-платформы в блоках. Независима от размера шахты.")]
+        [Tooltip("Ширина (X) плоской лобби-платформы в блоках.")]
         public int lobbyWidth  = 50;
-        [Tooltip("Длина (Z) плоской лобби-платформы в блоках. Независима от размера шахты.")]
+        [Tooltip("Длина (Z) плоской лобби-платформы в блоках.")]
         public int lobbyLength = 50;
+        [Tooltip("Сколько слоёв можно построить НАД полом. Пол располагается на gridY=lobbyBuildAbove, выше — gridY=0..lobbyBuildAbove-1.")]
+        public int lobbyBuildAbove = 8;
 
         [Header("Блоки")]
         public List<BlockData> blockDataConfig;
@@ -44,6 +46,15 @@ namespace SimpleVoxelSystem
 
         /// <summary>Текущая активная шахта (null если не куплена)</summary>
         public MineInstance ActiveMine { get; private set; }
+
+        /// <summary>Грид-Y уровня пола в лобби.
+        /// Слои 0..(LobbyFloorY-1) — пространство над полом для постройки.
+        /// LobbyEditor использует это значение для определения базовых блоков.</summary>
+        public int LobbyFloorY => lobbyBuildAbove;
+
+        /// <summary>Срабатывает каждый раз после генерации лобби-площадки.
+        /// LobbyEditor подписывается, чтобы загрузить сохранённые блоки.</summary>
+        public event System.Action OnFlatPlotReady;
 
         private const int TopLayerDepth = 3;
         private const int MidLayerDepth = 7;
@@ -81,17 +92,26 @@ namespace SimpleVoxelSystem
             // Используем отдельные размеры лобби (0 паддинга — площадка = весь остров)
             int lw = Mathf.Max(1, lobbyWidth);
             int ll = Mathf.Max(1, lobbyLength);
-            island.Init(lw, 1, ll, 0, 0);
 
-            // Заполняем один слой (y=0) блоками Dirt
+            // lobbyBuildAbove слоёв над полом + 1 слой самого пола
+            // в VoxelIsland: y=0 = самый верх, y растёт вниз
+            // Пол: gridY = lobbyBuildAbove  (оставляем 0..lobbyBuildAbove-1 для постройки над полом)
+            int totalHeight = Mathf.Max(1, lobbyBuildAbove) + 1;
+            island.Init(lw, totalHeight, ll, 0, 0);
+
+            // Заполняем пол (каждый блок на заданном уровне)
+            int floorY = lobbyBuildAbove;
             for (int x = 0; x < island.TotalX; x++)
             for (int z = 0; z < island.TotalZ; z++)
-                island.SetVoxel(x, 0, z, BlockType.Dirt);
+                island.SetVoxel(x, floorY, z, BlockType.Dirt);
 
             island.RebuildMesh();
             SpawnPlayerOnGround();
 
             Debug.Log($"[WellGenerator] Лобби-площадка создана ({island.TotalX}х{island.TotalZ}). Ожидание покупки шахты.");
+
+            // Уведомляем LobbyEditor — он загрузит сохранённые блоки поверх пола
+            OnFlatPlotReady?.Invoke();
         }
 
         // ══════════════════════════════════════════════════════════════════════
