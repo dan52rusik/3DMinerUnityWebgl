@@ -131,7 +131,7 @@ namespace SimpleVoxelSystem
             statusLabel = MakeLabelOffset(hud.transform, "StatusLabel",
                 "", 14, TextAnchor.MiddleCenter,
                 new Vector2(10, -50), new Vector2(-10, -30));
-            statusLabel.color = Color.yellow;
+            statusLabel.color = new Color(1f, 1f, 0.7f, 1f); // Мягкий бежевый
 
             // ── Кнопка Отмена (режим размещения) ─────────────────────
             cancelBtn = MakeButton(rootCanvas.transform, "CancelBtn",

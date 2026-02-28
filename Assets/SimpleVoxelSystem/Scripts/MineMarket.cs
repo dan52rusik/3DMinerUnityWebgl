@@ -134,17 +134,8 @@ namespace SimpleVoxelSystem
             Debug.Log("[MineMarket] Созданы дефолтные шахты (3 вида).");
         }
 
-        private float _lastHeartbeat;
-
         void Update()
         {
-            // Сердцебиение скрипта для отладки
-            if (Time.time > _lastHeartbeat + 2f)
-            {
-                _lastHeartbeat = Time.time;
-                Debug.Log($"[MineMarket] ЖИВОЙ. PendingMine: {(pendingMine != null ? pendingMine.shopData.displayName : "NULL")}, IsInLobby: {WellGen?.IsInLobbyMode}");
-            }
-
             // Если шахта не куплена — ничего не делаем
             if (pendingMine == null) 
             {
@@ -165,7 +156,6 @@ namespace SimpleVoxelSystem
                 // Левый клик = подтвердить размещение
                 if (IsConfirmPressed())
                 {
-                    Debug.Log("[MineMarket] Клик ЛКМ прошёл все проверки! Вызываем ConfirmPlacement...");
                     ConfirmPlacement();
                 }
             }
@@ -173,7 +163,6 @@ namespace SimpleVoxelSystem
             // Отменить покупку (Escape)
             if (IsCancelPressed())
             {
-                Debug.Log("[MineMarket] Нажат Escape. Отмена покупки.");
                 CancelPlacement();
             }
         }
@@ -204,9 +193,13 @@ namespace SimpleVoxelSystem
                 }
                 else
                 {
-                    // Если попали во что-то, но это не остров — лог раз в секунду
-                    if (Time.frameCount % 60 == 0) Debug.Log($"[MineMarket] Луч попал в '{hit.collider.name}', но это не VoxelIsland.");
+                    // Если не попали в остров — скрываем превью (чтобы не висело в воздухе)
+                    SetPreviewVisibility(false);
                 }
+            }
+            else
+            {
+                SetPreviewVisibility(false);
             }
         }
 
@@ -290,15 +283,21 @@ namespace SimpleVoxelSystem
                 foreach (var c in previewInstance.GetComponentsInChildren<Collider>()) c.enabled = false;
                 
                 MeshRenderer mr = previewInstance.GetComponent<MeshRenderer>();
-                Material mat = new Material(Shader.Find("Standard"));
-                mat.color = new Color(0, 1, 0, 0.4f);
-                // Настройка прозрачности
+                // Пробуем несколько шейдеров, чтобы избежать розового цвета (Magenta)
+                Shader s = Shader.Find("Universal Render Pipeline/Lit");
+                if (s == null) s = Shader.Find("Standard");
+                if (s == null) s = Shader.Find("Sprites/Default");
+                
+                Material mat = new Material(s);
+                mat.color = new Color(0, 1, 0.4f, 0.4f);
+                
+                // Настройка прозрачности для Standard/Lit
+                if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 3); // Transparent
                 mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 mat.SetInt("_ZWrite", 0);
                 mat.DisableKeyword("_ALPHATEST_ON");
                 mat.EnableKeyword("_ALPHABLEND_ON");
-                mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
                 mat.renderQueue = 3000;
                 mr.material = mat;
             }
@@ -325,7 +324,7 @@ namespace SimpleVoxelSystem
                               (UnityEngine.EventSystems.EventSystem.current != null && 
                                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject());
                 
-                Debug.Log($"[MineMarket] LMB Click. UI Blocking: {overUI}. MouseLocked: {Cursor.lockState == CursorLockMode.Locked}");
+                // Debug.Log($"[MineMarket] LMB Click. UI Blocking: {overUI}. MouseLocked: {Cursor.lockState == CursorLockMode.Locked}");
                 return !overUI;
             }
             return false;
