@@ -134,35 +134,47 @@ namespace SimpleVoxelSystem
             Debug.Log("[MineMarket] Созданы дефолтные шахты (3 вида).");
         }
 
+        private float _lastHeartbeat;
+
         void Update()
         {
+            // Сердцебиение скрипта для отладки
+            if (Time.time > _lastHeartbeat + 2f)
+            {
+                _lastHeartbeat = Time.time;
+                Debug.Log($"[MineMarket] ЖИВОЙ. PendingMine: {(pendingMine != null ? pendingMine.shopData.displayName : "NULL")}, IsInLobby: {WellGen?.IsInLobbyMode}");
+            }
+
+            // Если шахта не куплена — ничего не делаем
             if (pendingMine == null) 
             {
-                IsPlacementMode = false;
-                ShowPreview(false);
+                if (IsPlacementMode) { IsPlacementMode = false; ShowPreview(false); }
                 return;
             }
 
-            // В лобби превью скрыто, на острове — активно
-            bool shouldShowPreview = WellGen != null && !WellGen.IsInLobbyMode;
-            IsPlacementMode = shouldShowPreview;
-            ShowPreview(shouldShowPreview);
+            IsPlacementMode = true;
 
-            if (!IsPlacementMode) return;
+            // Но призрака показываем только на Острове
+            bool onIsland = WellGen != null && !WellGen.IsInLobbyMode;
+            ShowPreview(onIsland);
 
-            UpdatePlacementPreview();
+            if (onIsland)
+            {
+                UpdatePlacementPreview();
+                
+                // Левый клик = подтвердить размещение
+                if (IsConfirmPressed())
+                {
+                    Debug.Log("[MineMarket] Клик ЛКМ прошёл все проверки! Вызываем ConfirmPlacement...");
+                    ConfirmPlacement();
+                }
+            }
 
-            // Нажали Escape — отмена
+            // Отменить покупку (Escape)
             if (IsCancelPressed())
             {
+                Debug.Log("[MineMarket] Нажат Escape. Отмена покупки.");
                 CancelPlacement();
-                return;
-            }
-
-            // Левый клик = подтвердить размещение
-            if (IsConfirmPressed())
-            {
-                ConfirmPlacement();
             }
         }
 
@@ -170,28 +182,45 @@ namespace SimpleVoxelSystem
 
         void UpdatePlacementPreview()
         {
-            if (previewInstance == null) return;
+            if (previewInstance == null || !previewInstance.activeSelf) return;
 
-            // Рейкаст от камеры в мир
             Ray ray = Camera.main.ScreenPointToRay(GetMousePosition());
-            if (Physics.Raycast(ray, out RaycastHit hit))
+            ray.origin += ray.direction * 0.1f; 
+
+            if (Physics.Raycast(ray, out RaycastHit hit, 2000f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             {
-                // Находим точку на сетке (Snap)
-                Vector3 p = hit.point;
-                // Сдвигаем на полблока если нужно, но для 5x5 шахты лучше на целые числа
-                float x = Mathf.Round(p.x);
-                float z = Mathf.Round(p.z);
-                
-                // Высота: чуть выше поверхности острова (LobbyFloorY)
-                float y = (WellGen != null) ? WellGen.LobbyFloorY : p.y;
-                
-                previewInstance.transform.position = new Vector3(x, y + 0.5f, z);
-                lastValidPlacementPos = previewInstance.transform.position;
+                VoxelIsland land = hit.collider.GetComponentInParent<VoxelIsland>();
+                if (land != null)
+                {
+                    Vector3 localPos = land.transform.InverseTransformPoint(hit.point);
+                    int gx = Mathf.RoundToInt(localPos.x);
+                    int gz = Mathf.RoundToInt(localPos.z);
+                    
+                    Vector3 snappedLocal = new Vector3(gx, -WellGen.LobbyFloorY + 1.1f, gz);
+                    previewInstance.transform.position = land.transform.TransformPoint(snappedLocal);
+                    
+                    lastValidPlacementPos = previewInstance.transform.position;
+                    SetPreviewVisibility(true);
+                }
+                else
+                {
+                    // Если попали во что-то, но это не остров — лог раз в секунду
+                    if (Time.frameCount % 60 == 0) Debug.Log($"[MineMarket] Луч попал в '{hit.collider.name}', но это не VoxelIsland.");
+                }
             }
+        }
+
+        private void SetPreviewVisibility(bool visible)
+        {
+            if (previewInstance == null) return;
+            MeshRenderer mr = previewInstance.GetComponent<MeshRenderer>();
+            if (mr != null) mr.enabled = visible;
         }
 
         Vector2 GetMousePosition()
         {
+            if (Cursor.lockState == CursorLockMode.Locked)
+                return new Vector2(Screen.width / 2f, Screen.height / 2f);
 #if ENABLE_INPUT_SYSTEM
             return UnityEngine.InputSystem.Mouse.current != null ? UnityEngine.InputSystem.Mouse.current.position.ReadValue() : Vector2.zero;
 #else
@@ -199,122 +228,52 @@ namespace SimpleVoxelSystem
 #endif
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Публичное API (вызывается из UI)
-        // ════════════════════════════════════════════════════════════════════
-
-        /// <summary>
-        /// Пытается купить шахту указанного класса.
-        /// Если денег достаточно — списывает цену и входит в режим размещения.
-        /// </summary>
         public bool TryBuyMine(MineShopData data)
         {
             if (data == null) return false;
-
-            if (WellGen != null && WellGen.IsMineGenerated)
-            {
-                Debug.Log("[MineMarket] На участке уже стоит шахта. Сначала продайте текущую.");
-                return false;
-            }
-
-            if (GlobalEconomy.Money < data.buyPrice)
-            {
-                Debug.Log($"[MineMarket] Не хватает денег. Нужно {data.buyPrice}₽, есть {GlobalEconomy.Money}₽.");
-                return false;
-            }
+            if (WellGen != null && WellGen.IsMineGenerated) { Debug.Log("[MineMarket] Участок занят."); return false; }
+            if (GlobalEconomy.Money < data.buyPrice) { Debug.Log("[MineMarket] Мало денег."); return false; }
 
             GlobalEconomy.Money -= data.buyPrice;
-
-            // Бросаем кубик — реальная глубина известна покупателю только сейчас
             int depth = data.RollDepth();
             pendingMine = new MineInstance(data, depth, 0);
 
-            Debug.Log($"[MineMarket] Куплена '{data.displayName}' (глубина {depth}). " +
-                      $"Она добавлена в инвентарь. Отправляйтесь на свой Остров, чтобы разместить её.");
-
-            // Включаем режим, но Update() сам решит когда показать превью
+            Debug.Log($"[MineMarket] Куплена '{data.displayName}'. Режим установки ВКЛЮЧЕН.");
             IsPlacementMode = true; 
             return true;
         }
 
-        /// <summary>
-        /// Продать истощённую (или любую) шахту обратно.
-        /// </summary>
         public void SellCurrentMine()
         {
-            if (WellGen == null || !WellGen.IsMineGenerated || WellGen.ActiveMine == null)
-            {
-                Debug.Log("[MineMarket] Нет активной шахты для продажи.");
-                return;
-            }
-
+            if (WellGen == null || !WellGen.IsMineGenerated || WellGen.ActiveMine == null) return;
             MineInstance mine = WellGen.ActiveMine;
-            int price = mine.SellPrice;
-
-            GlobalEconomy.Money += price;
-            Debug.Log($"[MineMarket] Шахта '{mine.shopData.displayName}' продана за {price}₽. " +
-                      $"Добыто: {mine.minedBlocks}/{mine.totalBlocks} блоков.");
-
+            GlobalEconomy.Money += mine.SellPrice;
             OnMineSold?.Invoke(mine);
             WellGen.DemolishMine();
         }
 
-        /// <summary>Публичная отмена размещения (для UI-кнопки).</summary>
         public void CancelPlacementPublic() => CancelPlacement();
-
-        /// <summary>Проверить, стоит ли сейчас шахта на участке.</summary>
         public bool IsMineGenerated() => WellGen != null && WellGen.IsMineGenerated;
-
-        // ════════════════════════════════════════════════════════════════════
-        // Внутренняя логика размещения
-        // ════════════════════════════════════════════════════════════════════
-
-        void EnterPlacementMode()
-        {
-            IsPlacementMode = true;
-            ShowPreview(true);
-        }
 
         void ConfirmPlacement()
         {
             if (pendingMine == null) return;
-            if (WellGen != null && WellGen.IsInLobbyMode)
-            {
-                Debug.Log("[MineMarket] Нельзя разместить шахту в Лобби. Отправляйтесь на свой Остров!");
-                return;
-            }
-
-            IsPlacementMode = false;
-            ShowPreview(false);
-
-            if (WellGen == null)
-            {
-                Debug.LogError("[MineMarket] WellGen не найден!");
-                return;
-            }
-
-            // Находим локальные координаты в острове из позиции превью
             Vector3 worldPos = previewInstance.transform.position;
-            Vector3 localPos = WellGen.transform.InverseTransformPoint(worldPos);
-            
-            // Округляем до индекса вокселя
+            Vector3 localPos = WellGen.ActiveIsland.transform.InverseTransformPoint(worldPos);
             int gx = Mathf.RoundToInt(localPos.x);
             int gz = Mathf.RoundToInt(localPos.z);
 
+            Debug.Log($"[MineMarket] Установка шахты в сетку: {gx}, {gz}");
             WellGen.GenerateMineAt(pendingMine, gx, gz);
             OnMinePlaced?.Invoke(pendingMine);
             pendingMine = null;
+            IsPlacementMode = false;
+            ShowPreview(false);
         }
 
         void CancelPlacement()
         {
-            // Возвращаем деньги
-            if (pendingMine != null)
-            {
-                GlobalEconomy.Money += pendingMine.shopData.buyPrice;
-                Debug.Log($"[MineMarket] Размещение отменено. Возврат {pendingMine.shopData.buyPrice}₽.");
-            }
-
+            if (pendingMine != null) GlobalEconomy.Money += pendingMine.shopData.buyPrice;
             pendingMine = null;
             IsPlacementMode = false;
             ShowPreview(false);
@@ -323,84 +282,61 @@ namespace SimpleVoxelSystem
 
         void ShowPreview(bool show)
         {
-            if (!show)
-            {
-                if (previewInstance != null)
-                    previewInstance.SetActive(false);
-                return;
-            }
-
-            // Создаём превью при первом показе
+            if (!show) { if (previewInstance != null) previewInstance.SetActive(false); return; }
             if (previewInstance == null)
             {
-                if (placementPreviewPrefab != null)
-                {
-                    previewInstance = Instantiate(placementPreviewPrefab);
-                }
-                else
-                {
-                    previewInstance = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    previewInstance.name = "MinePlacementPreview";
-
-                    // Убираем коллайдер
-                    Collider[] cols = previewInstance.GetComponentsInChildren<Collider>();
-                    foreach (Collider c in cols)
-                        c.enabled = false;
-
-                    // Полупрозрачный материал
-                    MeshRenderer mr = previewInstance.GetComponent<MeshRenderer>();
-                    if (mr != null)
-                    {
-                        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                        if (shader == null) shader = Shader.Find("Standard");
-                        Material mat = new Material(shader);
-                        mat.color = previewColor;
-
-                        if (mat.HasProperty("_Surface"))  mat.SetFloat("_Surface", 1f);
-                        if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                        if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                        if (mat.HasProperty("_ZWrite"))   mat.SetFloat("_ZWrite", 0f);
-                        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-
-                        mr.material = mat;
-                        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    }
-                }
+                previewInstance = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                previewInstance.name = "MinePlacementPreview";
+                foreach (var c in previewInstance.GetComponentsInChildren<Collider>()) c.enabled = false;
+                
+                MeshRenderer mr = previewInstance.GetComponent<MeshRenderer>();
+                Material mat = new Material(Shader.Find("Standard"));
+                mat.color = new Color(0, 1, 0, 0.4f);
+                // Настройка прозрачности
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetInt("_ZWrite", 0);
+                mat.DisableKeyword("_ALPHATEST_ON");
+                mat.EnableKeyword("_ALPHABLEND_ON");
+                mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                mat.renderQueue = 3000;
+                mr.material = mat;
             }
-
             if (pendingMine != null)
             {
-                // Для превью используем размер шахты + паддинг (чтобы видеть зону влияния)
-                float w = pendingMine.shopData.wellWidth  + pendingMine.shopData.padding * 2;
-                float d = 0.5f; // Плоское превью для выбора места
+                float w = pendingMine.shopData.wellWidth + pendingMine.shopData.padding * 2;
                 float l = pendingMine.shopData.wellLength + pendingMine.shopData.padding * 2;
-                previewInstance.transform.localScale = new Vector3(w, d, l);
+                previewInstance.transform.localScale = new Vector3(w, 0.5f, l);
             }
-
             previewInstance.SetActive(true);
         }
 
         bool IsConfirmPressed()
         {
+            bool triggered = false;
 #if ENABLE_INPUT_SYSTEM
-            return UnityEngine.InputSystem.Mouse.current != null &&
-                   UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButtonDown(0);
+            triggered = UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame;
 #else
-            return false;
+            triggered = Input.GetMouseButtonDown(0);
 #endif
+            if (triggered)
+            {
+                bool overUI = (Cursor.lockState != CursorLockMode.Locked) && 
+                              (UnityEngine.EventSystems.EventSystem.current != null && 
+                               UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject());
+                
+                Debug.Log($"[MineMarket] LMB Click. UI Blocking: {overUI}. MouseLocked: {Cursor.lockState == CursorLockMode.Locked}");
+                return !overUI;
+            }
+            return false;
         }
 
         bool IsCancelPressed()
         {
 #if ENABLE_INPUT_SYSTEM
-            return UnityEngine.InputSystem.Keyboard.current != null &&
-                   UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetKeyDown(KeyCode.Escape);
+            return UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame;
 #else
-            return false;
+            return Input.GetKeyDown(KeyCode.Escape);
 #endif
         }
     }

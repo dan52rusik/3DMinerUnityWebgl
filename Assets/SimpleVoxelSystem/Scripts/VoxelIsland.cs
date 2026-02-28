@@ -70,6 +70,12 @@ namespace SimpleVoxelSystem
             voxels = new byte[TotalX, TotalY, TotalZ];
         }
 
+        public void ClearVoxels()
+        {
+            if (voxels == null) return;
+            System.Array.Clear(voxels, 0, voxels.Length);
+        }
+
         public void SetVoxel(int x, int y, int z, BlockType type)
         {
             if (!InBounds(x, y, z)) return;

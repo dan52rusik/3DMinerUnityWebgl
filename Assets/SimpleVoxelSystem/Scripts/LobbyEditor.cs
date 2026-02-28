@@ -180,10 +180,11 @@ namespace SimpleVoxelSystem
 
         private void OnFlatPlotReady()
         {
-            if (wellGenerator != null && !wellGenerator.IsInLobbyMode) return; // Не грузим лобби на остров
+            // Жесткое условие: лобби грузим только когда мы в центре мира и в режиме лобби
+            if (wellGenerator == null || !wellGenerator.IsInLobbyMode) return;
+            if (Vector3.SqrMagnitude(wellGenerator.transform.position) > 1.0f) return;
 
-            if (wellGenerator != null)
-                island = wellGenerator.GetComponent<VoxelIsland>();
+            island = wellGenerator.GetComponent<VoxelIsland>();
             LoadAndApplyLayout();
             LoadAndApplyShopZones();
         }

@@ -14,6 +14,9 @@ namespace SimpleVoxelSystem
         public int          totalBlocks;    // Сколько блоков было при генерации
         public int          minedBlocks;    // Сколько уже добыто
 
+        // Хранит типы блоков, чтобы они не менялись при перезагрузках
+        private byte[,,]    voxelsData; 
+
         public System.Collections.Generic.HashSet<Vector3Int> minedPositions = new System.Collections.Generic.HashSet<Vector3Int>();
 
         public int originX, originZ; // координаты размещения на острове
@@ -29,6 +32,27 @@ namespace SimpleVoxelSystem
             totalBlocks = totalBlockCount;
             minedBlocks = 0;
         }
+
+        public void InitializeVoxels(int ww, int wl, int wd)
+        {
+            if (voxelsData != null) return;
+            voxelsData = new byte[ww, wd, wl];
+        }
+
+        public void SetVoxel(int lx, int ly, int lz, BlockType type)
+        {
+            if (voxelsData == null) return;
+            voxelsData[lx, ly, lz] = (byte)((int)type + 1);
+        }
+
+        public BlockType GetVoxel(int lx, int ly, int lz)
+        {
+            if (voxelsData == null) return BlockType.Dirt;
+            int b = voxelsData[lx, ly, lz];
+            return (b == 0) ? BlockType.Dirt : (BlockType)(b - 1);
+        }
+
+        public bool HasVoxelsData => voxelsData != null;
 
         public void RegisterMinedBlock(int x, int y, int z)
         {

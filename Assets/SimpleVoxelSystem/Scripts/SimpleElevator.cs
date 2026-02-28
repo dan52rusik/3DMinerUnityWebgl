@@ -144,7 +144,10 @@ namespace SimpleVoxelSystem
 
         private float GetWorldYForDepth(int depthIndex)
         {
-            Vector3 local = island.GridToLocal(shaftGridX, depthIndex, shaftGridZ) + new Vector3(0.5f, platformHalfHeight, 0.5f);
+            // depthIndex 0 в шахте соответствует уровню LobbyFloorY в сетке вокселей.
+            // Также добавляем платформу на 0.5f выше пола ячейки.
+            int gridY = (wellGenerator != null) ? wellGenerator.LobbyFloorY + depthIndex : depthIndex;
+            Vector3 local = island.GridToLocal(shaftGridX, gridY, shaftGridZ) + new Vector3(0.5f, platformHalfHeight, 0.5f);
             return island.transform.TransformPoint(local).y;
         }
 
