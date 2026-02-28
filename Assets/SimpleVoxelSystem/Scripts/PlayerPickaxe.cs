@@ -159,6 +159,13 @@ namespace SimpleVoxelSystem
                 return;
             }
 
+            if (wellGenerator != null && !wellGenerator.CanMineVoxel(gx, gy, gz))
+            {
+                if (verboseLogs)
+                    Debug.Log($"[Pickaxe] Копать запрещено в [{gx},{gy},{gz}] (нет шахты или заблокирован слой).", this);
+                return;
+            }
+
             BlockData data = GetBlockData(blockType);
             MineBlock(gx, gy, gz, data, island);
         }

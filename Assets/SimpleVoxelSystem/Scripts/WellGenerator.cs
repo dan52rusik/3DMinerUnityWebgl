@@ -18,6 +18,12 @@ namespace SimpleVoxelSystem
         [Header("Паддинг земли вокруг колодца")]
         public int padding = 5;
 
+        [Header("Лобби (спавн-зона)")] 
+        [Tooltip("Ширина (X) плоской лобби-платформы в блоках. Независима от размера шахты.")]
+        public int lobbyWidth  = 50;
+        [Tooltip("Длина (Z) плоской лобби-платформы в блоках. Независима от размера шахты.")]
+        public int lobbyLength = 50;
+
         [Header("Блоки")]
         public List<BlockData> blockDataConfig;
 
@@ -25,64 +31,158 @@ namespace SimpleVoxelSystem
         public bool lockDeeperLayersUntilCleared = true;
 
         [Header("Elevator")]
-        public bool createElevatorOnStart = true;
         public Color elevatorColor = new Color(0.6f, 0.3f, 0.1f, 1f);
 
         [Header("Player Spawn")]
-        public bool spawnPlayerOnStart = true;
         public GameObject playerPrefab;
         public Transform playerToPlace;
         public float playerSpawnHeight = 1.05f;
+
+        // ─── Runtime ────────────────────────────────────────────────────────
+        /// <summary>true после вызова GenerateMine()</summary>
+        public bool IsMineGenerated { get; private set; }
+
+        /// <summary>Текущая активная шахта (null если не куплена)</summary>
+        public MineInstance ActiveMine { get; private set; }
 
         private const int TopLayerDepth = 3;
         private const int MidLayerDepth = 7;
 
         private VoxelIsland island;
 
-        void Start()
+        void Awake()
         {
-            if (blockDataConfig == null || blockDataConfig.Count == 0)
-            {
-                Debug.LogWarning("[WellGenerator] Нет blockDataConfig в инспекторе!");
-                return;
-            }
-
             island = GetComponent<VoxelIsland>();
-            SyncColorsToIsland();
-
-            island.Init(wellWidth, wellDepth, wellLength, padding, padding);
-            GenerateStartIsland();
         }
 
-        void GenerateStartIsland()
+        void Start()
         {
+            // Генерируем стартовую плоскую площадку — игрок стоит на ней
+            // и видит UI магазина с предложением купить шахту.
+            GenerateFlatPlot();
+        }
+
+        /// <summary>
+        /// Генерирует плоскую лобби-площадку из блоков Dirt (1 слой).
+        /// Размер задаётся значениями lobbyWidth и lobbyLength (независимо от параметров шахты).
+        /// Вызывается при старте и после сноса шахты.
+        /// </summary>
+        public void GenerateFlatPlot()
+        {
+            if (island == null)
+                island = GetComponent<VoxelIsland>();
+
+            IsMineGenerated = false;
+            ActiveMine = null;
+
+            if (blockDataConfig != null && blockDataConfig.Count > 0)
+                SyncColorsToIsland();
+
+            // Используем отдельные размеры лобби (0 паддинга — площадка = весь остров)
+            int lw = Mathf.Max(1, lobbyWidth);
+            int ll = Mathf.Max(1, lobbyLength);
+            island.Init(lw, 1, ll, 0, 0);
+
+            // Заполняем один слой (y=0) блоками Dirt
+            for (int x = 0; x < island.TotalX; x++)
+            for (int z = 0; z < island.TotalZ; z++)
+                island.SetVoxel(x, 0, z, BlockType.Dirt);
+
+            island.RebuildMesh();
+            SpawnPlayerOnGround();
+
+            Debug.Log($"[WellGenerator] Лобби-площадка создана ({island.TotalX}х{island.TotalZ}). Ожидание покупки шахты.");
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // Публичное API для MineMarket
+        // ══════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Генерирует шахту по данным MineInstance.
+        /// Вызывается снаружи (MinePlacement / MineMarket) после подтверждения покупки.
+        /// </summary>
+        public void GenerateMine(MineInstance mine)
+        {
+            if (island == null)
+                island = GetComponent<VoxelIsland>();
+
+            ActiveMine = mine;
+            IsMineGenerated = true;
+
+            // Обновляем размеры из данных шахты
+            wellWidth  = mine.shopData.wellWidth;
+            wellLength = mine.shopData.wellLength;
+            wellDepth  = mine.rolledDepth;
+            padding    = mine.shopData.padding;
+
+            if (blockDataConfig != null && blockDataConfig.Count > 0)
+                SyncColorsToIsland();
+
+            island.Init(wellWidth, wellDepth, wellLength, padding, padding);
+
+            // Заполняем воксели
+            int blockCount = 0;
             for (int x = 0; x < island.TotalX; x++)
             for (int z = 0; z < island.TotalZ; z++)
             for (int y = 0; y < wellDepth; y++)
             {
                 bool inWell = IsInsideWellArea(x, z);
-                BlockType t = inWell ? DetermineBlockType(y) : BlockType.Dirt;
+                BlockType t = inWell
+                    ? mine.shopData.RollBlockType(y)
+                    : BlockType.Dirt;
                 island.SetVoxel(x, y, z, t);
+                if (inWell) blockCount++;
             }
 
+            // Записываем реальное кол-во блоков в шахту
+            mine.totalBlocks = blockCount;
+
             island.RebuildMesh();
+            CreateElevator(padding, padding);
+            SpawnPlayerOnGround();
 
-            if (createElevatorOnStart)
-                CreateElevator(padding, padding);
+            Debug.Log($"[WellGenerator] Шахта '{mine.shopData.displayName}' построена. " +
+                      $"Глубина: {mine.rolledDepth}, блоков: {blockCount}. " +
+                      $"Размер: {island.TotalX}x{island.TotalY}x{island.TotalZ}.");
+        }
 
-            if (spawnPlayerOnStart)
-                SpawnPlayerOnGround();
+        /// <summary>
+        /// Разрушает текущую шахту (очищает воксели), готовит участок к новой.
+        /// </summary>
+        public void DemolishMine()
+        {
+            if (!IsMineGenerated) return;
 
-            Debug.Log($"[WellGenerator] Остров построен. Статистика: {island.TotalX}x{island.TotalY}x{island.TotalZ} вокселей → 1 draw call.");
+            // Удаляем лифт
+            foreach (SimpleElevator elev in GetComponentsInChildren<SimpleElevator>())
+                Destroy(elev.gameObject);
+
+            // Возвращаем плоскую площадку
+            Debug.Log("[WellGenerator] Шахта снесена. Возвращаем площадку.");
+            GenerateFlatPlot();
         }
 
         public void MineVoxel(int gx, int gy, int gz)
         {
             island.RemoveVoxel(gx, gy, gz);
+
+            // Регистрируем добытый блок в активной шахте
+            if (ActiveMine != null && IsInsideWellArea(gx, gz))
+            {
+                ActiveMine.RegisterMinedBlock();
+                if (ActiveMine.IsExhausted)
+                    Debug.Log($"[WellGenerator] Шахта '{ActiveMine.shopData.displayName}' ИСТОЩЕНА! " +
+                              $"Добыто {ActiveMine.minedBlocks}/{ActiveMine.totalBlocks} блоков.");
+            }
         }
 
         public bool CanMineVoxel(int gx, int gy, int gz)
         {
+            // На плоской площадке (шахта ещё не куплена) — копать нельзя
+            if (!IsMineGenerated)
+                return false;
+
             if (gy < 0 || gy >= wellDepth)
                 return false;
 

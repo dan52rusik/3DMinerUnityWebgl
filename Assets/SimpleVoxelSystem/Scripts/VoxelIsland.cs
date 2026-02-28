@@ -61,8 +61,11 @@ namespace SimpleVoxelSystem
 
         public void Init(int sx, int sy, int sz, int px, int pz)
         {
-            sizeX = sx; sizeY = sy; sizeZ = sz;
-            paddingX = px; paddingZ = pz;
+            sizeX = Mathf.Max(1, sx);
+            sizeY = Mathf.Max(1, sy);
+            sizeZ = Mathf.Max(1, sz);
+            paddingX = px;
+            paddingZ = pz;
             voxels = new byte[TotalX, TotalY, TotalZ];
         }
 

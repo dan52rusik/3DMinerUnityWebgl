@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2210833d5bd85d4ebfad0a25375cfc2, type: 3}
+  m_Name: 1Mine
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleVoxelSystem.MineShopData
+  displayName: "\u0411\u0440\u043E\u043D\u0437\u043E\u0432\u0430\u044F \u0448\u0430\u0445\u0442\u0430"
+  description: "\u041D\u0435\u0431\u043E\u043B\u044C\u0448\u0430\u044F \u0448\u0430\u0445\u0442\u0430
+    \u0441 \u043F\u0440\u0435\u0438\u043C\u0443\u0449\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u043E
+    \u043A\u0430\u043C\u0435\u043D\u043D\u044B\u043C\u0438 \u043F\u043E\u0440\u043E\u0434\u0430\u043C\u0438."
+  labelColor: {r: 0.8, g: 0.5, b: 0.2, a: 1}
+  buyPrice: 500
+  sellBackRatio: 0.5
+  wellWidth: 5
+  wellLength: 5
+  depthMin: 3
+  depthMax: 6
+  padding: 3
+  layers:
+  - maxDepth: 2
+    dirtWeight: 90
+    stoneWeight: 10
+    ironWeight: 0
+    goldWeight: 0
+  - maxDepth: 10
+    dirtWeight: 30
+    stoneWeight: 55
+    ironWeight: 15
+    goldWeight: 0
+  - maxDepth: 30
+    dirtWeight: 10
+    stoneWeight: 60
+    ironWeight: 25
+    goldWeight: 5
