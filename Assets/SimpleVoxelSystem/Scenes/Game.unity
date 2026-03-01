@@ -404,6 +404,9 @@ MonoBehaviour:
   lobbyWidth: 50
   lobbyLength: 50
   lobbyBuildAbove: 8
+  keepLobbyAlwaysLoaded: 1
+  lobbyRenderDistance: 100
+  disableLobbyColliderWhenFar: 1
   blockDataConfig:
   - type: 0
     maxHealth: 1
@@ -426,6 +429,8 @@ MonoBehaviour:
   playerPrefab: {fileID: 0}
   playerToPlace: {fileID: 0}
   playerSpawnHeight: 1.05
+  keepPlayerPositionWhenPlacingMine: 1
+  returnToLastIslandPosition: 1
   privateIslandOffset: {x: 500, y: 0, z: 500}
 --- !u!4 &461077781
 Transform:
@@ -1010,6 +1015,56 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2117366998
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2117367000}
+  - component: {fileID: 2117366999}
+  m_Layer: 0
+  m_Name: NetworkBootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2117366999
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2117366998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e87cc181f45948a4fad1e2cb2e39056c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleVoxelSystem.Net.NetworkBootstrap
+  autoStart: 0
+  showDebugGui: 1
+  runInBackground: 1
+  address: 127.0.0.1
+  port: 7777
+  useWebSocketsForWebGL: 1
+--- !u!4 &2117367000
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2117366998}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1020,3 +1075,4 @@ SceneRoots:
   - {fileID: 1691313762}
   - {fileID: 1770644504}
   - {fileID: 270235598}
+  - {fileID: 2117367000}

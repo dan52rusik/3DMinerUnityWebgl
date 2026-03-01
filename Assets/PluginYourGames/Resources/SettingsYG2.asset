@@ -20,7 +20,8 @@ MonoBehaviour:
     autoGRA: 1
     logInEditor: 1
     archivingBuild: 1
-    syncInitSDK: 0
+    autoDefineSymbols: 1
+    syncInitSDK: 1
     loadSceneIfSDKLate: 0
     loadSceneIndex: 0
     initDelaySimulation: 0

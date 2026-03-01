@@ -123,7 +123,7 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
             #pragma fragment ShadowFrag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            // Core.hlsl даёт TransformObjectToWorld, ApplyShadowBias, TransformWorldToHClip.
+            // Core.hlsl даёт TransformObjectToWorld и TransformWorldToHClip.
             // ShadowCasterPass.hlsl не включаем — он конфликтует с ручными структурами ниже.
             float3 _LightDirection;
 
@@ -145,8 +145,8 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
                 ShadowOut OUT;
                 float3 posWS = TransformObjectToWorld(IN.posOS.xyz);
                 float3 normWS = TransformObjectToWorldNormal(IN.normOS);
-                // Смещение по нормали — устраняет shadow acne
-                posWS = ApplyShadowBias(posWS, normWS, _LightDirection);
+                // Manual normal bias (portable across URP variants / platforms).
+                posWS += normWS * 0.005;
                 OUT.posCS = TransformWorldToHClip(posWS);
                 return OUT;
             }
