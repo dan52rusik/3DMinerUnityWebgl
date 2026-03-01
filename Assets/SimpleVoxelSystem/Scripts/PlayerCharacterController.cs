@@ -83,6 +83,22 @@ namespace SimpleVoxelSystem
                 SetCursorLocked(true);
             else
                 SetCursorLocked(false);
+
+            // Подписываемся на смену мира, чтобы отменять автобег при телепортации
+            WellGenerator wg = FindFirstObjectByType<WellGenerator>();
+            if (wg != null)
+            {
+                wg.OnWorldSwitch += (bool inLobby) => CancelAutoMove();
+            }
+        }
+
+        void OnDestroy()
+        {
+            WellGenerator wg = FindFirstObjectByType<WellGenerator>();
+            if (wg != null)
+            {
+                wg.OnWorldSwitch -= (bool inLobby) => CancelAutoMove();
+            }
         }
 
         void Update()

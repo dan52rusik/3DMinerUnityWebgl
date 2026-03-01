@@ -94,6 +94,9 @@ namespace SimpleVoxelSystem
 
             EnsureBasicBlockConfig();
 
+            if (GetComponent<PickaxeShopUI>() == null)
+                gameObject.AddComponent<PickaxeShopUI>();
+
             Transform p = ResolveOrSpawnPlayer();
             if (p != null) lobbySpawnPos = p.position;
             else lobbySpawnPos = Vector3.zero;
@@ -701,14 +704,49 @@ namespace SimpleVoxelSystem
         private void EnsureBasicBlockConfig()
         {
             if (blockDataConfig == null) blockDataConfig = new List<BlockData>();
-            bool hasGrass = false, hasDirt = false;
-            foreach (var b in blockDataConfig)
+            
+            ForceUpdateOrAdd(BlockType.Grass, new Color(0.2f, 0.8f, 0.2f), 1, 2, 0);
+            ForceUpdateOrAdd(BlockType.Dirt,  new Color(0.5f, 0.3f, 0.1f), 1, 2, 0);
+            ForceUpdateOrAdd(BlockType.Stone, new Color(0.5f, 0.5f, 0.5f), 2, 10, 5); // LVL 5
+            ForceUpdateOrAdd(BlockType.Iron,  new Color(0.8f, 0.6f, 0.4f), 5, 50, 10); // LVL 10
+            ForceUpdateOrAdd(BlockType.Gold,  new Color(1.0f, 0.9f, 0.0f), 10, 100, 15); // LVL 15
+        }
+
+        private void ForceUpdateOrAdd(BlockType type, Color color, int hp, int xp, int level)
+        {
+            BlockData existing = null;
+            if (blockDataConfig != null)
             {
-                if (b.type == BlockType.Grass) hasGrass = true;
-                if (b.type == BlockType.Dirt) hasDirt = true;
+                foreach (var b in blockDataConfig) 
+                {
+                    if (b != null && b.type == type) 
+                    {
+                        existing = b;
+                        break;
+                    }
+                }
             }
-            if (!hasGrass) blockDataConfig.Add(new BlockData { type = BlockType.Grass, blockColor = new Color(0.2f, 0.8f, 0.2f, 1f), maxHealth = 3 });
-            if (!hasDirt) blockDataConfig.Add(new BlockData { type = BlockType.Dirt, blockColor = new Color(0.5f, 0.3f, 0.1f, 1f), maxHealth = 3 });
+
+            if (existing != null)
+            {
+                // Принудительно обновляем требования и награду, чтобы изменения в коде сработали
+                existing.xpReward = xp;
+                existing.requiredMiningLevel = level;
+                existing.maxHealth = hp;
+                existing.reward = xp * 2;
+            }
+            else
+            {
+                blockDataConfig.Add(new BlockData 
+                { 
+                    type = type, 
+                    blockColor = color, 
+                    maxHealth = hp, 
+                    xpReward = xp, 
+                    requiredMiningLevel = level,
+                    reward = xp * 2
+                });
+            }
         }
     }
 }

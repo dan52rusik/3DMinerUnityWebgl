@@ -11,6 +11,8 @@ namespace SimpleVoxelSystem.Data
         public BlockType type;
         public int maxHealth; // Сколько ударов нужно
         public int reward;    // Сколько монет/ресурсов дает
+        public int xpReward;  // Сколько опыта за добычу
+        public int requiredMiningLevel; // Какой уровень нужен для копки
         public Color blockColor; // Цвет или ссылка на материал
     }
 }

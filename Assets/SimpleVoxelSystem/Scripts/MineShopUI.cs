@@ -125,7 +125,7 @@ namespace SimpleVoxelSystem
                 color: ColHUD);
 
             moneyText = MakeLabelOffset(hud.transform, "MoneyText",
-                "💰 0₽", 18, TextAnchor.MiddleLeft,
+                "💰 0₽  |  ⚒️ Ур. 1", 16, TextAnchor.MiddleLeft,
                 new Vector2(10, 0), new Vector2(-10, 0));
 
             statusLabel = MakeLabelOffset(hud.transform, "StatusLabel",
@@ -372,7 +372,8 @@ namespace SimpleVoxelSystem
             bool inLobby     = mineMarket.WellGen != null && mineMarket.WellGen.IsInLobbyMode;
             bool hasPending  = mineMarket.IsPlacementMode && !inLobby; // На острове с шахтой в руках
 
-            if (moneyText != null) moneyText.text = $"💰 {GlobalEconomy.Money}₽";
+            if (moneyText != null) 
+                moneyText.text = $"💰 {GlobalEconomy.Money}₽  |  ⚒️ Ур. {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
 
             // Кнопка создания: только в лобби и пока острова нет
             if (createIslandBtn != null) 

@@ -58,6 +58,9 @@ namespace SimpleVoxelSystem
             if (island == null)
                 island = FindFirstObjectByType<VoxelIsland>();
 
+            if (pickaxe != null)
+                pickaxe.RebuildDataCache();
+
             if (pickaxe != null && disableLegacyRaycastMining)
                 pickaxe.enableManualRaycastMining = false;
 

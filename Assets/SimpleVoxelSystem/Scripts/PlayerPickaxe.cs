@@ -22,6 +22,10 @@ namespace SimpleVoxelSystem
         public bool verboseLogs = false;
         public bool enableManualRaycastMining = true;
 
+        [Header("Pickaxe Evolution")]
+        public PickaxeData currentPickaxe;
+
+
         [Header("Inventory")]
         public int currentBackpackLoad = 0;
         public int maxBackpackCapacity = 10;
@@ -112,6 +116,15 @@ namespace SimpleVoxelSystem
             }
 
             BlockData data = GetBlockData(blockType);
+
+            // Проверка уровня копки
+            if (GlobalEconomy.MiningLevel < data.requiredMiningLevel)
+            {
+                if (verboseLogs)
+                    Debug.Log($"[Pickaxe] Нужен уровень копки {data.requiredMiningLevel}, чтобы добывать {data.type}!");
+                return false;
+            }
+
             MineBlock(gx, gy, gz, data, island);
             return true;
         }
@@ -182,6 +195,15 @@ namespace SimpleVoxelSystem
             }
 
             BlockData data = GetBlockData(blockType);
+
+            // Проверка уровня копки
+            if (GlobalEconomy.MiningLevel < data.requiredMiningLevel)
+            {
+                if (Time.frameCount % 90 == 0)
+                    Debug.Log($"<color=orange>[Pickaxe] Нужен уровень копки {data.requiredMiningLevel}, чтобы добывать {data.type}!</color>");
+                return;
+            }
+
             MineBlock(gx, gy, gz, data, island);
         }
 
@@ -189,7 +211,9 @@ namespace SimpleVoxelSystem
         {
             Vector3Int key = new Vector3Int(gx, gy, gz);
             int currentHealth = GetOrCreateBlockHealth(key, data);
-            int damage = Mathf.Max(1, pickaxePower);
+            
+            int power = (currentPickaxe != null) ? currentPickaxe.miningPower : pickaxePower;
+            int damage = Mathf.Max(1, power);
             currentHealth -= damage;
 
             if (currentHealth > 0)
@@ -202,6 +226,19 @@ namespace SimpleVoxelSystem
 
             blockHealth.Remove(key);
             CollectResources(data);
+            
+            // Начисление опыта
+            int xp = data.xpReward;
+            // Если в данных стоит 0 (баг сериализации), даем минимум 2 для земли и больше для ценных руд
+            if (xp <= 0)
+            {
+                if (data.type == BlockType.Dirt || data.type == BlockType.Grass) xp = 2;
+                else if (data.type == BlockType.Stone) xp = 10;
+                else xp = 50;
+            }
+
+            GlobalEconomy.AddMiningXP(xp);
+            Debug.Log($"<color=cyan>+{xp} XP ({data.type})</color>");
 
             if (wellGenerator != null)
                 wellGenerator.MineVoxel(gx, gy, gz);
@@ -229,7 +266,7 @@ namespace SimpleVoxelSystem
             return FallbackData;
         }
 
-        void RebuildDataCache()
+        public void RebuildDataCache()
         {
             dataCache.Clear();
             if (wellGenerator == null || wellGenerator.blockDataConfig == null)
