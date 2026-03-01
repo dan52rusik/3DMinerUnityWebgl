@@ -28,6 +28,14 @@ namespace SimpleVoxelSystem
         [Tooltip("Сколько слоёв можно построить НАД полом. Пол располагается на gridY=lobbyBuildAbove, выше — gridY=0..lobbyBuildAbove-1.")]
         public int lobbyBuildAbove = 8;
 
+        [Header("Lobby Persistence")]
+        [Tooltip("Лобби всегда остается в сцене. При переходе на остров скрывается только визуально по дистанции.")]
+        public bool keepLobbyAlwaysLoaded = true;
+        [Tooltip("Если игрок дальше этой дистанции от центра лобби, лобби можно не рендерить.")]
+        public float lobbyRenderDistance = 100f;
+        [Tooltip("Выключать ли коллайдер лобби, когда лобби скрыто по дистанции.")]
+        public bool disableLobbyColliderWhenFar = true;
+
         [Header("Блоки")]
         public List<BlockData> blockDataConfig;
 
@@ -62,6 +70,8 @@ namespace SimpleVoxelSystem
 
         private VoxelIsland lobbyIsland;
         private VoxelIsland playerIsland;
+        private MeshRenderer lobbyRenderer;
+        private MeshCollider lobbyCollider;
 
         public VoxelIsland ActiveIsland => IsInLobbyMode ? lobbyIsland : (playerIsland ?? lobbyIsland);
         public bool IsIslandGenerated => playerIsland != null;
@@ -74,6 +84,8 @@ namespace SimpleVoxelSystem
             
             // Если лобби всё ещё не найдено — вешаем на себя (старый способ)
             if (lobbyIsland == null) lobbyIsland = gameObject.AddComponent<VoxelIsland>();
+            lobbyRenderer = lobbyIsland.GetComponent<MeshRenderer>();
+            lobbyCollider = lobbyIsland.GetComponent<MeshCollider>();
 
             EnsureBasicBlockConfig();
 
@@ -94,6 +106,11 @@ namespace SimpleVoxelSystem
         {
             IsInLobbyMode = true;
             GenerateFlatPlot();
+        }
+
+        void Update()
+        {
+            UpdateLobbyStreamingVisibility();
         }
 
         private void SyncColorsToActiveIsland()
@@ -127,7 +144,6 @@ namespace SimpleVoxelSystem
                 lobbyIsland.gameObject.SetActive(true);
                 if (playerIsland != null) playerIsland.gameObject.SetActive(false);
 
-                this.transform.position = Vector3.zero;
                 Physics.SyncTransforms();
 
                 int lw = Mathf.Max(32, lobbyWidth);
@@ -151,11 +167,11 @@ namespace SimpleVoxelSystem
             }
             else
             {
-                lobbyIsland.gameObject.SetActive(false);
+                if (keepLobbyAlwaysLoaded) lobbyIsland.gameObject.SetActive(true);
+                else lobbyIsland.gameObject.SetActive(false);
                 if (playerIsland == null) CreatePlayerIsland();
 
                 playerIsland.gameObject.SetActive(true);
-                this.transform.position = privateIslandOffset;
                 Physics.SyncTransforms();
 
                 SyncColorsToActiveIsland();
@@ -166,6 +182,8 @@ namespace SimpleVoxelSystem
                     RestoreElevatorForActiveMine();
                 }
             }
+
+            UpdateLobbyStreamingVisibility();
         }
 
         private void CreatePlayerIsland()
@@ -356,10 +374,10 @@ namespace SimpleVoxelSystem
                 CreatePlayerIsland();
             }
 
-            SetIslandActive(lobbyIsland, false);
+            if (keepLobbyAlwaysLoaded) SetIslandActive(lobbyIsland, true);
+            else SetIslandActive(lobbyIsland, false);
             SetIslandActive(playerIsland, true);
 
-            this.transform.position = privateIslandOffset;
             Physics.SyncTransforms();
 
             if (ActiveMine != null)
@@ -376,6 +394,7 @@ namespace SimpleVoxelSystem
             }
 
             OnWorldSwitch?.Invoke(false);
+            UpdateLobbyStreamingVisibility();
         }
 
         public void SwitchToLobby()
@@ -385,8 +404,6 @@ namespace SimpleVoxelSystem
 
             SetIslandActive(playerIsland, false);
             SetIslandActive(lobbyIsland, true);
-
-            this.transform.position = Vector3.zero;
             Physics.SyncTransforms();
 
             // Всегда спавним в центре Лобби
@@ -395,6 +412,36 @@ namespace SimpleVoxelSystem
             SpawnPlayerAt(new Vector3(cx, -LobbyFloorY, cz));
 
             OnWorldSwitch?.Invoke(true);
+            UpdateLobbyStreamingVisibility();
+        }
+
+        private void UpdateLobbyStreamingVisibility()
+        {
+            if (lobbyIsland == null || lobbyRenderer == null) return;
+
+            bool shouldShow = true;
+            if (keepLobbyAlwaysLoaded && !IsInLobbyMode)
+            {
+                Transform player = ResolveOrSpawnPlayer();
+                if (player != null)
+                {
+                    Vector3 lobbyCenter = lobbyIsland.transform.TransformPoint(
+                        new Vector3(lobbyWidth * 0.5f, -LobbyFloorY, lobbyLength * 0.5f));
+                    float maxDist = Mathf.Max(1f, lobbyRenderDistance);
+                    shouldShow = (player.position - lobbyCenter).sqrMagnitude <= maxDist * maxDist;
+                }
+            }
+
+            if (!keepLobbyAlwaysLoaded)
+                shouldShow = IsInLobbyMode;
+
+            lobbyRenderer.enabled = shouldShow;
+
+            if (lobbyCollider != null)
+            {
+                bool keepCollider = IsInLobbyMode || shouldShow || !disableLobbyColliderWhenFar;
+                lobbyCollider.enabled = keepCollider;
+            }
         }
 
         public void DemolishMine()
