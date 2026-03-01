@@ -280,11 +280,9 @@ namespace SimpleVoxelSystem
         bool IsMineHeld()
         {
 #if ENABLE_INPUT_SYSTEM
-            bool mouseHeld = Mouse.current != null && Mouse.current.leftButton.isPressed;
-            bool spaceHeld = Keyboard.current != null && Keyboard.current.spaceKey.isPressed;
-            return mouseHeld || spaceHeld;
+            return Mouse.current != null && Mouse.current.leftButton.isPressed;
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space);
+            return Input.GetMouseButton(0);
 #else
             return false;
 #endif

@@ -260,7 +260,7 @@ namespace SimpleVoxelSystem
 
         public bool IsInBounds(int x, int y, int z) => InBounds(x, y, z);
 
-        private bool InBounds(int x, int y, int z)
+        public bool InBounds(int x, int y, int z)
             => x >= 0 && x < TotalX
             && y >= 0 && y < TotalY
             && z >= 0 && z < TotalZ;

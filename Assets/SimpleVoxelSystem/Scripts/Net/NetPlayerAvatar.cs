@@ -74,7 +74,8 @@ namespace SimpleVoxelSystem.Net
             if (controller != null) controller.enabled = local;
             if (pickaxe != null) pickaxe.enabled = local;
             if (smartMiner != null) smartMiner.enabled = local;
-            if (lobbyEditor != null) lobbyEditor.enabled = local;
+            // LobbyEditor is a shared scene object. Remote avatars must not disable it.
+            if (lobbyEditor != null && local) lobbyEditor.enabled = true;
 
             if (cameras != null)
             {
@@ -92,4 +93,3 @@ namespace SimpleVoxelSystem.Net
         }
     }
 }
-

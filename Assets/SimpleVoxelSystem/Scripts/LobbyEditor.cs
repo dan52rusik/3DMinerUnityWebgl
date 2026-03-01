@@ -4,8 +4,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using SimpleVoxelSystem.Data;
 
+using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 #endif
 
 namespace SimpleVoxelSystem
@@ -41,6 +43,7 @@ namespace SimpleVoxelSystem
     {
         public float worldX, worldY, worldZ;
         public int   sizeX, sizeY, sizeZ;
+        public ShopZoneType zoneType = ShopZoneType.Mine;
     }
 
     [System.Serializable]
@@ -51,7 +54,7 @@ namespace SimpleVoxelSystem
 
     // ─── Режим инструмента ────────────────────────────────────────────────────
 
-    public enum EditorToolMode { Block, Shop }
+    public enum EditorToolMode { Block, Shop, PickaxeShop }
 
     // ─── Основной скрипт редактора ────────────────────────────────────────────
 
@@ -73,6 +76,8 @@ namespace SimpleVoxelSystem
         [Header("Дальность")]
         public float placementRange = 200f;
         public LayerMask miningLayers = Physics.DefaultRaycastLayers;
+        [Tooltip("Малое смещение луча по нормали при выборе ячейки, чтобы не перескакивать на соседний блок.")]
+        public float hoverSurfaceEpsilon = 0.01f;
 
         [Header("Дебаг чанков")]
         [Tooltip("Показывать границы чанков 16×16 в режиме редактора.")]
@@ -117,6 +122,7 @@ namespace SimpleVoxelSystem
         private Button     toggleBtn;
         private readonly List<Button> typeButtons = new List<Button>();
         private Button     shopToolBtn;
+        private Button     pickaxeShopToolBtn;
 
         // Диалог размера зоны
         private GameObject dialogPanel;
@@ -268,59 +274,60 @@ namespace SimpleVoxelSystem
             pendingRemovePos = null;
             pendingShopWorldPos = null;
 
-            if (editorCamera == null || island == null) { HidePreview(); return; }
+            // Находим камеру динамически для поддержки мультиплеера в разных окнах
+            if (editorCamera == null) editorCamera = Camera.main;
+            if (editorCamera == null) { HidePreview(); return; }
 
-            Ray ray = editorCamera.ScreenPointToRay(GetPointerPos());
-            if (!Physics.Raycast(ray, out RaycastHit hit, placementRange, miningLayers,
-                                  QueryTriggerInteraction.Ignore))
-            { HidePreview(); return; }
+            if (IsPointerOverUI()) { HidePreview(); return; }
+
+            Vector2 pointerPos = GetPointerPos();
+            Ray ray = editorCamera.ScreenPointToRay(pointerPos);
+            
+            // Игнорируем превью (Layer 2)
+            int layerMask = miningLayers & ~(1 << 2);
+
+            if (!Physics.Raycast(ray, out RaycastHit hit, placementRange, layerMask, QueryTriggerInteraction.Ignore))
+            { 
+               HidePreview(); 
+               return; 
+            }
 
             VoxelIsland hitIsland = hit.collider.GetComponentInParent<VoxelIsland>();
-            if (hitIsland != island) { HidePreview(); return; }
+            if (hitIsland == null) { HidePreview(); return; }
+            
+            // Если в редакторе не закреплен конкретный остров, работаем с тем, в который попали
+            var activeIsland = (island != null) ? island : hitIsland;
+            if (hitIsland != activeIsland) { HidePreview(); return; }
 
             bool rmb = IsRightHeld();
 
-            if (ToolMode == EditorToolMode.Shop)
+            if (ToolMode == EditorToolMode.Shop || ToolMode == EditorToolMode.PickaxeShop)
             {
-                // В Shop-режиме проверяем триггеры через отдельный рейкаст
+                // В Shop-режиме используем исходную маску (чтобы ловить коллайдеры зон)
                 ShopZone newHovered = null;
 
-                if (IsRightHeld())
+                if (Physics.Raycast(ray, out RaycastHit trigHit, placementRange, miningLayers, QueryTriggerInteraction.Collide))
                 {
-                    // ПКМ: ищем зону для удаления через trigger raycast
-                    if (Physics.Raycast(ray, out RaycastHit trigHit, placementRange, miningLayers,
-                                        QueryTriggerInteraction.Collide))
-                    {
-                        newHovered = trigHit.collider.GetComponentInParent<ShopZone>();
-                    }
-                    if (newHovered != null)
-                    {
-                        HidePreview();
-                        pendingShopWorldPos = null;
-                    }
-                    else
-                    {
-                        // Наводим на пол — показываем превью для новой зоны
-                        VoxelIsland hi = hit.collider.GetComponentInParent<VoxelIsland>();
-                        if (hi == island)
-                        {
-                            Vector3 lp = island.transform.InverseTransformPoint(hit.point + hit.normal * 0.5f);
-                            int px = Mathf.FloorToInt(lp.x), py = -Mathf.FloorToInt(lp.y), pz = Mathf.FloorToInt(lp.z);
-                            pendingShopWorldPos = island.transform.TransformPoint(new Vector3(px + 0.5f, -py + 0.5f, pz + 0.5f));
-                        }
-                    }
+                    newHovered = trigHit.collider.GetComponentInParent<ShopZone>();
+                }
+
+                if (newHovered != null)
+                {
+                    HidePreview();
+                    pendingShopWorldPos = null;
                 }
                 else
                 {
-                    // ЛКМ: ставим зону на пол
-                    VoxelIsland hi = hit.collider.GetComponentInParent<VoxelIsland>();
-                    if (hi == island)
+                    // Наводим на пол — показываем превью для новой зоны
+                    Vector3 lp = activeIsland.transform.InverseTransformPoint(hit.point + hit.normal * hoverSurfaceEpsilon);
+                    int px = Mathf.FloorToInt(lp.x), py = -Mathf.FloorToInt(lp.y), pz = Mathf.FloorToInt(lp.z);
+                    
+                    if (activeIsland.InBounds(px, py, pz))
                     {
-                        Vector3 lp = island.transform.InverseTransformPoint(hit.point + hit.normal * 0.5f);
-                        int px = Mathf.FloorToInt(lp.x), py = -Mathf.FloorToInt(lp.y), pz = Mathf.FloorToInt(lp.z);
-                        pendingShopWorldPos = island.transform.TransformPoint(new Vector3(px + 0.5f, -py + 0.5f, pz + 0.5f));
-                        ShowPreview(new Vector3(px, -py, pz), previewColorShop);
+                        pendingShopWorldPos = activeIsland.transform.TransformPoint(new Vector3(px + 0.5f, -py + 0.5f, pz + 0.5f));
+                        ShowPreview(activeIsland, new Vector3(px, -py, pz), previewColorShop);
                     }
+                    else HidePreview();
                 }
 
                 // Обновляем hover зоны
@@ -331,40 +338,52 @@ namespace SimpleVoxelSystem
                     if (hoveredZone != null) hoveredZone.SetDeleteHover(true);
                 }
             }
-            else if (rmb)
+            else // Block editing mode
             {
-                Vector3 lp = island.transform.InverseTransformPoint(hit.point - hit.normal * 0.5f);
-                int rx = Mathf.FloorToInt(lp.x);
-                int ry = -Mathf.FloorToInt(lp.y);
-                int rz = Mathf.FloorToInt(lp.z);
-                if (island.IsSolid(rx, ry, rz))
+                if (!rmb)
                 {
-                    pendingRemovePos = new Vector3Int(rx, ry, rz);
-                    ShowPreview(new Vector3(rx, -ry, rz), previewColorRemove);
+                    // ЛКМ (place) - ставим в ячейку под курсором/по нормали без прыжка через блок
+                    Vector3 lp = activeIsland.transform.InverseTransformPoint(hit.point + hit.normal * hoverSurfaceEpsilon);
+                    int px = Mathf.FloorToInt(lp.x);
+                    int py = -Mathf.FloorToInt(lp.y);
+                    int pz = Mathf.FloorToInt(lp.z);
+
+                    if (activeIsland.InBounds(px, py, pz))
+                    {
+                        pendingPlacePos = new Vector3Int(px, py, pz);
+                        Color bc = BtnColors[(int)selectedBlockType];
+                        ShowPreview(activeIsland, new Vector3(px, -py, pz),
+                            new Color(bc.r, bc.g, bc.b, 0.45f));
+                    }
+                    else HidePreview();
                 }
-                else HidePreview();
-            }
-            else
-            {
-                Vector3 lp = island.transform.InverseTransformPoint(hit.point + hit.normal * 0.5f);
-                int px = Mathf.FloorToInt(lp.x);
-                int py = -Mathf.FloorToInt(lp.y);
-                int pz = Mathf.FloorToInt(lp.z);
-                pendingPlacePos = new Vector3Int(px, py, pz);
-                Color bc = BtnColors[(int)selectedBlockType];
-                ShowPreview(new Vector3(px, -py, pz),
-                    new Color(bc.r, bc.g, bc.b, 0.45f));
+                else
+                {
+                    // ПКМ (remove) - удаляем саму поверхность
+                    Vector3 lp = activeIsland.transform.InverseTransformPoint(hit.point - hit.normal * hoverSurfaceEpsilon);
+                    int px = Mathf.FloorToInt(lp.x);
+                    int py = -Mathf.FloorToInt(lp.y);
+                    int pz = Mathf.FloorToInt(lp.z);
+
+                    if (activeIsland.IsSolid(px, py, pz))
+                    {
+                        pendingRemovePos = new Vector3Int(px, py, pz);
+                        ShowPreview(activeIsland, new Vector3(px, -py, pz), previewColorRemove);
+                        hoveredZone = null; // Ensure shop zone hover is cleared when in block mode
+                    }
+                    else HidePreview();
+                }
             }
         }
 
         void HandleInput()
         {
-            if (ToolMode == EditorToolMode.Shop)
+            if (ToolMode == EditorToolMode.Shop || ToolMode == EditorToolMode.PickaxeShop)
             {
                 if (IsRightJustPressed() && hoveredZone != null)
                     DeleteShopZone(hoveredZone);
                 else if (IsLeftJustPressed() && pendingShopWorldPos.HasValue)
-                    OpenSizeDialog(pendingShopWorldPos.Value);
+                    OpenSizeDialog(pendingShopWorldPos.Value, (ToolMode == EditorToolMode.PickaxeShop) ? ShopZoneType.Pickaxe : ShopZoneType.Mine);
             }
             else
             {
@@ -412,7 +431,7 @@ namespace SimpleVoxelSystem
         // Диалог размера Shop-зоны
         // ══════════════════════════════════════════════════════════════════════
 
-        void OpenSizeDialog(Vector3 worldPos)
+        void OpenSizeDialog(Vector3 worldPos, ShopZoneType type)
         {
             dialogOpen = true;
             HidePreview();
@@ -425,9 +444,10 @@ namespace SimpleVoxelSystem
                 Vector2.zero, new Vector2(320f, 260f),
                 new Color(0.08f, 0.08f, 0.14f, 0.97f));
 
+            string title = (type == ShopZoneType.Pickaxe) ? "⚒️ МАГАЗИН КИРОК" : "🛒 МАГАЗИН ШАХТ";
             // Заголовок
             MakeLabelOff(dialogPanel.transform, "DlgTitle",
-                "🛒 ЗОНА МАГАЗИНА\nВведите размер:", 14, TextAnchor.UpperCenter,
+                $"{title}\nВведите размер:", 14, TextAnchor.UpperCenter,
                 new Vector2(10, -36), new Vector2(-10, 0), bold: true);
 
             // Поля ввода
@@ -446,7 +466,7 @@ namespace SimpleVoxelSystem
                 new Color(0.2f, 0.65f, 0.3f, 1f),
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(-80f, 14f), new Vector2(148f, 36f));
-            okBtn.onClick.AddListener(() => ConfirmShopPlace(worldPos));
+            okBtn.onClick.AddListener(() => ConfirmShopPlace(worldPos, type));
 
             Button cancelBtn = MakeBtn(dialogPanel.transform, "CancelBtn",
                 "✖ Отмена",
@@ -456,18 +476,19 @@ namespace SimpleVoxelSystem
             cancelBtn.onClick.AddListener(CancelDialog);
         }
 
-        void ConfirmShopPlace(Vector3 worldPos)
+        void ConfirmShopPlace(Vector3 worldPos, ShopZoneType type)
         {
             int sx = Mathf.Max(1, ParseInt(inputSizeX?.text, 3));
             int sy = Mathf.Max(1, ParseInt(inputSizeY?.text, 3));
             int sz = Mathf.Max(1, ParseInt(inputSizeZ?.text, 3));
 
-            SpawnShopZone(worldPos, sx, sy, sz);
+            SpawnShopZone(worldPos, sx, sy, sz, type);
 
             shopSaveData.zones.Add(new ShopZoneEntry
             {
                 worldX = worldPos.x, worldY = worldPos.y, worldZ = worldPos.z,
-                sizeX = sx, sizeY = sy, sizeZ = sz
+                sizeX = sx, sizeY = sy, sizeZ = sz,
+                zoneType = type
             });
             SaveShopZones();
             CloseDialog();
@@ -481,16 +502,17 @@ namespace SimpleVoxelSystem
             if (dialogPanel != null) { Destroy(dialogPanel); dialogPanel = null; }
         }
 
-        void SpawnShopZone(Vector3 worldPos, int sx, int sy, int sz)
+        void SpawnShopZone(Vector3 worldPos, int sx, int sy, int sz, ShopZoneType type = ShopZoneType.Mine)
         {
             var go = new GameObject($"ShopZone_{spawnedZones.Count}");
             go.transform.position = worldPos;
             var zone = go.AddComponent<ShopZone>();
+            zone.zoneType = type;
             zone.sizeX = sx;
             zone.sizeY = sy;
             zone.sizeZ = sz;
             spawnedZones.Add(zone);
-            Debug.Log($"[LobbyEditor] Зона магазина поставлена {sx}x{sy}x{sz} @ {worldPos}");
+            Debug.Log($"[LobbyEditor] Зона магазина ({type}) поставлена {sx}x{sy}x{sz} @ {worldPos}");
         }
 
         static int ParseInt(string s, int def)
@@ -643,7 +665,7 @@ namespace SimpleVoxelSystem
             catch { shopSaveData = new ShopZoneSaveData(); return; }
 
             foreach (var e in shopSaveData.zones)
-                SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ);
+                SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ, e.zoneType);
 
             Debug.Log($"[LobbyEditor] Загружено {spawnedZones.Count} зон магазина.");
         }
@@ -652,16 +674,19 @@ namespace SimpleVoxelSystem
         // Preview cube
         // ══════════════════════════════════════════════════════════════════════
 
-        void ShowPreview(Vector3 gridLocalOrigin, Color color)
+        void ShowPreview(VoxelIsland targetIsland, Vector3 gridLocalOrigin, Color color)
         {
             EnsurePreview();
-            if (island == null) return;
-            Vector3 worldPos = island.transform.TransformPoint(gridLocalOrigin + new Vector3(0.5f, 0.5f, 0.5f));
-            previewCube.transform.position   = worldPos;
-            previewCube.transform.localScale = island.transform.lossyScale;
+            previewCube.SetActive(true);
+
+            // world position. gridLocalOrigin.y - инвертирован, поэтому (x, y, z)
+            Vector3 worldPos = targetIsland.transform.TransformPoint(gridLocalOrigin + new Vector3(0.5f, 0.5f, 0.5f));
+            previewCube.transform.position = worldPos;
+            previewCube.transform.rotation = targetIsland.transform.rotation;
+            previewCube.transform.localScale = targetIsland.transform.lossyScale;
+
             var mr = previewCube.GetComponent<MeshRenderer>();
             if (mr != null) mr.material.color = color;
-            previewCube.SetActive(true);
         }
 
         void HidePreview() { if (previewCube != null) previewCube.SetActive(false); }
@@ -671,6 +696,7 @@ namespace SimpleVoxelSystem
             if (previewCube != null) return;
             previewCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
             previewCube.name = "LobbyEditorPreview";
+            previewCube.layer = 2; // Ignore Raycast
             Destroy(previewCube.GetComponent<Collider>());
             var mr = previewCube.GetComponent<MeshRenderer>();
             Shader sh = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
@@ -730,11 +756,15 @@ namespace SimpleVoxelSystem
                 cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 cGo.AddComponent<GraphicRaycaster>();
             }
-            if (FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+            if (EventSystem.current == null)
             {
                 var es = new GameObject("EventSystem");
-                es.AddComponent<UnityEngine.EventSystems.EventSystem>();
-                es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                es.AddComponent<EventSystem>();
+#if ENABLE_INPUT_SYSTEM
+                es.AddComponent<InputSystemUIInputModule>();
+#else
+                es.AddComponent<StandaloneInputModule>();
+#endif
             }
 
             // Кнопка-тоггл
@@ -745,10 +775,10 @@ namespace SimpleVoxelSystem
                 new Vector2(-10f, -110f), new Vector2(168f, 36f));
             toggleBtn.onClick.AddListener(ToggleEditMode);
 
-            // Панель инструментов (высота 400 — учитывает и Shop-кнопку)
+            // Панель инструментов (высота 450 — учитывает и Shop-кнопку)
             editorPanel = MakePanel("LobbyEditorPanel", rootCanvas.transform,
                 new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
-                new Vector2(-10f, 0f), new Vector2(168f, 400f),
+                new Vector2(-10f, 0f), new Vector2(168f, 450f),
                 new Color(0.07f, 0.07f, 0.11f, 0.93f));
 
             MakeLabelOff(editorPanel.transform, "EdTitle",
@@ -777,13 +807,21 @@ namespace SimpleVoxelSystem
                 typeButtons.Add(btn);
             }
 
-            // Кнопка инструмента «Магазин»
+            // Кнопка инструмента «Магазин Шахт»
             shopToolBtn = MakeBtn(editorPanel.transform, "ShopTool",
-                "🛒 Зона магазина",
+                "🛒 Зона шахт",
                 new Color(0.15f, 0.35f, 0.80f, 1f),
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -(86f + BtnTypes.Length * 46f)), new Vector2(148f, 38f));
             shopToolBtn.onClick.AddListener(() => SetToolMode(EditorToolMode.Shop));
+
+            // Кнопка инструмента «Магазин Кирок»
+            pickaxeShopToolBtn = MakeBtn(editorPanel.transform, "PickaxeShopTool",
+                "⚒️ Зона кирок",
+                new Color(0.25f, 0.45f, 0.25f, 1f),
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -(86f + (BtnTypes.Length + 1) * 46f)), new Vector2(148f, 38f));
+            pickaxeShopToolBtn.onClick.AddListener(() => SetToolMode(EditorToolMode.PickaxeShop));
 
             // Сохранить
             Button saveBtn = MakeBtn(editorPanel.transform, "ManualSaveBtn",
@@ -820,14 +858,21 @@ namespace SimpleVoxelSystem
             // Выделяем кнопку Shop
             if (shopToolBtn != null)
             {
+                bool sel = ToolMode == EditorToolMode.Shop;
                 var img = shopToolBtn.GetComponent<Image>();
-                if (img != null)
-                    img.color = ToolMode == EditorToolMode.Shop
-                        ? Color.white
-                        : new Color(0.15f, 0.35f, 0.80f, 1f);
+                if (img != null) img.color = sel ? Color.white : new Color(0.15f, 0.35f, 0.80f, 1f);
                 var txt = shopToolBtn.GetComponentInChildren<Text>();
-                if (txt != null)
-                    txt.color = ToolMode == EditorToolMode.Shop ? Color.black : Color.white;
+                if (txt != null) txt.color = sel ? Color.black : Color.white;
+            }
+
+            // Выделяем кнопку PickaxeShop
+            if (pickaxeShopToolBtn != null)
+            {
+                bool sel = ToolMode == EditorToolMode.PickaxeShop;
+                var img = pickaxeShopToolBtn.GetComponent<Image>();
+                if (img != null) img.color = sel ? Color.white : new Color(0.25f, 0.45f, 0.25f, 1f);
+                var txt = pickaxeShopToolBtn.GetComponentInChildren<Text>();
+                if (txt != null) txt.color = sel ? Color.black : Color.white;
             }
         }
 
@@ -835,15 +880,25 @@ namespace SimpleVoxelSystem
         // Input
         // ══════════════════════════════════════════════════════════════════════
 
+        bool IsPointerOverUI()
+        {
+            if (EventSystem.current == null) return false;
+            // Более надежная проверка для редактора и WebGL
+            return EventSystem.current.IsPointerOverGameObject();
+        }
+
         Vector2 GetPointerPos()
         {
 #if ENABLE_INPUT_SYSTEM
-            return Mouse.current?.position.ReadValue() ?? Vector2.zero;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.mousePosition;
-#else
-            return Vector2.zero;
+            if (Mouse.current != null)
+            {
+                // В полноэкранном режиме с масштабированием Mouse.current.position 
+                // может отличаться от Input.mousePosition. 
+                // Возвращаем как есть, ScreenPointToRay сам разберется.
+                return Mouse.current.position.ReadValue();
+            }
 #endif
+            return Input.mousePosition;
         }
 
         bool IsToggleKeyDown()

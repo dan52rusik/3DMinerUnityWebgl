@@ -8,17 +8,18 @@ using UnityEngine.InputSystem;
 
 namespace SimpleVoxelSystem
 {
+    public enum ShopZoneType { Mine, Pickaxe }
+
     /// <summary>
     /// Невидимый триггер-куб зоны магазина.
     /// Создаётся автоматически LobbyEditor при выборе инструмента «🛒 Зона магазина».
-    /// Никаких настроек в Inspector не нужно — всё задаётся через диалог размера.
-    ///
-    /// В игре: полностью невидим.
-    /// В Editor: синий полупрозрачный куб с подписью.
     /// </summary>
     [AddComponentMenu("SimpleVoxelSystem/Shop Zone")]
     public class ShopZone : MonoBehaviour
     {
+        [Header("Тип магазина")]
+        public ShopZoneType zoneType = ShopZoneType.Mine;
+
         [Header("Размер зоны (в блоках)")]
         public int sizeX = 3;
         public int sizeY = 3;
@@ -28,9 +29,10 @@ namespace SimpleVoxelSystem
         public KeyCode openKey = KeyCode.B;
 
         // ─── Runtime ─────────────────────────────────────────────────────────
-        private bool        playerInside;
-        private MineShopUI  shopUI;
-        private GameObject  editorVisual;   // полупрозрачный куб в режиме редактора
+        private bool          playerInside;
+        private MineShopUI    mineShopUI;
+        private PickaxeShopUI pickaxeShopUI;
+        private GameObject    editorVisual;   // полупрозрачный куб в режиме редактора
         private Material    visualMat;
 
         private static readonly Color ColNormal = new Color(0.20f, 0.55f, 1.00f, 0.28f);
@@ -48,7 +50,8 @@ namespace SimpleVoxelSystem
 
         void Start()
         {
-            shopUI = FindFirstObjectByType<MineShopUI>();
+            mineShopUI    = FindFirstObjectByType<MineShopUI>();
+            pickaxeShopUI = FindFirstObjectByType<PickaxeShopUI>();
             EnsurePromptUI();
 
             // BoxCollider
@@ -110,10 +113,14 @@ namespace SimpleVoxelSystem
 
         void Update()
         {
-            // B работает только если игрок внутри зоны магазина
+            // Работает только если игрок внутри зоны магазина
             if (!playerInside) return;
             if (!IsKeyPressed()) return;
-            if (shopUI != null) shopUI.TogglePanel();
+
+            if (zoneType == ShopZoneType.Mine && mineShopUI != null)
+                mineShopUI.TogglePanel();
+            else if (zoneType == ShopZoneType.Pickaxe && pickaxeShopUI != null)
+                pickaxeShopUI.Toggle();
         }
 
         void OnTriggerEnter(Collider other)
@@ -132,7 +139,10 @@ namespace SimpleVoxelSystem
             {
                 currentZone = null;
                 ShowPrompt(false);
-                if (shopUI != null) shopUI.SetPanelVisible(false);
+                if (zoneType == ShopZoneType.Mine && mineShopUI != null)
+                    mineShopUI.SetPanelVisible(false);
+                else if (zoneType == ShopZoneType.Pickaxe && pickaxeShopUI != null)
+                    pickaxeShopUI.Toggle(); // Или SetVisible(false) если добавим такой метод
             }
         }
 
@@ -161,18 +171,40 @@ namespace SimpleVoxelSystem
                 || other.name.ToLower().Contains("player");
         }
 
+        private char GetOpenKeyDisplay()
+        {
+            if (zoneType == ShopZoneType.Pickaxe) return 'P';
+            return 'B';
+        }
+
         bool IsKeyPressed()
         {
 #if ENABLE_INPUT_SYSTEM
-            return Keyboard.current?[Key.B].wasPressedThisFrame ?? false;
+            var kb = Keyboard.current;
+            if (kb == null) return false;
+            if (zoneType == ShopZoneType.Pickaxe) return kb.pKey.wasPressedThisFrame;
+            return kb.bKey.wasPressedThisFrame;
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetKeyDown(openKey);
+            KeyCode k = (zoneType == ShopZoneType.Pickaxe) ? KeyCode.P : KeyCode.B;
+            return Input.GetKeyDown(k);
 #else
             return false;
 #endif
         }
 
-        static void ShowPrompt(bool v) { if (promptPanel != null) promptPanel.SetActive(v); }
+        static void ShowPrompt(bool v) 
+        { 
+            if (promptPanel != null) 
+            {
+                if (v && currentZone != null)
+                {
+                    string keyStr = currentZone.GetOpenKeyDisplay().ToString();
+                    string shopName = (currentZone.zoneType == ShopZoneType.Pickaxe) ? "магазин кирок" : "магазин шахт";
+                    promptText.text = $"Нажмите <color=#FFD700><b>[{keyStr}]</b></color> — открыть {shopName}";
+                }
+                promptPanel.SetActive(v); 
+            } 
+        }
 
         void EnsurePromptUI()
         {
@@ -226,9 +258,11 @@ namespace SimpleVoxelSystem
 
 #if UNITY_EDITOR
             UnityEditor.Handles.color = Color.white;
+            string keyStr = (zoneType == ShopZoneType.Pickaxe) ? "P" : "B";
+            string shopName = (zoneType == ShopZoneType.Pickaxe) ? "Кирки" : "Шахты";
             UnityEditor.Handles.Label(
                 transform.position + Vector3.up * (sizeY + 0.4f),
-                $"🛒 Магазин  {sizeX}×{sizeY}×{sizeZ}  [B]");
+                $"🛒 {shopName}  {sizeX}×{sizeY}×{sizeZ}  [{keyStr}]");
 #endif
         }
     }

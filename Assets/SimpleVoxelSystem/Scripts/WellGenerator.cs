@@ -552,7 +552,12 @@ namespace SimpleVoxelSystem
         public bool CanMineVoxel(int gx, int gy, int gz)
         {
             if (IsInLobbyMode) return false;
-            if (!IsMineGenerated || ActiveMine == null) return false;
+
+            // Если шахта не куплена/не поставлена, разрешаем копать верхние 3 слоя земли (терраформинг)
+            if (!IsMineGenerated || ActiveMine == null)
+            {
+                return (gy >= LobbyFloorY && gy < LobbyFloorY + 3);
+            }
             
             int mineDepth = ActiveMine.rolledDepth;
             // Нельзя копать воздух выше земли
