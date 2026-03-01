@@ -393,14 +393,29 @@ namespace SimpleVoxelSystem
                 if (btn != null) btn.interactable = inLobby;
             }
 
-            // Кнопка продажи: только если есть шахта и мы в лобби (или на острове? Пока лобби)
-            if (sellMineBtn   != null) sellMineBtn.gameObject.SetActive(hasMine && inLobby);
+            // Кнопка продажи: только если купили, но еще не поставили (в режиме размещения)
+            if (sellMineBtn != null) 
+            {
+                // Пользователь хочет продавать только если купили, но еще не поставили.
+                // В нашей логике это значит pendingMine != null.
+                // Мы убираем кнопку Продать для уже установленных шахт.
+                sellMineBtn.gameObject.SetActive(false); 
+            }
             
-            // Кнопка отмены размещения: только когда ставим
-            if (cancelBtn != null) cancelBtn.gameObject.SetActive(mineMarket.IsPlacementMode && !inLobby);
+            bool isPlacing = mineMarket.IsPlacementMode;
+
+            // Кнопка отмены размещения: только когда купили, но еще не поставили
+            if (cancelBtn != null) 
+            {
+                // Показываем кнопку возврата, если шахта куплена (в руках), 
+                // независимо от того, в лобби мы или на острове.
+                cancelBtn.gameObject.SetActive(isPlacing);
+                
+                var txt = cancelBtn.GetComponentInChildren<Text>();
+                if (txt != null) txt.text = "💰 Вернуть деньги";
+            }
 
             // Статус размещения
-            bool isPlacing = mineMarket.IsPlacementMode;
             if (statusLabel != null)
             {
                 if (isPlacing)

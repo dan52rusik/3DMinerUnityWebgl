@@ -419,7 +419,7 @@ namespace SimpleVoxelSystem
         public void SwitchToLobby()
         {
             if (IsInLobbyMode) return;
-            IsInLobbyMode = true;
+            IsInLobbyMode = true; // Сначала ставим флаг
 
             RememberCurrentIslandSpawnPoint();
             SetIslandActive(playerIsland, false);
@@ -493,7 +493,35 @@ namespace SimpleVoxelSystem
 
         public void MineVoxel(int gx, int gy, int gz)
         {
+            if (ActiveIsland == null) return;
             ActiveIsland.RemoveVoxel(gx, gy, gz);
+
+            // Проверка разрушения лифта: 
+            // Он ломается только если мы ударили блок прямо ПОД ним (на его текущей высоте)
+            // И если копать глубже уже нельзя.
+            foreach (SimpleElevator elev in GetComponentsInChildren<SimpleElevator>())
+            {
+                if (elev != null && elev.shaftGridX == gx && elev.shaftGridZ == gz)
+                {
+                    // Вычисляем текущий Grid Y лифта
+                    Vector3 localPos = ActiveIsland.transform.InverseTransformPoint(elev.transform.position);
+                    int elevGridY = ActiveIsland.LocalToGrid(localPos).y;
+
+                    // Если бьем именно тот блок, на котором он стоит
+                    if (gy == elevGridY)
+                    {
+                        int clearedDepth = GetContiguousClearedDepth();
+                        int maxDepth = ActiveMine != null ? ActiveMine.rolledDepth : 0;
+                        
+                        // Если это последний возможный блок в этой шахте — ломаем
+                        if (clearedDepth >= maxDepth) 
+                        {
+                            Destroy(elev.gameObject);
+                            Debug.Log($"[WellGenerator] Лифт разрушен: удалена последняя опора.");
+                        }
+                    }
+                }
+            }
 
             if (ActiveMine != null && IsInsideWellArea(gx, gz))
             {
@@ -527,16 +555,12 @@ namespace SimpleVoxelSystem
             // Нельзя копать воздух выше земли
             if (gy < LobbyFloorY) return false;
             // Нельзя копать глубже, чем рассчитано для этой шахты
-            if (gy >= LobbyFloorY + mineDepth) 
-            {
-                if (Time.frameCount % 90 == 0) Debug.Log($"[WellGenerator] Глубина шахты исчерпана ({mineDepth} слоёв).");
-                return false;
-            }
+            if (gy >= LobbyFloorY + mineDepth) return false;
 
-            // На своем острове разрешаем копать везде в пределах серой зоны (well+pad)
-            if (!IsInsideWellArea(gx, gz)) return false;
+            // Пользователь разрешил копать ВЕЗДЕ на острове (стен больше нет)
+            // Поэтому IsInsideWellArea больше не ограничивает копание.
 
-            // Если блокировка слоев отключена (мы её отключили в Awake) — копаем свободно
+            // Если блокировка слоев отключена — копаем свободно
             if (!lockDeeperLayersUntilCleared) return true;
 
             // Иначе проверяем слой выше
@@ -593,7 +617,7 @@ namespace SimpleVoxelSystem
             player.position = new Vector3(pos.x, spawnY, pos.z);
             Physics.SyncTransforms();
 
-            if (ActiveMine != null)
+            if (!IsInLobbyMode && ActiveMine != null)
             {
                 Vector3 worldMineCenter = ActiveIsland.transform.TransformPoint(ActiveIsland.GridToLocal(ActiveMine.originX, LobbyFloorY, ActiveMine.originZ));
                 Vector3 lookDir = worldMineCenter - player.position;

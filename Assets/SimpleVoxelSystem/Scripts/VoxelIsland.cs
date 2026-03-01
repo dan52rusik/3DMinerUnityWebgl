@@ -275,5 +275,10 @@ namespace SimpleVoxelSystem
 
         // Конвертировать сеточную позицию в локальное пространство (для UI/дебага)
         public Vector3 GridToLocal(int x, int y, int z) => new Vector3(x, -y, z);
+
+        public Vector3Int LocalToGrid(Vector3 local)
+        {
+            return new Vector3Int(Mathf.RoundToInt(local.x), Mathf.RoundToInt(-local.y), Mathf.RoundToInt(local.z));
+        }
     }
 }

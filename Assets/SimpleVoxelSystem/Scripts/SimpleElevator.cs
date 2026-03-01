@@ -20,12 +20,14 @@ namespace SimpleVoxelSystem
         public int shaftGridX;
         public int shaftGridZ;
         public float platformHalfHeight = 0.125f;
+        public float moveCooldown = 1.0f; // Пауза между поездками
 
         private Vector3 targetPos;
         private bool isMoving;
         private Transform rider;
         private Collider[] selfColliders;
         private bool playerInsideTrigger;
+        private float lastMoveTime; // Время завершения последнего движения
 
         void Awake()
         {
@@ -36,17 +38,36 @@ namespace SimpleVoxelSystem
         {
             if (!isMoving)
             {
-                if (rider == null && !playerInsideTrigger)
+                if (rider == null)
                     TryAutoLowerToClearedDepth();
                 return;
             }
 
+            Vector3 oldPos = transform.position;
             transform.position = Vector3.MoveTowards(transform.position, targetPos, speed * Time.deltaTime);
+            Vector3 delta = transform.position - oldPos;
+
+            // Двигаем игрока за собой вручную
+            if (rider != null)
+            {
+                CharacterController cc = rider.GetComponent<CharacterController>();
+                if (cc != null)
+                {
+                    cc.enabled = false;
+                    rider.position += delta;
+                    cc.enabled = true;
+                }
+                else
+                {
+                    rider.position += delta;
+                }
+            }
 
             if (Vector3.SqrMagnitude(transform.position - targetPos) <= 0.0001f)
             {
                 isMoving = false;
                 ReleaseRider();
+                lastMoveTime = Time.time; // Ставим метку времени завершения
             }
         }
 
@@ -56,10 +77,17 @@ namespace SimpleVoxelSystem
                 return;
 
             playerInsideTrigger = true;
-            if (!autoStartOnEnter || isMoving)
+
+            // Если только что приехали или уже в пути — не перезапускаем
+            if (isMoving || (Time.time - lastMoveTime < moveCooldown))
                 return;
 
-            StartRideToTop(other.transform);
+            // Если мы и так на самом верху — ехать некуда
+            if (Mathf.Abs(transform.position.y - topY) < 0.1f)
+                return;
+
+            if (autoStartOnEnter)
+                StartRideToTop(other.transform);
         }
 
         private void OnTriggerStay(Collider other)
@@ -85,7 +113,7 @@ namespace SimpleVoxelSystem
         private void StartRideToTop(Transform player)
         {
             rider = player;
-            rider.SetParent(transform, true);
+            // rider.SetParent(transform, true); // Вызывает ошибку в Netcode
             MoveToTop();
         }
 
@@ -132,14 +160,32 @@ namespace SimpleVoxelSystem
             if (wellGenerator == null || island == null)
                 return;
 
+            // Не опускаемся, если недавно двигались (защита от дерготни)
+            if (Time.time - lastMoveTime < moveCooldown)
+                return;
+
             int clearedDepth = wellGenerator.GetContiguousClearedDepth();
             float desiredY = GetWorldYForDepth(clearedDepth);
 
+            // Если мы уже на месте
             if (Mathf.Abs(transform.position.y - desiredY) < 0.02f)
+                return;
+
+            // ВАЖНО: Если мы на самом верху и игрок внутри — НЕ ОПУСКАЕМСЯ.
+            // Даем игроку возможность выйти из шахты.
+            if (playerInsideTrigger && Mathf.Abs(transform.position.y - topY) < 0.1f)
                 return;
 
             targetPos = new Vector3(transform.position.x, desiredY, transform.position.z);
             isMoving = true;
+            
+            // Если игрок на платформе — берем его с собой как rider, 
+            // чтобы движение вниз было плавным и не вызывало OnTriggerEnter/Exit
+            if (playerInsideTrigger)
+            {
+                GameObject p = GameObject.FindGameObjectWithTag("Player");
+                if (p != null) rider = p.transform;
+            }
         }
 
         private float GetWorldYForDepth(int depthIndex)
@@ -170,7 +216,7 @@ namespace SimpleVoxelSystem
             if (rider == null)
                 return;
 
-            rider.SetParent(null, true);
+            // rider.SetParent(null, true); // Не нужно, так как больше нет привязки
             rider = null;
         }
 
