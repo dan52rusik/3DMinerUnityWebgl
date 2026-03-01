@@ -60,13 +60,17 @@ namespace SimpleVoxelSystem.Net
 
             if (networkManager.IsListening)
             {
-                // Hide local offline player only after NGO has a spawned local player object.
-                if (!offlineHiddenForNetwork &&
-                    networkManager.LocalClient != null &&
-                    networkManager.LocalClient.PlayerObject != null)
+                // Дожидаемся фактического подключения к серверу (рукопожатие NGO),
+                // чтобы безопасно получить LocalClient.
+                if (networkManager.IsConnectedClient)
                 {
-                    DisableOfflinePlayer();
-                    offlineHiddenForNetwork = true;
+                    if (!offlineHiddenForNetwork &&
+                        networkManager.LocalClient != null &&
+                        networkManager.LocalClient.PlayerObject != null)
+                    {
+                        DisableOfflinePlayer();
+                        offlineHiddenForNetwork = true;
+                    }
                 }
                 return;
             }
@@ -80,12 +84,16 @@ namespace SimpleVoxelSystem.Net
             started = false;
         }
 
-        void Start()
+        System.Collections.IEnumerator Start()
         {
+            // Ждем 1 кадр, чтобы WellGenerator.Start() успел сгенерировать остров 
+            // и переместить оффлайн-игрока в правильную позицию спавна (в центр).
+            yield return null;
+
             EnsureNetworkStack();
 
             if (autoStart == AutoStartMode.Disabled)
-                return;
+                yield break;
 
             if (autoStart == AutoStartMode.Host) StartHost();
             if (autoStart == AutoStartMode.Client) StartClient();
@@ -324,59 +332,14 @@ namespace SimpleVoxelSystem.Net
             if (offlinePlayer == null)
                 offlinePlayer = FindOfflinePlayerCandidate();
 
-            if (offlinePlayer == null || !offlinePlayer.activeSelf)
-                return;
-
-            // Do not deactivate whole object: camera can be parented to player rig.
-            var pcc = offlinePlayer.GetComponent<PlayerCharacterController>();
-            if (pcc != null) pcc.enabled = false;
-            var pickaxe = offlinePlayer.GetComponent<PlayerPickaxe>();
-            if (pickaxe != null) pickaxe.enabled = false;
-            var miner = offlinePlayer.GetComponent<SmartMiner>();
-            if (miner != null) miner.enabled = false;
-
-            var cc = offlinePlayer.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = false;
-
-            foreach (var col in offlinePlayer.GetComponentsInChildren<Collider>(true))
-                col.enabled = false;
-
-            foreach (var cam in offlinePlayer.GetComponentsInChildren<Camera>(true))
-                cam.enabled = false;
-
-            foreach (var listener in offlinePlayer.GetComponentsInChildren<AudioListener>(true))
-                listener.enabled = false;
-
-            foreach (var rend in offlinePlayer.GetComponentsInChildren<Renderer>(true))
-                rend.enabled = false;
+            if (offlinePlayer != null)
+                offlinePlayer.SetActive(false);
         }
 
         private void RestoreOfflinePlayer()
         {
-            if (offlinePlayer == null || !offlinePlayer.activeSelf)
-                return;
-
-            var pcc = offlinePlayer.GetComponent<PlayerCharacterController>();
-            if (pcc != null) pcc.enabled = true;
-            var pickaxe = offlinePlayer.GetComponent<PlayerPickaxe>();
-            if (pickaxe != null) pickaxe.enabled = true;
-            var miner = offlinePlayer.GetComponent<SmartMiner>();
-            if (miner != null) miner.enabled = true;
-
-            var cc = offlinePlayer.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = true;
-
-            foreach (var col in offlinePlayer.GetComponentsInChildren<Collider>(true))
-                col.enabled = true;
-
-            foreach (var cam in offlinePlayer.GetComponentsInChildren<Camera>(true))
-                cam.enabled = true;
-
-            foreach (var listener in offlinePlayer.GetComponentsInChildren<AudioListener>(true))
-                listener.enabled = true;
-
-            foreach (var rend in offlinePlayer.GetComponentsInChildren<Renderer>(true))
-                rend.enabled = true;
+            if (offlinePlayer != null)
+                offlinePlayer.SetActive(true);
         }
 
         private GameObject FindOfflinePlayerCandidate()
