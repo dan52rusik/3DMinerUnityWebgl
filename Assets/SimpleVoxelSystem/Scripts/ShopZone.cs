@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using Unity.Netcode;
 
@@ -8,50 +8,53 @@ using UnityEngine.InputSystem;
 
 namespace SimpleVoxelSystem
 {
-    public enum ShopZoneType { Mine, Pickaxe }
+    public enum ShopZoneType { Mine, Pickaxe, Sell }
 
     /// <summary>
-    /// Невидимый триггер-куб зоны магазина.
-    /// Создаётся автоматически LobbyEditor при выборе инструмента «🛒 Зона магазина».
+    /// ÐÐµÐ²Ð¸Ð´Ð¸Ð¼Ñ‹Ð¹ Ñ‚Ñ€Ð¸Ð³Ð³ÐµÑ€-ÐºÑƒÐ± Ð·Ð¾Ð½Ñ‹ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°.
+    /// Ð¡Ð¾Ð·Ð´Ð°Ñ‘Ñ‚ÑÑ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸ LobbyEditor Ð¿Ñ€Ð¸ Ð²Ñ‹Ð±Ð¾Ñ€Ðµ Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð° Â«ðŸ›’ Ð—Ð¾Ð½Ð° Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°Â».
     /// </summary>
     [AddComponentMenu("SimpleVoxelSystem/Shop Zone")]
     public class ShopZone : MonoBehaviour
     {
-        [Header("Тип магазина")]
+        [Header("Ð¢Ð¸Ð¿ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°")]
         public ShopZoneType zoneType = ShopZoneType.Mine;
 
-        [Header("Размер зоны (в блоках)")]
+        [Header("Ð Ð°Ð·Ð¼ÐµÑ€ Ð·Ð¾Ð½Ñ‹ (Ð² Ð±Ð»Ð¾ÐºÐ°Ñ…)")]
         public int sizeX = 3;
         public int sizeY = 3;
         public int sizeZ = 3;
 
-        [Header("Клавиша")]
+        [Header("ÐšÐ»Ð°Ð²Ð¸ÑˆÐ°")]
         public KeyCode openKey = KeyCode.B;
 
-        // ─── Runtime ─────────────────────────────────────────────────────────
+        // â”€â”€â”€ Runtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private bool          playerInside;
         private MineShopUI    mineShopUI;
         private PickaxeShopUI pickaxeShopUI;
+        private PlayerPickaxe playerPickaxe;
         private GameObject    editorVisual;   // полупрозрачный куб в режиме редактора
-        private Material    visualMat;
+        private GameObject    gameplayMarker; // visible marker for sell point in normal gameplay
+        private Material      visualMat;
 
         private static readonly Color ColNormal = new Color(0.20f, 0.55f, 1.00f, 0.28f);
         private static readonly Color ColDelete = new Color(1.00f, 0.20f, 0.20f, 0.42f);
 
-        // Один промпт на всю сцену
+        // ÐžÐ´Ð¸Ð½ Ð¿Ñ€Ð¾Ð¼Ð¿Ñ‚ Ð½Ð° Ð²ÑÑŽ ÑÑ†ÐµÐ½Ñƒ
         private static GameObject promptPanel;
         private static Text       promptText;
         private static ShopZone   currentZone;
 
 
-        // ══════════════════════════════════════════════════════════════════════
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Unity
-        // ══════════════════════════════════════════════════════════════════════
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         void Start()
         {
             mineShopUI    = FindFirstObjectByType<MineShopUI>();
             pickaxeShopUI = FindFirstObjectByType<PickaxeShopUI>();
+            playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();
             EnsurePromptUI();
 
             // BoxCollider
@@ -67,18 +70,19 @@ namespace SimpleVoxelSystem
             rb.isKinematic = true;
             rb.useGravity  = false;
 
-            // Визуальный куб для режима редактора
+            // Ð’Ð¸Ð·ÑƒÐ°Ð»ÑŒÐ½Ñ‹Ð¹ ÐºÑƒÐ± Ð´Ð»Ñ Ñ€ÐµÐ¶Ð¸Ð¼Ð° Ñ€ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€Ð°
             CreateEditorVisual();
-            SetEditorVisible(false);  // начально скрыт в игре
+            CreateGameplayMarker();
+            SetEditorVisible(false);  // Ð½Ð°Ñ‡Ð°Ð»ÑŒÐ½Ð¾ ÑÐºÑ€Ñ‹Ñ‚ Ð² Ð¸Ð³Ñ€Ðµ
         }
 
-        // Включить/выключить визуальный куб редактора
+        // Ð’ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ/Ð²Ñ‹ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Ð²Ð¸Ð·ÑƒÐ°Ð»ÑŒÐ½Ñ‹Ð¹ ÐºÑƒÐ± Ñ€ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€Ð°
         public void SetEditorVisible(bool visible)
         {
             if (editorVisual != null) editorVisual.SetActive(visible);
         }
 
-        // Подсветить зону красным при hover эдитора (удаление)
+        // ÐŸÐ¾Ð´ÑÐ²ÐµÑ‚Ð¸Ñ‚ÑŒ Ð·Ð¾Ð½Ñƒ ÐºÑ€Ð°ÑÐ½Ñ‹Ð¼ Ð¿Ñ€Ð¸ hover ÑÐ´Ð¸Ñ‚Ð¾Ñ€Ð° (ÑƒÐ´Ð°Ð»ÐµÐ½Ð¸Ðµ)
         public void SetDeleteHover(bool hovered)
         {
             if (visualMat != null)
@@ -91,11 +95,11 @@ namespace SimpleVoxelSystem
             editorVisual.name = "ShopZoneVisual";
             editorVisual.transform.SetParent(transform, false);
 
-            // Размер и центр совпадают с BoxCollider
+            // Ð Ð°Ð·Ð¼ÐµÑ€ Ð¸ Ñ†ÐµÐ½Ñ‚Ñ€ ÑÐ¾Ð²Ð¿Ð°Ð´Ð°ÑŽÑ‚ Ñ BoxCollider
             editorVisual.transform.localScale  = new Vector3(sizeX, sizeY, sizeZ);
             editorVisual.transform.localPosition = new Vector3(0f, sizeY * 0.5f - 0.5f, 0f);
 
-            // Коллайдер визуального куба не нужен
+            // ÐšÐ¾Ð»Ð»Ð°Ð¹Ð´ÐµÑ€ Ð²Ð¸Ð·ÑƒÐ°Ð»ÑŒÐ½Ð¾Ð³Ð¾ ÐºÑƒÐ±Ð° Ð½Ðµ Ð½ÑƒÐ¶ÐµÐ½
             Destroy(editorVisual.GetComponent<Collider>());
 
             var mr = editorVisual.GetComponent<MeshRenderer>();
@@ -110,10 +114,29 @@ namespace SimpleVoxelSystem
             mr.material = visualMat;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
+        void CreateGameplayMarker()
+        {
+            // Keep mine/pickaxe zones invisible in game; show only sell point marker.
+            if (zoneType != ShopZoneType.Sell)
+                return;
 
+            gameplayMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            gameplayMarker.name = "SellPointMarker";
+            gameplayMarker.transform.SetParent(transform, false);
+            gameplayMarker.transform.localScale = new Vector3(0.75f, 0.1f, 0.75f);
+            gameplayMarker.transform.localPosition = new Vector3(0f, 0.1f, 0f);
+            Destroy(gameplayMarker.GetComponent<Collider>());
+
+            var mr = gameplayMarker.GetComponent<MeshRenderer>();
+            Shader sh = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var mat = new Material(sh);
+            mat.color = new Color(1.00f, 0.80f, 0.20f, 0.95f);
+            mr.material = mat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
         void Update()
         {
-            // Работает только если игрок внутри зоны магазина
+            // Ð Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð¸Ð³Ñ€Ð¾Ðº Ð²Ð½ÑƒÑ‚Ñ€Ð¸ Ð·Ð¾Ð½Ñ‹ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°
             if (!playerInside) return;
             if (!IsKeyPressed()) return;
 
@@ -121,6 +144,8 @@ namespace SimpleVoxelSystem
                 mineShopUI.TogglePanel();
             else if (zoneType == ShopZoneType.Pickaxe && pickaxeShopUI != null)
                 pickaxeShopUI.Toggle();
+            else if (zoneType == ShopZoneType.Sell && playerPickaxe != null)
+                playerPickaxe.SellResources();
         }
 
         void OnTriggerEnter(Collider other)
@@ -151,21 +176,21 @@ namespace SimpleVoxelSystem
             if (currentZone == this) { currentZone = null; ShowPrompt(false); }
         }
 
-        // ══════════════════════════════════════════════════════════════════════
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Helpers
-        // ══════════════════════════════════════════════════════════════════════
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         static bool IsPlayer(Collider other)
         {
-            // 1. Ищем NetworkObject
+            // 1. Ð˜Ñ‰ÐµÐ¼ NetworkObject
             var no = other.GetComponentInParent<NetworkObject>();
             if (no != null)
             {
-                // Если это сетевой объект — он должен принадлежать локальному игроку
+                // Ð•ÑÐ»Ð¸ ÑÑ‚Ð¾ ÑÐµÑ‚ÐµÐ²Ð¾Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚ â€” Ð¾Ð½ Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð¿Ñ€Ð¸Ð½Ð°Ð´Ð»ÐµÐ¶Ð°Ñ‚ÑŒ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ð¾Ð¼Ñƒ Ð¸Ð³Ñ€Ð¾ÐºÑƒ
                 return no.IsOwner && no.IsPlayerObject;
             }
 
-            // 2. Если сетевого объекта нет (одиночный режим) — проверяем тег/компоненты
+            // 2. Ð•ÑÐ»Ð¸ ÑÐµÑ‚ÐµÐ²Ð¾Ð³Ð¾ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° Ð½ÐµÑ‚ (Ð¾Ð´Ð¸Ð½Ð¾Ñ‡Ð½Ñ‹Ð¹ Ñ€ÐµÐ¶Ð¸Ð¼) â€” Ð¿Ñ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼ Ñ‚ÐµÐ³/ÐºÐ¾Ð¼Ð¿Ð¾Ð½ÐµÐ½Ñ‚Ñ‹
             return other.CompareTag("Player")
                 || other.GetComponentInParent<PlayerPickaxe>() != null
                 || other.name.ToLower().Contains("player");
@@ -174,6 +199,7 @@ namespace SimpleVoxelSystem
         private char GetOpenKeyDisplay()
         {
             if (zoneType == ShopZoneType.Pickaxe) return 'P';
+            if (zoneType == ShopZoneType.Sell) return 'R';
             return 'B';
         }
 
@@ -183,9 +209,12 @@ namespace SimpleVoxelSystem
             var kb = Keyboard.current;
             if (kb == null) return false;
             if (zoneType == ShopZoneType.Pickaxe) return kb.pKey.wasPressedThisFrame;
+            if (zoneType == ShopZoneType.Sell) return kb.rKey.wasPressedThisFrame;
             return kb.bKey.wasPressedThisFrame;
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            KeyCode k = (zoneType == ShopZoneType.Pickaxe) ? KeyCode.P : KeyCode.B;
+            KeyCode k = KeyCode.B;
+            if (zoneType == ShopZoneType.Pickaxe) k = KeyCode.P;
+            else if (zoneType == ShopZoneType.Sell) k = KeyCode.R;
             return Input.GetKeyDown(k);
 #else
             return false;
@@ -199,7 +228,9 @@ namespace SimpleVoxelSystem
                 if (v && currentZone != null)
                 {
                     string keyStr = currentZone.GetOpenKeyDisplay().ToString();
-                    string shopName = (currentZone.zoneType == ShopZoneType.Pickaxe) ? "магазин кирок" : "магазин шахт";
+                    string shopName = "магазин шахт";
+                    if (currentZone.zoneType == ShopZoneType.Pickaxe) shopName = "магазин кирок";
+                    else if (currentZone.zoneType == ShopZoneType.Sell) shopName = "точку продажи";
                     promptText.text = $"Нажмите <color=#FFD700><b>[{keyStr}]</b></color> — открыть {shopName}";
                 }
                 promptPanel.SetActive(v); 
@@ -241,9 +272,9 @@ namespace SimpleVoxelSystem
             promptPanel.SetActive(false);
         }
 
-        // ══════════════════════════════════════════════════════════════════════
-        // Gizmo (только в Editor)
-        // ══════════════════════════════════════════════════════════════════════
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // Gizmo (Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Editor)
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         void OnDrawGizmos()
         {
@@ -258,8 +289,10 @@ namespace SimpleVoxelSystem
 
 #if UNITY_EDITOR
             UnityEditor.Handles.color = Color.white;
-            string keyStr = (zoneType == ShopZoneType.Pickaxe) ? "P" : "B";
-            string shopName = (zoneType == ShopZoneType.Pickaxe) ? "Кирки" : "Шахты";
+            string keyStr = "B";
+            string shopName = "Шахты";
+            if (zoneType == ShopZoneType.Pickaxe) { keyStr = "P"; shopName = "Кирки"; }
+            else if (zoneType == ShopZoneType.Sell) { keyStr = "R"; shopName = "Продажа"; }
             UnityEditor.Handles.Label(
                 transform.position + Vector3.up * (sizeY + 0.4f),
                 $"🛒 {shopName}  {sizeX}×{sizeY}×{sizeZ}  [{keyStr}]");
@@ -267,3 +300,4 @@ namespace SimpleVoxelSystem
         }
     }
 }
+

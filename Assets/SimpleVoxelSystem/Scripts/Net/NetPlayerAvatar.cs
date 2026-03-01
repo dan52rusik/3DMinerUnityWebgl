@@ -1,6 +1,7 @@
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using SimpleVoxelSystem;
 
 namespace SimpleVoxelSystem.Net
 {
@@ -56,12 +57,40 @@ namespace SimpleVoxelSystem.Net
             playerName.Value = newName;
         }
 
+        [ServerRpc]
+        public void RequestSpawnShopZoneServerRpc(Vector3 worldPos, int sx, int sy, int sz, int zoneType)
+        {
+            SpawnShopZoneClientRpc(worldPos, sx, sy, sz, zoneType);
+        }
+
+        [ServerRpc]
+        public void RequestDeleteShopZoneServerRpc(Vector3 worldPos, int zoneType)
+        {
+            DeleteShopZoneClientRpc(worldPos, zoneType);
+        }
+
+        [ClientRpc]
+        private void SpawnShopZoneClientRpc(Vector3 worldPos, int sx, int sy, int sz, int zoneType)
+        {
+            LobbyEditor editor = FindLobbyEditor();
+            if (editor == null) return;
+            editor.ApplyNetworkSpawnShopZone(worldPos, sx, sy, sz, (ShopZoneType)zoneType);
+        }
+
+        [ClientRpc]
+        private void DeleteShopZoneClientRpc(Vector3 worldPos, int zoneType)
+        {
+            LobbyEditor editor = FindLobbyEditor();
+            if (editor == null) return;
+            editor.ApplyNetworkDeleteShopZone(worldPos, (ShopZoneType)zoneType);
+        }
+
         private void CacheRefs()
         {
             controller = GetComponent<PlayerCharacterController>();
             pickaxe = GetComponent<PlayerPickaxe>();
             smartMiner = GetComponent<SmartMiner>();
-            lobbyEditor = FindFirstObjectByType<LobbyEditor>();
+            lobbyEditor = FindLobbyEditor();
 
             cameras = GetComponentsInChildren<Camera>(true);
             listeners = GetComponentsInChildren<AudioListener>(true);
@@ -90,6 +119,16 @@ namespace SimpleVoxelSystem.Net
             }
 
             gameObject.tag = local ? "Player" : "Untagged";
+        }
+
+        private static LobbyEditor FindLobbyEditor()
+        {
+            var editors = FindObjectsByType<LobbyEditor>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var e in editors)
+            {
+                if (e != null) return e;
+            }
+            return null;
         }
     }
 }
