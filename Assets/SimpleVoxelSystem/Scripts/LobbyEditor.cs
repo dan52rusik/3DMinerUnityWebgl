@@ -556,7 +556,12 @@ namespace SimpleVoxelSystem
             for (int z = z0; z < z1; z++)
             {
                 if (island.TryGetBlockType(x, y, z, out BlockType bt))
-                    data.entries.Add(new LobbyVoxelEntry { x = x, y = y, z = z, blockTypeId = (int)bt });
+                {
+                    int id = (int)bt;
+                    // В старых чанках "земля" могла быть сохранена как 0. Пишем 1 (Dirt), чтобы избежать Air.
+                    if (id == 0) id = (int)BlockType.Dirt;
+                    data.entries.Add(new LobbyVoxelEntry { x = x, y = y, z = z, blockTypeId = id });
+                }
             }
 
             try { File.WriteAllText(ChunkFilePath(cx, cz), JsonUtility.ToJson(data, true)); }
@@ -599,7 +604,13 @@ namespace SimpleVoxelSystem
                 // Восстанавливаем из файла
                 if (data.entries != null)
                     foreach (var e in data.entries)
-                        island.SetVoxel(e.x, e.y, e.z, (BlockType)e.blockTypeId);
+                    {
+                        int raw = e.blockTypeId;
+                        // Совместимость со старыми сохранениями лобби: 0 трактуем как Dirt.
+                        if (raw <= 0) raw = (int)BlockType.Dirt;
+                        if (raw > (int)BlockType.Grass) raw = (int)BlockType.Dirt;
+                        island.SetVoxel(e.x, e.y, e.z, (BlockType)raw);
+                    }
 
                 loaded++;
             }

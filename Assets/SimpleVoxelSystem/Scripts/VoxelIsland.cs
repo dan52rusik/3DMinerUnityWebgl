@@ -148,7 +148,12 @@ namespace SimpleVoxelSystem
             mesh.UploadMeshData(false);
 
             meshFilter.sharedMesh   = mesh;
+            // Сброс меша для обновления физического коллайдера
+            meshCollider.sharedMesh = null;
             meshCollider.sharedMesh = mesh;
+
+            // Срочная синхронизация физики
+            Physics.SyncTransforms();
         }
 
         // ══════════════════════════════════════════════════════════════════════

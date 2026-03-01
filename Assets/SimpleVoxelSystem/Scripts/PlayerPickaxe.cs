@@ -92,6 +92,12 @@ namespace SimpleVoxelSystem
                 return false;
             }
 
+            if (blockType == BlockType.Air)
+            {
+                blockHealth.Remove(new Vector3Int(gx, gy, gz));
+                return false;
+            }
+
             if (wellGenerator != null && !wellGenerator.CanMineVoxel(gx, gy, gz))
             {
                 if (verboseLogs)
@@ -159,10 +165,19 @@ namespace SimpleVoxelSystem
                 return;
             }
 
+            if (blockType == BlockType.Air)
+            {
+                blockHealth.Remove(new Vector3Int(gx, gy, gz));
+                if (verboseLogs)
+                    Debug.Log($"[Pickaxe] Промах — в [{gx},{gy},{gz}] воздух.", this);
+                return;
+            }
+
             if (wellGenerator != null && !wellGenerator.CanMineVoxel(gx, gy, gz))
             {
-                if (verboseLogs)
-                    Debug.Log($"[Pickaxe] Копать запрещено в [{gx},{gy},{gz}] (нет шахты или заблокирован слой).", this);
+                // Показываем причину в консоль раз в 1 сек, чтобы пользователь видел блокировку
+                if (Time.frameCount % 60 == 0)
+                    Debug.Log($"[Pickaxe] Не могу копать в [{gx},{gy},{gz}]. Проверьте глубину вашей шахты!");
                 return;
             }
 

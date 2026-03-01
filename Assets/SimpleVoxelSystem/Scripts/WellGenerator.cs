@@ -32,7 +32,7 @@ namespace SimpleVoxelSystem
         public List<BlockData> blockDataConfig;
 
         [Header("Mining Rules")]
-        public bool lockDeeperLayersUntilCleared = true;
+        public bool lockDeeperLayersUntilCleared = false; // Отключаем по умолчанию для удобства
 
         [Header("Elevator")]
         public Color elevatorColor = new Color(0.6f, 0.3f, 0.1f, 1f);
@@ -85,6 +85,9 @@ namespace SimpleVoxelSystem
             {
                 gameObject.AddComponent<MineMarket>();
             }
+
+            // Принудительно отключаем блокировку слоев, чтобы можно было копать сразу вниз
+            lockDeeperLayersUntilCleared = false;
         }
 
         void Start()
@@ -221,10 +224,15 @@ namespace SimpleVoxelSystem
         public void GenerateMineAt(MineInstance mine, int gx, int gz)
         {
             if (ActiveIsland == null) return;
+            if (mine == null || mine.shopData == null) return;
             
             Transform player = ResolveOrSpawnPlayer();
             CharacterController cc = (player != null) ? player.GetComponent<CharacterController>() : null;
             if (cc != null) cc.enabled = false;
+
+            int minDepth = Mathf.Min(mine.shopData.depthMin, mine.shopData.depthMax);
+            int maxDepth = Mathf.Max(mine.shopData.depthMin, mine.shopData.depthMax);
+            mine.rolledDepth = Mathf.Clamp(mine.rolledDepth, minDepth, maxDepth);
 
             ActiveMine = mine;
             ActiveMine.originX = gx;
@@ -238,6 +246,7 @@ namespace SimpleVoxelSystem
             int pad = mine.shopData.padding;
             int x0 = gx - (ww / 2) - pad;
             int z0 = gz - (wl / 2) - pad;
+            // Возвращаем лифт в угол зоны, как просил пользователь
             CreateElevator(x0, z0);
             
             Vector3 worldSurfacePos = ActiveIsland.transform.TransformPoint(ActiveIsland.GridToLocal(gx, LobbyFloorY, gz));
@@ -262,6 +271,7 @@ namespace SimpleVoxelSystem
             int x0 = gx - (ww / 2) - pad;
             int z0 = gz - (wl / 2) - pad;
 
+            // Расчистка под лифтом теперь тоже в углу
             int shaftX = x0; 
             int shaftZ = z0; 
 
@@ -296,7 +306,7 @@ namespace SimpleVoxelSystem
                     }
 
                     BlockType t;
-                    if (mine.GetVoxel(ix, iy, iz) == BlockType.Air) 
+                    if (!mine.HasVoxelValue(ix, iy, iz))
                     {
                         t = inWell ? mine.shopData.RollBlockType(iy) : BlockType.Dirt;
                         mine.SetVoxel(ix, iy, iz, t);
@@ -414,35 +424,40 @@ namespace SimpleVoxelSystem
         {
             if (ActiveMine == null) return false;
             int ww = ActiveMine.shopData.wellWidth;
-            int ox = ActiveMine.originX;
-            int oz = ActiveMine.originZ;
-            int xMin = ox - (ww / 2);
-            int zMin = oz - (ActiveMine.shopData.wellLength / 2);
-            return gx >= xMin && gx < xMin + ww && gz >= zMin && gz < zMin + ActiveMine.shopData.wellLength;
-        }
-
-        public bool IsOnWellRimSurface(int gx, int gy, int gz)
-        {
-            if (ActiveMine == null) return false;
-            if (gy != LobbyFloorY) return false;
-            int pad = ActiveMine.shopData.padding;
-            int ww = ActiveMine.shopData.wellWidth;
             int wl = ActiveMine.shopData.wellLength;
+            int pad = ActiveMine.shopData.padding;
             int ox = ActiveMine.originX;
             int oz = ActiveMine.originZ;
+
             int xMin = ox - (ww / 2) - pad;
             int zMin = oz - (wl / 2) - pad;
-            return gx >= xMin && gx < xMin + ww + pad * 2 && gz >= zMin && gz < zMin + wl + pad * 2;
+            int xMax = xMin + ww + pad * 2 - 1;
+            int zMax = zMin + wl + pad * 2 - 1;
+
+            return gx >= xMin && gx <= xMax && gz >= zMin && gz <= zMax;
         }
 
         public bool CanMineVoxel(int gx, int gy, int gz)
         {
             if (!IsMineGenerated || ActiveMine == null) return false;
+            
             int mineDepth = ActiveMine.rolledDepth;
-            if (gy < LobbyFloorY || gy >= LobbyFloorY + mineDepth) return false;
-            if (!IsInsideWellArea(gx, gz) && !IsOnWellRimSurface(gx, gy, gz)) return false;
+            // Нельзя копать воздух выше земли
+            if (gy < LobbyFloorY) return false;
+            // Нельзя копать глубже, чем рассчитано для этой шахты
+            if (gy >= LobbyFloorY + mineDepth) 
+            {
+                if (Time.frameCount % 90 == 0) Debug.Log($"[WellGenerator] Глубина шахты исчерпана ({mineDepth} слоёв).");
+                return false;
+            }
+
+            // На своем острове разрешаем копать везде в пределах серой зоны (well+pad)
+            if (!IsInsideWellArea(gx, gz)) return false;
+
+            // Если блокировка слоев отключена (мы её отключили в Awake) — копаем свободно
             if (!lockDeeperLayersUntilCleared) return true;
-            if (!IsInsideWellArea(gx, gz)) return true;
+
+            // Иначе проверяем слой выше
             if (gy <= LobbyFloorY) return true;
             return IsWellLayerCleared(gy - 1);
         }
@@ -557,6 +572,9 @@ namespace SimpleVoxelSystem
             trigger.isTrigger = true;
             trigger.size = new Vector3(1f, 2f, 1f);
             trigger.center = new Vector3(0f, 1f, 0f);
+
+            // Лифт не должен блокировать луч кирки (Layer 2 = Ignore Raycast)
+            go.layer = 2;
 
             SimpleElevator elevatorScript = go.AddComponent<SimpleElevator>();
             elevatorScript.topY = go.transform.position.y;

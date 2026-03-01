@@ -26,6 +26,7 @@ namespace SimpleVoxelSystem
 
         private WellGenerator wellGenerator;
         private VoxelIsland island;
+        private VoxelIsland currentTargetIsland;
         private PlayerPickaxe pickaxe;
         private PlayerCharacterController playerController;
 
@@ -39,6 +40,7 @@ namespace SimpleVoxelSystem
         private bool queuedAutoMine;
         private Vector3Int queuedTargetGridPos;
         private Vector3 queuedTargetWorldPos;
+        private VoxelIsland queuedTargetIsland;
 
         void Start()
         {
@@ -92,7 +94,7 @@ namespace SimpleVoxelSystem
             if (Time.time < lastMineTime + mineCooldown)
                 return;
 
-            if (MineTargetBlock(currentTargetGridPos))
+            if (MineTargetBlock(currentTargetGridPos, currentTargetIsland))
                 lastMineTime = Time.time;
         }
 
@@ -108,10 +110,11 @@ namespace SimpleVoxelSystem
             if (Time.time < lastMineTime + mineCooldown)
                 return;
 
-            if (MineTargetBlock(queuedTargetGridPos))
+            if (MineTargetBlock(queuedTargetGridPos, queuedTargetIsland))
             {
                 lastMineTime = Time.time;
                 queuedAutoMine = false;
+                queuedTargetIsland = null;
                 if (playerController != null)
                     playerController.CancelAutoMove();
             }
@@ -125,12 +128,14 @@ namespace SimpleVoxelSystem
             queuedAutoMine = true;
             queuedTargetGridPos = currentTargetGridPos;
             queuedTargetWorldPos = currentTargetWorldPos;
+            queuedTargetIsland = currentTargetIsland;
             playerController.SetAutoMoveTarget(currentTargetWorldPos, autoMoveStopDistance);
         }
 
         void FindTargetBlock()
         {
             hasTarget = false;
+            currentTargetIsland = null;
 
             Camera cam = Camera.main;
             if (cam == null)
@@ -143,9 +148,17 @@ namespace SimpleVoxelSystem
             Vector2 pointerPos = ReadPointerPosition();
             Ray ray = cam.ScreenPointToRay(pointerPos);
 
-            if (Physics.Raycast(ray, out RaycastHit hit, maxTargetDistance, voxelLayer, QueryTriggerInteraction.Ignore) &&
-                hit.collider.GetComponentInParent<VoxelIsland>() != null)
+            if (Physics.Raycast(ray, out RaycastHit hit, maxTargetDistance, voxelLayer, QueryTriggerInteraction.Ignore))
             {
+                VoxelIsland hitIsland = hit.collider.GetComponentInParent<VoxelIsland>();
+                if (hitIsland == null)
+                {
+                    if (highlightInstance != null && highlightInstance.activeSelf)
+                        highlightInstance.SetActive(false);
+                    return;
+                }
+
+                island = hitIsland;
                 Vector3 localHit = island.transform.InverseTransformPoint(hit.point - hit.normal * 0.5f);
 
                 int gx = Mathf.FloorToInt(localHit.x);
@@ -162,6 +175,7 @@ namespace SimpleVoxelSystem
                     }
 
                     currentTargetGridPos = new Vector3Int(gx, gy, gz);
+                    currentTargetIsland = island;
                     hasTarget = true;
 
                     Vector3 blockLocalPos = island.GridToLocal(gx, gy, gz) + new Vector3(0.5f, 0.5f, 0.5f);
@@ -183,7 +197,7 @@ namespace SimpleVoxelSystem
                 highlightInstance.SetActive(false);
         }
 
-        bool MineTargetBlock(Vector3Int target)
+        bool MineTargetBlock(Vector3Int target, VoxelIsland targetIsland)
         {
             if (pickaxe == null)
             {
@@ -191,7 +205,7 @@ namespace SimpleVoxelSystem
                 return false;
             }
 
-            return pickaxe.TryMineGridTarget(target.x, target.y, target.z, island);
+            return pickaxe.TryMineGridTarget(target.x, target.y, target.z, targetIsland);
         }
 
         GameObject CreateHighlightInstance()

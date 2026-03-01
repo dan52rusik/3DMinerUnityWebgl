@@ -41,18 +41,21 @@ namespace SimpleVoxelSystem
 
         public void SetVoxel(int lx, int ly, int lz, BlockType type)
         {
-            if (voxelsData == null) return;
+            if (voxelsData == null || !InBounds(lx, ly, lz)) return;
             voxelsData[lx, ly, lz] = (byte)((int)type + 1);
         }
 
         public BlockType GetVoxel(int lx, int ly, int lz)
         {
-            if (voxelsData == null) return BlockType.Dirt;
+            if (voxelsData == null || !InBounds(lx, ly, lz)) return BlockType.Air;
             int b = voxelsData[lx, ly, lz];
-            return (b == 0) ? BlockType.Dirt : (BlockType)(b - 1);
+            return (b == 0) ? BlockType.Air : (BlockType)(b - 1);
         }
 
         public bool HasVoxelsData => voxelsData != null;
+
+        public bool HasVoxelValue(int lx, int ly, int lz)
+            => voxelsData != null && InBounds(lx, ly, lz) && voxelsData[lx, ly, lz] != 0;
 
         public void RegisterMinedBlock(int x, int y, int z)
         {
@@ -62,5 +65,11 @@ namespace SimpleVoxelSystem
         }
 
         public bool IsVoxelMined(int x, int y, int z) => minedPositions.Contains(new Vector3Int(x - originX, y, z - originZ));
+
+        private bool InBounds(int lx, int ly, int lz)
+            => lx >= 0 && ly >= 0 && lz >= 0
+            && lx < voxelsData.GetLength(0)
+            && ly < voxelsData.GetLength(1)
+            && lz < voxelsData.GetLength(2);
     }
 }
