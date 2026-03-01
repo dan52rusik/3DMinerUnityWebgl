@@ -125,6 +125,7 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             // Core.hlsl даёт TransformObjectToWorld, ApplyShadowBias, TransformWorldToHClip.
             // ShadowCasterPass.hlsl не включаем — он конфликтует с ручными структурами ниже.
+            float3 _LightDirection;
 
             // Входная структура для shadow (минимальная)
             struct ShadowIn
@@ -145,7 +146,7 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
                 float3 posWS = TransformObjectToWorld(IN.posOS.xyz);
                 float3 normWS = TransformObjectToWorldNormal(IN.normOS);
                 // Смещение по нормали — устраняет shadow acne
-                posWS = ApplyShadowBias(posWS, normWS, GetMainLight().direction);
+                posWS = ApplyShadowBias(posWS, normWS, _LightDirection);
                 OUT.posCS = TransformWorldToHClip(posWS);
                 return OUT;
             }
