@@ -49,6 +49,10 @@ namespace SimpleVoxelSystem
         public GameObject playerPrefab;
         public Transform playerToPlace;
         public float playerSpawnHeight = 1.05f;
+        [Tooltip("При установке шахты не телепортировать игрока в центр шахты.")]
+        public bool keepPlayerPositionWhenPlacingMine = true;
+        [Tooltip("При возврате из лобби на остров возвращать игрока в последнюю позицию на острове.")]
+        public bool returnToLastIslandPosition = true;
 
         // ─── Runtime ────────────────────────────────────────────────────────
         public bool IsMineGenerated { get; private set; }
@@ -64,6 +68,7 @@ namespace SimpleVoxelSystem
 
         private Vector3 lobbySpawnPos;
         private Vector3 islandSpawnPos;
+        private bool hasIslandSpawnPos;
 
         private const int TopLayerDepth = 3;
         private const int MidLayerDepth = 7;
@@ -223,6 +228,8 @@ namespace SimpleVoxelSystem
                     playerIsland.SetVoxel(x, y, z, BlockType.Dirt);
             }
             playerIsland.RebuildMesh();
+            islandSpawnPos = playerIsland.transform.TransformPoint(new Vector3(lw / 2f, -LobbyFloorY, ll / 2f));
+            hasIslandSpawnPos = true;
             Debug.Log($"[WellGenerator] Личный Остров СОЗДАН в {privateIslandOffset}.");
         }
 
@@ -267,8 +274,16 @@ namespace SimpleVoxelSystem
             // Возвращаем лифт в угол зоны, как просил пользователь
             CreateElevator(x0, z0);
             
-            Vector3 worldSurfacePos = ActiveIsland.transform.TransformPoint(ActiveIsland.GridToLocal(gx, LobbyFloorY, gz));
-            SpawnPlayerAt(new Vector3(worldSurfacePos.x, worldSurfacePos.y, worldSurfacePos.z - 3f));
+            if (!keepPlayerPositionWhenPlacingMine)
+            {
+                Vector3 worldSurfacePos = ActiveIsland.transform.TransformPoint(ActiveIsland.GridToLocal(gx, LobbyFloorY, gz));
+                SpawnPlayerAt(new Vector3(worldSurfacePos.x, worldSurfacePos.y, worldSurfacePos.z - 3f));
+            }
+            else
+            {
+                RememberCurrentIslandSpawnPoint();
+                if (cc != null) cc.enabled = true;
+            }
 
             IsInLobbyMode = false;
             OnWorldSwitch?.Invoke(false);
@@ -380,7 +395,11 @@ namespace SimpleVoxelSystem
 
             Physics.SyncTransforms();
 
-            if (ActiveMine != null)
+            if (returnToLastIslandPosition && hasIslandSpawnPos)
+            {
+                SpawnPlayerAt(islandSpawnPos);
+            }
+            else if (ActiveMine != null)
             {
                 Vector3 worldMinePos = playerIsland.transform.TransformPoint(playerIsland.GridToLocal(ActiveMine.originX, LobbyFloorY, ActiveMine.originZ));
                 SpawnPlayerAt(new Vector3(worldMinePos.x, worldMinePos.y, worldMinePos.z - 3f));
@@ -402,6 +421,7 @@ namespace SimpleVoxelSystem
             if (IsInLobbyMode) return;
             IsInLobbyMode = true;
 
+            RememberCurrentIslandSpawnPoint();
             SetIslandActive(playerIsland, false);
             SetIslandActive(lobbyIsland, true);
             Physics.SyncTransforms();
@@ -413,6 +433,20 @@ namespace SimpleVoxelSystem
 
             OnWorldSwitch?.Invoke(true);
             UpdateLobbyStreamingVisibility();
+        }
+
+        private void RememberCurrentIslandSpawnPoint()
+        {
+            if (playerIsland == null) return;
+            Transform player = ResolveOrSpawnPlayer();
+            if (player == null) return;
+
+            Vector3 local = playerIsland.transform.InverseTransformPoint(player.position);
+            if (local.x < 0f || local.z < 0f || local.x > playerIsland.TotalX || local.z > playerIsland.TotalZ)
+                return;
+
+            islandSpawnPos = player.position;
+            hasIslandSpawnPos = true;
         }
 
         private void UpdateLobbyStreamingVisibility()

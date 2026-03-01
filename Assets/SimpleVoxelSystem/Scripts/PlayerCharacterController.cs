@@ -97,6 +97,9 @@ namespace SimpleVoxelSystem
 
         void HandleMove()
         {
+            if (controller == null || !controller.enabled || !controller.gameObject.activeInHierarchy)
+                return;
+
             Vector2 moveInput = ReadMoveInput();
             bool hasManualMove = moveInput.sqrMagnitude > 0.0001f;
             bool isRunning = IsRunPressed();
