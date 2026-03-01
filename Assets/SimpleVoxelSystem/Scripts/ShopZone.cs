@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Unity.Netcode;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -145,9 +146,20 @@ namespace SimpleVoxelSystem
         // ══════════════════════════════════════════════════════════════════════
 
         static bool IsPlayer(Collider other)
-            => other.CompareTag("Player")
-            || other.GetComponentInParent<PlayerPickaxe>() != null
-            || other.name.ToLower().Contains("player");
+        {
+            // 1. Ищем NetworkObject
+            var no = other.GetComponentInParent<NetworkObject>();
+            if (no != null)
+            {
+                // Если это сетевой объект — он должен принадлежать локальному игроку
+                return no.IsOwner && no.IsPlayerObject;
+            }
+
+            // 2. Если сетевого объекта нет (одиночный режим) — проверяем тег/компоненты
+            return other.CompareTag("Player")
+                || other.GetComponentInParent<PlayerPickaxe>() != null
+                || other.name.ToLower().Contains("player");
+        }
 
         bool IsKeyPressed()
         {

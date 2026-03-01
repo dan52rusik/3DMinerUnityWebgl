@@ -116,14 +116,9 @@ namespace SimpleVoxelSystem.Net
             }
         }
 
-        void OnDisable()
-        {
-            // Protects against disabled-domain-reload mode where transport jobs may survive Play stop.
-            Shutdown();
-        }
-
         void OnApplicationQuit()
         {
+            // Мы вызываем Shutdown только тут, чтобы не дергать его многократно при выходе.
             Shutdown();
         }
 
@@ -224,6 +219,9 @@ namespace SimpleVoxelSystem.Net
 
             if (networkManager.NetworkConfig.NetworkTransport != transport)
                 networkManager.NetworkConfig.NetworkTransport = transport;
+
+            // Устанавливаем уровень логов на Error, чтобы убрать спам из консоли
+            networkManager.LogLevel = LogLevel.Error;
 
             SubscribeNetworkCallbacks();
             EnsureRuntimePlayerPrefab();

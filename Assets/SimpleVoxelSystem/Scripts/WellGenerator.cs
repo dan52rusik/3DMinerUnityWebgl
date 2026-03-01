@@ -520,6 +520,7 @@ namespace SimpleVoxelSystem
 
         public bool CanMineVoxel(int gx, int gy, int gz)
         {
+            if (IsInLobbyMode) return false;
             if (!IsMineGenerated || ActiveMine == null) return false;
             
             int mineDepth = ActiveMine.rolledDepth;
