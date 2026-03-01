@@ -55,7 +55,14 @@ namespace SimpleVoxelSystem
         void BuildUI()
         {
             rootCanvas = FindFirstObjectByType<Canvas>();
-            if (rootCanvas == null) return;
+            if (rootCanvas == null)
+            {
+                GameObject cGo = new GameObject("PickaxeShopCanvas");
+                rootCanvas = cGo.AddComponent<Canvas>();
+                rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                cGo.AddComponent<GraphicRaycaster>();
+            }
 
             overlay = MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000f, 10000f), new Color(0f, 0f, 0f, 0.6f));
             shopPanel = MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400f, 500f), ColPanel);
@@ -118,14 +125,25 @@ namespace SimpleVoxelSystem
 
         public void Toggle()
         {
+            EnsureUIBuilt();
+            if (shopPanel == null || overlay == null) return;
             bool next = !shopPanel.activeSelf;
             SetPanelVisible(next);
         }
 
         public void SetPanelVisible(bool visible)
         {
+            EnsureUIBuilt();
             if (shopPanel != null) shopPanel.SetActive(visible);
             if (overlay != null) overlay.SetActive(visible);
+        }
+
+        void EnsureUIBuilt()
+        {
+            if (shopPanel != null && overlay != null)
+                return;
+
+            BuildUI();
         }
 
         void TryBuy(PickaxeData data)

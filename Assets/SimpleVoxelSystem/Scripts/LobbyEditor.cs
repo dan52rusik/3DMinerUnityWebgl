@@ -82,6 +82,7 @@ namespace SimpleVoxelSystem
         [Header("Дебаг чанков")]
         [Tooltip("Показывать границы чанков 16×16 в режиме редактора.")]
         public bool showChunkDebug = true;
+        public bool verboseLogs = false;
 
         public Color previewColorPlace  = new Color(0.2f, 1f, 0.5f,  0.40f);
         public Color previewColorRemove = new Color(1f,   0.2f, 0.2f, 0.40f);
@@ -403,7 +404,7 @@ namespace SimpleVoxelSystem
             }
             hoveredZone = null;
             Destroy(zone.gameObject);
-            Debug.Log("[LobbyEditor] Зона магазина удалена.");
+            if (verboseLogs) Debug.Log("[LobbyEditor] Зона магазина удалена.");
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -512,7 +513,7 @@ namespace SimpleVoxelSystem
             zone.sizeY = sy;
             zone.sizeZ = sz;
             spawnedZones.Add(zone);
-            Debug.Log($"[LobbyEditor] Зона магазина ({type}) поставлена {sx}x{sy}x{sz} @ {worldPos}");
+            if (verboseLogs) Debug.Log($"[LobbyEditor] Зона магазина ({type}) поставлена {sx}x{sy}x{sz} @ {worldPos}");
         }
 
         static int ParseInt(string s, int def)
@@ -547,7 +548,7 @@ namespace SimpleVoxelSystem
             foreach (var cc in dirtyChunks)
                 SaveChunk(cc.x, cc.y);
 
-            Debug.Log($"[LobbyEditor] Сброшено {dirtyChunks.Count} чанк(ов) на диск.");
+            if (verboseLogs) Debug.Log($"[LobbyEditor] Сброшено {dirtyChunks.Count} чанк(ов) на диск.");
             dirtyChunks.Clear();
         }
 
@@ -640,7 +641,7 @@ namespace SimpleVoxelSystem
             if (loaded > 0)
             {
                 island.RebuildMesh();
-                Debug.Log($"[LobbyEditor] Загружено {loaded} чанк(ов).");
+                if (verboseLogs) Debug.Log($"[LobbyEditor] Загружено {loaded} чанк(ов).");
             }
         }
 
@@ -667,7 +668,7 @@ namespace SimpleVoxelSystem
             foreach (var e in shopSaveData.zones)
                 SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ, e.zoneType);
 
-            Debug.Log($"[LobbyEditor] Загружено {spawnedZones.Count} зон магазина.");
+            if (verboseLogs) Debug.Log($"[LobbyEditor] Загружено {spawnedZones.Count} зон магазина.");
         }
 
         // ══════════════════════════════════════════════════════════════════════

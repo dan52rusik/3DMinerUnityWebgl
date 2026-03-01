@@ -21,6 +21,7 @@ namespace SimpleVoxelSystem
         public WellGenerator wellGenerator;
         public bool verboseLogs = false;
         public bool enableManualRaycastMining = true;
+        [Min(0.1f)] public float backpackFullLogCooldown = 1.5f;
 
         [Header("Pickaxe Evolution")]
         public PickaxeData currentPickaxe;
@@ -40,6 +41,7 @@ namespace SimpleVoxelSystem
         private readonly Dictionary<Vector3Int, int> blockHealth = new Dictionary<Vector3Int, int>();
         private readonly Dictionary<BlockType, BlockData> dataCache = new Dictionary<BlockType, BlockData>();
         private static readonly BlockData FallbackData = new BlockData { maxHealth = 1, reward = 1, type = BlockType.Dirt, blockColor = Color.white };
+        private float nextBackpackLogTime;
 
         void Awake()
         {
@@ -62,7 +64,7 @@ namespace SimpleVoxelSystem
 
             if (currentBackpackLoad >= maxBackpackCapacity)
             {
-                Debug.Log("Рюкзак полон! Нужно разгрузиться на складе.");
+                LogBackpackFull();
                 return;
             }
 
@@ -73,7 +75,7 @@ namespace SimpleVoxelSystem
         {
             if (currentBackpackLoad >= maxBackpackCapacity)
             {
-                Debug.Log("Рюкзак полон! Нужно разгрузиться на складе.");
+                LogBackpackFull();
                 return false;
             }
 
@@ -238,7 +240,8 @@ namespace SimpleVoxelSystem
             }
 
             GlobalEconomy.AddMiningXP(xp);
-            Debug.Log($"<color=cyan>+{xp} XP ({data.type})</color>");
+            if (verboseLogs)
+                Debug.Log($"<color=cyan>+{xp} XP ({data.type})</color>");
 
             if (wellGenerator != null)
                 wellGenerator.MineVoxel(gx, gy, gz);
@@ -314,11 +317,14 @@ namespace SimpleVoxelSystem
                 case BlockType.Gold: goldCount++; break;
             }
 
-            Debug.Log(
-                $"Добыт: {data.type} (+{data.reward}₽). " +
-                $"Рюкзак: {currentBackpackLoad}/{maxBackpackCapacity}. " +
-                $"[D:{dirtCount} S:{stoneCount} Fe:{ironCount} Au:{goldCount}]"
-            );
+            if (verboseLogs)
+            {
+                Debug.Log(
+                    $"Добыт: {data.type} (+{data.reward}₽). " +
+                    $"Рюкзак: {currentBackpackLoad}/{maxBackpackCapacity}. " +
+                    $"[D:{dirtCount} S:{stoneCount} Fe:{ironCount} Au:{goldCount}]"
+                );
+            }
         }
 
         public void SellResources()
@@ -336,6 +342,15 @@ namespace SimpleVoxelSystem
             currentBackpackLoad = 0;
             totalValueInBackpack = 0;
             dirtCount = stoneCount = ironCount = goldCount = 0;
+        }
+
+        void LogBackpackFull()
+        {
+            if (Time.unscaledTime < nextBackpackLogTime)
+                return;
+
+            nextBackpackLogTime = Time.unscaledTime + backpackFullLogCooldown;
+            Debug.Log("Рюкзак полон! Нужно разгрузиться на складе.");
         }
     }
 }

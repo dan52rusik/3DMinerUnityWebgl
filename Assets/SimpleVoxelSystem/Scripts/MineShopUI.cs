@@ -1,6 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using UnityEngine.EventSystems;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem.UI;
+#endif
 
 namespace SimpleVoxelSystem
 {
@@ -111,11 +115,15 @@ namespace SimpleVoxelSystem
             }
 
             // ── EventSystem ───────────────────────────────────────────────
-            if (FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+            if (EventSystem.current == null)
             {
                 GameObject es = new GameObject("EventSystem");
-                es.AddComponent<UnityEngine.EventSystems.EventSystem>();
-                es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                es.AddComponent<EventSystem>();
+#if ENABLE_INPUT_SYSTEM
+                es.AddComponent<InputSystemUIInputModule>();
+#else
+                es.AddComponent<StandaloneInputModule>();
+#endif
             }
 
             // ── HUD: деньги в левом верхнем углу ────────────────────

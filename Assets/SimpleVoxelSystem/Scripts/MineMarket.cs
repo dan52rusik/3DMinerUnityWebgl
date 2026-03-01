@@ -22,6 +22,7 @@ namespace SimpleVoxelSystem
         [Tooltip("Полупрозрачный куб-превью (опциональный)")]
         public GameObject placementPreviewPrefab;
         public Color previewColor = new Color(0f, 1f, 0.5f, 0.3f);
+        public bool verboseLogs = false;
 
         // ─── Runtime ────────────────────────────────────────────────────────
         public bool IsPlacementMode { get; private set; }
@@ -63,12 +64,12 @@ namespace SimpleVoxelSystem
             else
             {
                 host = new GameObject("MineShopUI_Host");
-                Debug.Log("[MineMarket] Canvas не найден, создан отдельный GO для MineShopUI.");
+                if (verboseLogs) Debug.Log("[MineMarket] Canvas не найден, создан отдельный GO для MineShopUI.");
             }
 
             var shopUI = host.AddComponent<MineShopUI>();
             shopUI.mineMarket = this;
-            Debug.Log("[MineMarket] MineShopUI автоздан на «" + host.name + "».");
+            if (verboseLogs) Debug.Log("[MineMarket] MineShopUI автоздан на «" + host.name + "».");
         }
 
         /// <summary>
@@ -131,7 +132,7 @@ namespace SimpleVoxelSystem
             };
             availableMines.Add(gold);
 
-            Debug.Log("[MineMarket] Созданы дефолтные шахты (3 вида).");
+            if (verboseLogs) Debug.Log("[MineMarket] Созданы дефолтные шахты (3 вида).");
         }
 
         void Update()
@@ -224,14 +225,14 @@ namespace SimpleVoxelSystem
         public bool TryBuyMine(MineShopData data)
         {
             if (data == null) return false;
-            if (WellGen != null && WellGen.IsMineGenerated) { Debug.Log("[MineMarket] Участок занят."); return false; }
-            if (GlobalEconomy.Money < data.buyPrice) { Debug.Log("[MineMarket] Мало денег."); return false; }
+            if (WellGen != null && WellGen.IsMineGenerated) { if (verboseLogs) Debug.Log("[MineMarket] Участок занят."); return false; }
+            if (GlobalEconomy.Money < data.buyPrice) { if (verboseLogs) Debug.Log("[MineMarket] Мало денег."); return false; }
 
             GlobalEconomy.Money -= data.buyPrice;
             int depth = data.RollDepth();
             pendingMine = new MineInstance(data, depth, 0);
 
-            Debug.Log($"[MineMarket] Куплена '{data.displayName}'. Режим установки ВКЛЮЧЕН.");
+            if (verboseLogs) Debug.Log($"[MineMarket] Куплена '{data.displayName}'. Режим установки ВКЛЮЧЕН.");
             IsPlacementMode = true; 
             return true;
         }
@@ -256,7 +257,7 @@ namespace SimpleVoxelSystem
             int gx = Mathf.RoundToInt(localPos.x);
             int gz = Mathf.RoundToInt(localPos.z);
 
-            Debug.Log($"[MineMarket] Установка шахты в сетку: {gx}, {gz}");
+            if (verboseLogs) Debug.Log($"[MineMarket] Установка шахты в сетку: {gx}, {gz}");
             WellGen.GenerateMineAt(pendingMine, gx, gz);
             OnMinePlaced?.Invoke(pendingMine);
             pendingMine = null;
