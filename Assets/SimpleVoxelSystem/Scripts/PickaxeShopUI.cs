@@ -1,10 +1,7 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using SimpleVoxelSystem.Data;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 namespace SimpleVoxelSystem
 {
@@ -20,7 +17,6 @@ namespace SimpleVoxelSystem
         private Transform buttonContainer;
 
         private static readonly Color ColPanel = new Color(0.1f, 0.1f, 0.12f, 0.95f);
-        private static readonly Color ColBtn = new Color(0.25f, 0.45f, 0.25f, 1f);
         private static readonly Color ColText = new Color(0.95f, 0.95f, 0.95f, 1f);
 
         void Awake()
@@ -35,13 +31,13 @@ namespace SimpleVoxelSystem
         void EnsureDefaultPickaxes()
         {
             if (availablePickaxes != null && availablePickaxes.Count > 0) return;
-            availablePickaxes = new List<PickaxeData>();
-
-            // Мы можем создать их процедурно, если не хватает ассетов
-            availablePickaxes.Add(CreateData("Каменная кирка", "Крепче дерева. Позволяет копать быстрее.", 500, 2, 3, new Color(0.5f, 0.5f, 0.5f)));
-            availablePickaxes.Add(CreateData("Железная кирка", "Надежный инструмент для серьезных руд.", 2000, 5, 7, new Color(0.8f, 0.8f, 0.8f)));
-            availablePickaxes.Add(CreateData("Золотая кирка", "Очень быстрая, но дорогая.", 5000, 10, 12, new Color(1f, 0.9f, 0f)));
-            availablePickaxes.Add(CreateData("Алмазная кирка", "Лучшее, что можно найти.", 15000, 25, 20, new Color(0.3f, 0.9f, 1f)));
+            availablePickaxes = new List<PickaxeData>
+            {
+                CreateData("Каменная кирка", "Крепче дерева. Позволяет копать быстрее.", 500, 2, 3, new Color(0.5f, 0.5f, 0.5f)),
+                CreateData("Железная кирка", "Надежный инструмент для серьезных руд.", 2000, 5, 7, new Color(0.8f, 0.8f, 0.8f)),
+                CreateData("Золотая кирка", "Очень быстрая, но дорогая.", 5000, 10, 12, new Color(1f, 0.9f, 0f)),
+                CreateData("Алмазная кирка", "Лучшее, что можно найти.", 15000, 25, 20, new Color(0.3f, 0.9f, 1f))
+            };
         }
 
         PickaxeData CreateData(string n, string d, int p, int pow, int lvl, Color c)
@@ -61,12 +57,12 @@ namespace SimpleVoxelSystem
             rootCanvas = FindFirstObjectByType<Canvas>();
             if (rootCanvas == null) return;
 
-            overlay = MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000, 10000), new Color(0, 0, 0, 0.6f));
-            shopPanel = MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400, 500), ColPanel);
+            overlay = MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000f, 10000f), new Color(0f, 0f, 0f, 0.6f));
+            shopPanel = MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400f, 500f), ColPanel);
 
-            MakeLabel(shopPanel.transform, "Title", "⚒️ МАГАЗИН КИРОК", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0, -15);
-            levelText = MakeLabel(shopPanel.transform, "LevelInfo", "Ваш уровень копки: 1", 14, TextAnchor.UpperCenter);
-            levelText.rectTransform.anchoredPosition = new Vector2(0, -45);
+            MakeLabel(shopPanel.transform, "Title", "⚒️ МАГАЗИН КИРОК", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
+            levelText = MakeLabel(shopPanel.transform, "LevelInfo", "Ваш уровень копки: 1 (0 XP)", 14, TextAnchor.UpperCenter);
+            levelText.rectTransform.anchoredPosition = new Vector2(0f, -45f);
 
             buttonContainer = MakeScrollContainer(shopPanel.transform);
             BuildButtons();
@@ -81,26 +77,33 @@ namespace SimpleVoxelSystem
             {
                 GameObject item = new GameObject(data.displayName + "_Item");
                 item.transform.SetParent(buttonContainer, false);
-                item.AddComponent<RectTransform>().sizeDelta = new Vector2(360, 80);
+
+                RectTransform itemRt = item.AddComponent<RectTransform>();
+                itemRt.anchorMin = new Vector2(0f, 1f);
+                itemRt.anchorMax = new Vector2(1f, 1f);
+                itemRt.pivot = new Vector2(0.5f, 1f);
+                itemRt.sizeDelta = new Vector2(0f, 88f);
+
+                LayoutElement le = item.AddComponent<LayoutElement>();
+                le.minHeight = 88f;
+                le.preferredHeight = 88f;
+
                 Image img = item.AddComponent<Image>();
-                img.color = new Color(1, 1, 1, 0.05f);
+                img.color = new Color(1f, 1f, 1f, 0.06f);
 
-                Text tName = MakeLabel(item.transform, "Name", data.displayName, 16, TextAnchor.UpperLeft);
-                tName.rectTransform.offsetMin = new Vector2(10, 0);
-                tName.rectTransform.offsetMax = new Vector2(-80, -5);
+                MakeLabelRect(item.transform, "Name", data.displayName, 16, TextAnchor.UpperLeft,
+                    new Vector2(10f, -26f), new Vector2(-110f, -2f), ColText);
 
-                Text tDesc = MakeLabel(item.transform, "Desc", data.description, 10, TextAnchor.UpperLeft);
-                tDesc.rectTransform.offsetMin = new Vector2(10, -30);
-                tDesc.rectTransform.offsetMax = new Vector2(-80, -5);
-                tDesc.color = new Color(0.7f, 0.7f, 0.7f);
+                Text tDesc = MakeLabelRect(item.transform, "Desc", data.description, 11, TextAnchor.UpperLeft,
+                    new Vector2(10f, -58f), new Vector2(-110f, -26f), new Color(0.72f, 0.72f, 0.72f));
+                tDesc.horizontalOverflow = HorizontalWrapMode.Wrap;
+                tDesc.verticalOverflow = VerticalWrapMode.Truncate;
 
-                Text tLvl = MakeLabel(item.transform, "Lvl", $"Ур. {data.requiredMiningLevel}", 12, TextAnchor.LowerLeft);
-                tLvl.rectTransform.offsetMin = new Vector2(10, 5);
-                tLvl.color = new Color(0.5f, 0.8f, 1f);
+                MakeLabelRect(item.transform, "Lvl", $"Ур. {data.requiredMiningLevel}", 12, TextAnchor.LowerLeft,
+                    new Vector2(10f, -4f), new Vector2(-160f, 22f), new Color(0.5f, 0.8f, 1f));
 
-                Text tPrice = MakeLabel(item.transform, "Price", $"{data.buyPrice}₽", 16, TextAnchor.MiddleRight);
-                tPrice.rectTransform.offsetMax = new Vector2(-10, 0);
-                tPrice.color = Color.yellow;
+                MakeLabelRect(item.transform, "Price", $"{data.buyPrice}₽", 16, TextAnchor.MiddleRight,
+                    new Vector2(-108f, -2f), new Vector2(-10f, 24f), Color.yellow);
 
                 Button btn = item.AddComponent<Button>();
                 btn.onClick.AddListener(() => TryBuy(data));
@@ -109,40 +112,20 @@ namespace SimpleVoxelSystem
 
         void Update()
         {
-            if (IsPPressed()) 
-            {
-                Debug.Log("[PickaxeShopUI] Клавиша P нажата, переключаю панель.");
-                Toggle();
-            }
-
-            if (shopPanel != null && shopPanel.activeSelf)
-            {
-                levelText.text = $"Ваш уровень копки: {GlobalEconomy.MiningLevel}  ({GlobalEconomy.MiningXP} XP)";
-            }
-        }
-
-        private bool IsPPressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            if (Keyboard.current != null)
-            {
-                return Keyboard.current.pKey.wasPressedThisFrame;
-            }
-            return false;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetKeyDown(KeyCode.P);
-#else
-            // Если никакая система не определена, пробуем легаси (но это может вызвать ошибку, если включен только новый)
-            // Чтобы избежать ошибки, просто вернем false.
-            return false; 
-#endif
+            if (shopPanel != null && shopPanel.activeSelf && levelText != null)
+                levelText.text = $"Ваш уровень копки: {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
         }
 
         public void Toggle()
         {
             bool next = !shopPanel.activeSelf;
-            shopPanel.SetActive(next);
-            overlay.SetActive(next);
+            SetPanelVisible(next);
+        }
+
+        public void SetPanelVisible(bool visible)
+        {
+            if (shopPanel != null) shopPanel.SetActive(visible);
+            if (overlay != null) overlay.SetActive(visible);
         }
 
         void TryBuy(PickaxeData data)
@@ -152,6 +135,7 @@ namespace SimpleVoxelSystem
                 Debug.Log("<color=red>Не хватает денег!</color>");
                 return;
             }
+
             if (GlobalEconomy.MiningLevel < data.requiredMiningLevel)
             {
                 Debug.Log($"<color=orange>Нужен уровень {data.requiredMiningLevel}!</color>");
@@ -159,22 +143,51 @@ namespace SimpleVoxelSystem
             }
 
             GlobalEconomy.Money -= data.buyPrice;
-            playerPickaxe.currentPickaxe = data;
+            if (playerPickaxe != null)
+                playerPickaxe.currentPickaxe = data;
+
             Debug.Log($"<color=green>Куплена: {data.displayName}!</color>");
-            Toggle();
+            SetPanelVisible(false);
         }
 
-        // Factory methods
         Text MakeLabel(Transform parent, string name, string text, int size, TextAnchor align)
         {
             GameObject go = new GameObject(name);
             go.transform.SetParent(parent, false);
             RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
             Text t = go.AddComponent<Text>();
             t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            t.text = text; t.fontSize = size; t.alignment = align; t.color = ColText;
+            t.text = text;
+            t.fontSize = size;
+            t.alignment = align;
+            t.color = ColText;
+            t.supportRichText = true;
+            return t;
+        }
+
+        Text MakeLabelRect(Transform parent, string name, string text, int size, TextAnchor align,
+            Vector2 offsetTopLeft, Vector2 offsetBottomRight, Color color)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            RectTransform rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.offsetMin = new Vector2(offsetTopLeft.x, offsetBottomRight.y);
+            rt.offsetMax = new Vector2(offsetBottomRight.x, offsetTopLeft.y);
+
+            Text t = go.AddComponent<Text>();
+            t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.text = text;
+            t.fontSize = size;
+            t.alignment = align;
+            t.color = color;
             t.supportRichText = true;
             return t;
         }
@@ -184,8 +197,11 @@ namespace SimpleVoxelSystem
             GameObject go = new GameObject(name);
             go.transform.SetParent(parent, false);
             RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = anchor; rt.pivot = pivot;
-            rt.anchoredPosition = pos; rt.sizeDelta = size;
+            rt.anchorMin = anchor;
+            rt.anchorMax = anchor;
+            rt.pivot = pivot;
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
             go.AddComponent<Image>().color = color;
             return go;
         }
@@ -194,11 +210,24 @@ namespace SimpleVoxelSystem
         {
             GameObject go = new GameObject("Container");
             go.transform.SetParent(parent, false);
+
             RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-            rt.offsetMin = new Vector2(10, 10); rt.offsetMax = new Vector2(-10, -80);
-            go.AddComponent<VerticalLayoutGroup>().spacing = 5;
-            go.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(10f, 10f);
+            rt.offsetMax = new Vector2(-10f, -80f);
+
+            VerticalLayoutGroup vlg = go.AddComponent<VerticalLayoutGroup>();
+            vlg.spacing = 6f;
+            vlg.childAlignment = TextAnchor.UpperCenter;
+            vlg.childControlWidth = true;
+            vlg.childControlHeight = true;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+
+            ContentSizeFitter fitter = go.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
             return go.transform;
         }
     }

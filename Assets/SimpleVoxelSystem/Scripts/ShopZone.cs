@@ -142,7 +142,7 @@ namespace SimpleVoxelSystem
                 if (zoneType == ShopZoneType.Mine && mineShopUI != null)
                     mineShopUI.SetPanelVisible(false);
                 else if (zoneType == ShopZoneType.Pickaxe && pickaxeShopUI != null)
-                    pickaxeShopUI.Toggle(); // Или SetVisible(false) если добавим такой метод
+                    pickaxeShopUI.SetPanelVisible(false);
             }
         }
 

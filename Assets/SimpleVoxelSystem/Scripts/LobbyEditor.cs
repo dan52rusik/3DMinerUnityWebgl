@@ -154,7 +154,7 @@ namespace SimpleVoxelSystem
             if (wellGenerator == null)
                 wellGenerator = FindFirstObjectByType<WellGenerator>();
             if (editorCamera == null)
-                editorCamera = Camera.main;
+                editorCamera = ResolveEditorCamera();
             if (wellGenerator != null)
                 wellGenerator.OnFlatPlotReady += OnFlatPlotReady;
             BuildUI();
@@ -274,8 +274,8 @@ namespace SimpleVoxelSystem
             pendingRemovePos = null;
             pendingShopWorldPos = null;
 
-            // Находим камеру динамически для поддержки мультиплеера в разных окнах
-            if (editorCamera == null) editorCamera = Camera.main;
+            // Находим корректную локальную камеру в мультиплеере.
+            editorCamera = ResolveEditorCamera();
             if (editorCamera == null) { HidePreview(); return; }
 
             if (IsPointerOverUI()) { HidePreview(); return; }
@@ -887,18 +887,61 @@ namespace SimpleVoxelSystem
             return EventSystem.current.IsPointerOverGameObject();
         }
 
+        Camera ResolveEditorCamera()
+        {
+            if (editorCamera != null && editorCamera.isActiveAndEnabled)
+                return editorCamera;
+
+            // В мультиплеере локальный аватар помечается тегом Player.
+            GameObject localPlayer = GameObject.FindGameObjectWithTag("Player");
+            if (localPlayer != null)
+            {
+                Camera localCam = localPlayer.GetComponentInChildren<Camera>(true);
+                if (localCam != null && localCam.isActiveAndEnabled)
+                {
+                    editorCamera = localCam;
+                    return editorCamera;
+                }
+            }
+
+            if (Camera.main != null && Camera.main.isActiveAndEnabled)
+            {
+                editorCamera = Camera.main;
+                return editorCamera;
+            }
+
+            Camera[] allCameras = Camera.allCameras;
+            for (int i = 0; i < allCameras.Length; i++)
+            {
+                Camera cam = allCameras[i];
+                if (cam != null && cam.isActiveAndEnabled)
+                {
+                    editorCamera = cam;
+                    return editorCamera;
+                }
+            }
+
+            editorCamera = null;
+            return null;
+        }
+
         Vector2 GetPointerPos()
         {
+#if ENABLE_LEGACY_INPUT_MANAGER
+            // Для луча предпочитаем координаты legacy Input, когда он доступен.
+            Vector2 legacyPos = Input.mousePosition;
+            if (legacyPos.x >= 0f && legacyPos.x <= Screen.width &&
+                legacyPos.y >= 0f && legacyPos.y <= Screen.height)
+                return legacyPos;
+#endif
+
 #if ENABLE_INPUT_SYSTEM
             if (Mouse.current != null)
             {
-                // В полноэкранном режиме с масштабированием Mouse.current.position 
-                // может отличаться от Input.mousePosition. 
-                // Возвращаем как есть, ScreenPointToRay сам разберется.
                 return Mouse.current.position.ReadValue();
             }
 #endif
-            return Input.mousePosition;
+            return Vector2.zero;
         }
 
         bool IsToggleKeyDown()
