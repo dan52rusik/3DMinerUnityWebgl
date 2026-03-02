@@ -67,8 +67,8 @@ namespace SimpleVoxelSystem
             overlay = MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000f, 10000f), new Color(0f, 0f, 0f, 0.6f));
             shopPanel = MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400f, 500f), ColPanel);
 
-            MakeLabel(shopPanel.transform, "Title", "⚒️ МАГАЗИН КИРОК", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
-            levelText = MakeLabel(shopPanel.transform, "LevelInfo", "Ваш уровень копки: 1 (0 XP)", 14, TextAnchor.UpperCenter);
+            MakeLabel(shopPanel.transform, "Title", "PICKAXE SHOP", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
+            levelText = MakeLabel(shopPanel.transform, "LevelInfo", "Mining level: 1 (0 XP)", 14, TextAnchor.UpperCenter);
             levelText.rectTransform.anchoredPosition = new Vector2(0f, -45f);
 
             buttonContainer = MakeScrollContainer(shopPanel.transform);
@@ -106,10 +106,10 @@ namespace SimpleVoxelSystem
                 tDesc.horizontalOverflow = HorizontalWrapMode.Wrap;
                 tDesc.verticalOverflow = VerticalWrapMode.Truncate;
 
-                MakeLabelRect(item.transform, "Lvl", $"Ур. {data.requiredMiningLevel}", 12, TextAnchor.LowerLeft,
+                MakeLabelRect(item.transform, "Lvl", $"Lv. {data.requiredMiningLevel}", 12, TextAnchor.LowerLeft,
                     new Vector2(10f, -4f), new Vector2(-160f, 22f), new Color(0.5f, 0.8f, 1f));
 
-                MakeLabelRect(item.transform, "Price", $"{data.buyPrice}₽", 16, TextAnchor.MiddleRight,
+                MakeLabelRect(item.transform, "Price", $"$ {data.buyPrice}", 16, TextAnchor.MiddleRight,
                     new Vector2(-108f, -2f), new Vector2(-10f, 24f), Color.yellow);
 
                 Button btn = item.AddComponent<Button>();
@@ -120,7 +120,7 @@ namespace SimpleVoxelSystem
         void Update()
         {
             if (shopPanel != null && shopPanel.activeSelf && levelText != null)
-                levelText.text = $"Ваш уровень копки: {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
+                levelText.text = $"Mining level: {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
         }
 
         public void Toggle()

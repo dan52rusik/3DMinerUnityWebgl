@@ -133,7 +133,7 @@ namespace SimpleVoxelSystem
                 color: ColHUD);
 
             moneyText = MakeLabelOffset(hud.transform, "MoneyText",
-                "💰 0₽  |  ⛏️ Ур. 1", 16, TextAnchor.MiddleLeft,
+                "$ 0  |  Lv. 1", 16, TextAnchor.MiddleLeft,
                 new Vector2(10, 0), new Vector2(-10, 0));
 
             statusLabel = MakeLabelOffset(hud.transform, "StatusLabel",
@@ -143,7 +143,7 @@ namespace SimpleVoxelSystem
 
             // â”€â”€ ÐšÐ½Ð¾Ð¿ÐºÐ° ÐžÑ‚Ð¼ÐµÐ½Ð° (Ñ€ÐµÐ¶Ð¸Ð¼ Ñ€Ð°Ð·Ð¼ÐµÑ‰ÐµÐ½Ð¸Ñ) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             cancelBtn = MakeButton(rootCanvas.transform, "CancelBtn",
-                "✖ Отмена", ColBtnCancel,
+                "Cancel", ColBtnCancel,
                 anchor: new Vector2(1f, 0f), pivot: new Vector2(1f, 0f),
                 pos: new Vector2(-10f, 10f), size: new Vector2(120f, 40f));
             cancelBtn.onClick.AddListener(() => mineMarket.CancelPlacementPublic());
@@ -151,7 +151,7 @@ namespace SimpleVoxelSystem
 
             // â”€â”€ ÐšÐ½Ð¾Ð¿ÐºÐ° ÐŸÑ€Ð¾Ð´Ð°Ñ‚ÑŒ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             sellMineBtn = MakeButton(rootCanvas.transform, "SellMineBtn",
-                "💰 Продать шахту", ColBtnSell,
+                "Sell Mine", ColBtnSell,
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-10f, -10f), size: new Vector2(155f, 40f));
             sellMineBtn.onClick.AddListener(() => mineMarket.SellCurrentMine());
@@ -159,7 +159,7 @@ namespace SimpleVoxelSystem
 
             // â”€â”€ ÐšÐ½Ð¾Ð¿ÐºÐ° ÐŸÐµÑ€ÐµÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ñ ÐœÐ¸Ñ€Ð¾Ð² â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             switchWorldBtn = MakeButton(rootCanvas.transform, "SwitchWorldBtn",
-                "🏠 В Лобби", new Color(0.2f, 0.7f, 0.2f, 1f),
+                "To Lobby", new Color(0.2f, 0.7f, 0.2f, 1f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-170f, -10f), size: new Vector2(140f, 40f));
             switchWorldBtn.onClick.AddListener(() => 
@@ -173,7 +173,7 @@ namespace SimpleVoxelSystem
 
             // â”€â”€ ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¡Ð¾Ð·Ð´Ð°Ñ‚ÑŒ ÐžÑÑ‚Ñ€Ð¾Ð² (Ñ‚ÐµÐ¿ÐµÑ€ÑŒ ÑÐ²ÐµÑ€Ñ…Ñƒ, Ð² Ð²Ð¸Ð´Ðµ Ð¸ÐºÐ¾Ð½ÐºÐ¸/Ð¼Ð°Ð»ÐµÐ½ÑŒÐºÐ¾Ð¹ Ð¿Ð°Ð½ÐµÐ»Ð¸) â”€â”€
             createIslandBtn = MakeButton(rootCanvas.transform, "CreateIslandBtn",
-                "🏝 Создать Свой Остров", new Color(0.15f, 0.45f, 0.85f, 0.9f),
+                "Create Island", new Color(0.15f, 0.45f, 0.85f, 0.9f),
                 anchor: new Vector2(0.5f, 1f), pivot: new Vector2(0.5f, 1f),
                 pos: new Vector2(0, -10f), size: new Vector2(240f, 40f));
             createIslandBtn.onClick.AddListener(() => 
@@ -199,12 +199,12 @@ namespace SimpleVoxelSystem
 
             // Ð—Ð°Ð³Ð¾Ð»Ð¾Ð²Ð¾Ðº
             MakeLabelOffset(shopPanel.transform, "ShopTitle",
-                "⛏ МАГАЗИН ШАХТ", 20, TextAnchor.UpperCenter,
+                "MINE SHOP", 20, TextAnchor.UpperCenter,
                 new Vector2(0, -12), new Vector2(0, 0), bold: true);
 
             // ÐŸÐ¾Ð´Ð·Ð°Ð³Ð¾Ð»Ð¾Ð²Ð¾ÐºÑ Ð´ÐµÐ½ÑŒÐ³Ð°Ð¼Ð¸
             MakeLabelOffset(shopPanel.transform, "ShopMoney",
-                "💰 Баланс: 0₽  |  [B] — закрыть", 12, TextAnchor.UpperCenter,
+                "Balance: $0  |  [B] close", 12, TextAnchor.UpperCenter,
                 new Vector2(0, -42), new Vector2(0, -22), bold: false);
 
             // Ð“Ð¾Ñ€Ð¸Ð·Ð¾Ð½Ñ‚Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ€Ð°Ð·Ð´ÐµÐ»Ð¸Ñ‚ÐµÐ»ÑŒ
@@ -299,7 +299,7 @@ namespace SimpleVoxelSystem
 
             // Ð¦ÐµÐ½Ð° ÑÐ¿Ñ€Ð°Ð²Ð°
             Text priceT = MakeLabelOffset(go.transform, "Price",
-                $"💰 {data.buyPrice}₽", 15, TextAnchor.MiddleRight,
+                $"$ {data.buyPrice}", 15, TextAnchor.MiddleRight,
                 new Vector2(0, 0), new Vector2(-12, 0), bold: true);
             priceT.color = new Color(1f, 0.88f, 0.25f, 1f);
 
@@ -309,13 +309,13 @@ namespace SimpleVoxelSystem
                 bool canAfford = GlobalEconomy.Money >= cap.buyPrice;
                 if (!canAfford)
                 {
-                    SetStatus($"⚠️ Не хватает денег! Нужно {cap.buyPrice}₽, есть {GlobalEconomy.Money}₽.");
+                    SetStatus($"Not enough money. Need {cap.buyPrice}, have {GlobalEconomy.Money}.");
                     return;
                 }
                 if (mineMarket.TryBuyMine(cap))
                 {
                     SetPanelVisible(false);
-                    SetStatus($"Кликните левой кнопкой, чтобы установить «{cap.displayName}». Escape — отменить.");
+                    SetStatus($"Left click to place {cap.displayName}. Esc to cancel.");
                 }
             });
 
@@ -341,10 +341,10 @@ namespace SimpleVoxelSystem
             int total = l.dirtWeight + l.stoneWeight + l.ironWeight + l.goldWeight;
             if (total <= 0) return "-";
             var parts = new System.Collections.Generic.List<string>();
-            if (l.dirtWeight  > 0) parts.Add($"🟫Земля {l.dirtWeight  * 100 / total}%");
-            if (l.stoneWeight > 0) parts.Add($"⚪Камень {l.stoneWeight * 100 / total}%");
-            if (l.ironWeight  > 0) parts.Add($"🔶Железо {l.ironWeight  * 100 / total}%");
-            if (l.goldWeight  > 0) parts.Add($"🟡Золото {l.goldWeight  * 100 / total}%");
+            if (l.dirtWeight  > 0) parts.Add($"Dirt {l.dirtWeight  * 100 / total}%");
+            if (l.stoneWeight > 0) parts.Add($"Stone {l.stoneWeight * 100 / total}%");
+            if (l.ironWeight  > 0) parts.Add($"Iron {l.ironWeight  * 100 / total}%");
+            if (l.goldWeight  > 0) parts.Add($"Gold {l.goldWeight  * 100 / total}%");
             return string.Join("  ", parts);
         }
 
@@ -354,17 +354,17 @@ namespace SimpleVoxelSystem
 
         void OnMinePlaced(MineInstance mine)
         {
-            SetStatus($"✅ Шахта «{mine.shopData.displayName}» установлена! Глубина: {mine.rolledDepth} сл.");
+            SetStatus($"Mine {mine.shopData.displayName} placed. Depth: {mine.rolledDepth}.");
         }
 
         void OnMineSold(MineInstance mine)
         {
-            SetStatus($"💰 Шахта продана за {mine.SellPrice}₽. Участок свободен.");
+            SetStatus($"Mine sold for {mine.SellPrice}.");
         }
 
         void OnPlacementCancelled()
         {
-            SetStatus("Установка отменена. Деньги возвращены.");
+            SetStatus("Placement canceled. Money returned.");
         }
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -381,7 +381,7 @@ namespace SimpleVoxelSystem
             bool hasPending  = mineMarket.IsPlacementMode && !inLobby; // ÐÐ° Ð¾ÑÑ‚Ñ€Ð¾Ð²Ðµ Ñ ÑˆÐ°Ñ…Ñ‚Ð¾Ð¹ Ð² Ñ€ÑƒÐºÐ°Ñ…
 
             if (moneyText != null) 
-                moneyText.text = $"💰 {GlobalEconomy.Money}₽  |  ⛏️ Ур. {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
+                moneyText.text = $"$ {GlobalEconomy.Money}  |  Lv. {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ° ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Ð»Ð¾Ð±Ð±Ð¸ Ð¸ Ð¿Ð¾ÐºÐ° Ð¾ÑÑ‚Ñ€Ð¾Ð²Ð° Ð½ÐµÑ‚
             if (createIslandBtn != null) 
@@ -393,7 +393,7 @@ namespace SimpleVoxelSystem
                 switchWorldBtn.gameObject.SetActive(islandBuilt);
                 var txt = switchWorldBtn.GetComponentInChildren<Text>();
                 if (txt != null)
-                    txt.text = inLobby ? "🏝 К Острову" : "🏠 К Лобби";
+                    txt.text = inLobby ? "To Island" : "To Lobby";
             }
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ¸ Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹ Ð¢ÐžÐ›Ð¬ÐšÐž Ð² Ð»Ð¾Ð±Ð±Ð¸
@@ -421,7 +421,7 @@ namespace SimpleVoxelSystem
                 cancelBtn.gameObject.SetActive(isPlacing);
                 
                 var txt = cancelBtn.GetComponentInChildren<Text>();
-                if (txt != null) txt.text = "💰 Вернуть деньги";
+                if (txt != null) txt.text = "Refund";
             }
 
             // Ð¡Ñ‚Ð°Ñ‚ÑƒÑ Ñ€Ð°Ð·Ð¼ÐµÑ‰ÐµÐ½Ð¸Ñ
@@ -430,8 +430,8 @@ namespace SimpleVoxelSystem
                 if (isPlacing)
                 {
                     statusLabel.text = inLobby 
-                        ? "📦 <color=yellow>Шахта куплена!</color> Вернитесь на Остров для установки."
-                        : "📍 <color=yellow>Режим установки.</color> Выберите место ЛКМ.";
+                        ? "<color=yellow>Mine purchased.</color> Go to Island to place it."
+                        : "<color=yellow>Placement mode.</color> Choose a position with LMB.";
                 }
                 else
                 {
@@ -465,7 +465,7 @@ namespace SimpleVoxelSystem
             if (shopPanel == null) return;
             var txt = shopPanel.transform.Find("ShopMoney")?.GetComponent<Text>();
             if (txt != null)
-                txt.text = $"💰 Баланс: {GlobalEconomy.Money}₽  |  [B] — закрыть";
+                txt.text = $"Balance: ${GlobalEconomy.Money}  |  [B] close";
         }
 
         void SetStatus(string msg)

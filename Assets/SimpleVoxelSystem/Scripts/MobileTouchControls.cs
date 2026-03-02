@@ -120,8 +120,32 @@ namespace SimpleVoxelSystem
 #if UNITY_EDITOR
             return forceEnableInEditor;
 #else
-            return autoEnableOnMobile && Application.isMobilePlatform;
+            if (!autoEnableOnMobile)
+                return false;
+
+            if (!Application.isMobilePlatform)
+                return false;
+
+            // On desktop browsers with touch-capable hardware Unity can still report touch support.
+            // Keep mobile controls disabled when mouse/keyboard are present.
+            if (HasDesktopPointer())
+                return false;
+
+            return true;
 #endif
+        }
+
+        private static bool HasDesktopPointer()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (Mouse.current != null || Keyboard.current != null)
+                return true;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.mousePresent)
+                return true;
+#endif
+            return false;
         }
 
         private static void EnsureEventSystem()

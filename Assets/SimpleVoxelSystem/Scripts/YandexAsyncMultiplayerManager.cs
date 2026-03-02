@@ -17,6 +17,11 @@ namespace SimpleVoxelSystem
         [Min(5f)] public float autoPushIntervalSeconds = 25f;
         public bool verboseLogs = true;
 
+        [Header("State Commit Filter")]
+        [Min(0f)] public float minStateMoveDistance = 0.05f;
+        [Min(0f)] public float minStateYawDelta = 2f;
+        [Min(0.1f)] public float forceStateCommitInterval = 2f;
+
         private WellGenerator wellGenerator;
         private Transform localPlayer;
 
@@ -24,7 +29,11 @@ namespace SimpleVoxelSystem
         private bool initialized;
         private float nextCommitTime;
         private float nextPushTime;
+        private float nextForcedStateTime;
         private int totalIncomingTransactions;
+        private bool hasLastState;
+        private Vector3 lastStatePos;
+        private float lastStateYaw;
 
         private readonly Dictionary<string, GhostAvatar> ghosts = new Dictionary<string, GhostAvatar>();
         private readonly Queue<string> pendingCommitPayloads = new Queue<string>();
@@ -273,6 +282,7 @@ namespace SimpleVoxelSystem
                 initialized = true;
                 nextCommitTime = Time.unscaledTime + commitInterval;
                 nextPushTime = Time.unscaledTime + Mathf.Max(5f, autoPushIntervalSeconds);
+                nextForcedStateTime = Time.unscaledTime + Mathf.Max(0.1f, forceStateCommitInterval);
                 FlushPendingCommits();
                 if (verboseLogs)
                     Debug.Log($"[YandexAsyncMP] Init OK. Opponents loaded: {response.opponentsCount}");
@@ -344,19 +354,39 @@ namespace SimpleVoxelSystem
             if (player == null)
                 return;
 
+            Vector3 pos = player.position;
+            float yaw = player.eulerAngles.y;
+            float forceAfter = Mathf.Max(0.1f, forceStateCommitInterval);
+
+            if (hasLastState)
+            {
+                float moveThresholdSqr = Mathf.Max(0f, minStateMoveDistance) * Mathf.Max(0f, minStateMoveDistance);
+                float movedSqr = (pos - lastStatePos).sqrMagnitude;
+                float yawDelta = Mathf.Abs(Mathf.DeltaAngle(yaw, lastStateYaw));
+                bool changed = movedSqr >= moveThresholdSqr || yawDelta >= Mathf.Max(0f, minStateYawDelta);
+                bool forced = Time.unscaledTime >= nextForcedStateTime;
+
+                if (!changed && !forced)
+                    return;
+            }
+
             bool inLobby = wellGenerator == null || wellGenerator.IsInLobbyMode;
             CommitPayload payload = new CommitPayload
             {
                 kind = "state",
-                x = player.position.x,
-                y = player.position.y,
-                z = player.position.z,
-                ry = player.eulerAngles.y,
+                x = pos.x,
+                y = pos.y,
+                z = pos.z,
+                ry = yaw,
                 inLobby = inLobby,
                 miningLevel = GlobalEconomy.MiningLevel
             };
 
             CommitPayloadJson(JsonUtility.ToJson(payload));
+            hasLastState = true;
+            lastStatePos = pos;
+            lastStateYaw = yaw;
+            nextForcedStateTime = Time.unscaledTime + forceAfter;
         }
 
         private void OnLocalGameplayEvent(AsyncGameplayEvent e)

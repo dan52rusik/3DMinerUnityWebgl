@@ -114,6 +114,12 @@ namespace SimpleVoxelSystem
         [Header("Mobile Input")]
         [Min(0.12f)] public float mobileDoubleTapWindow = 0.32f;
         [Min(8f)] public float mobileDoubleTapMaxDistance = 80f;
+        [Header("Shared Lobby Sync")]
+        public bool enableSharedLobbySync = false;
+        [Tooltip("HTTPS URL to lobby_sync.php. Example: https://your-domain.com/lobby_sync.php")]
+        public string sharedLobbyEndpoint = "";
+        public string sharedLobbyRoomId = "global_lobby";
+        public bool sharedLobbyVerboseLogs = false;
 
         [Header("Ð”ÐµÐ±Ð°Ð³ Ñ‡Ð°Ð½ÐºÐ¾Ð²")]
         [Tooltip("ÐŸÐ¾ÐºÐ°Ð·Ñ‹Ð²Ð°Ñ‚ÑŒ Ð³Ñ€Ð°Ð½Ð¸Ñ†Ñ‹ Ñ‡Ð°Ð½ÐºÐ¾Ð² 16Ã—16 Ð² Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Ñ€ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€Ð°.")]
@@ -147,12 +153,12 @@ namespace SimpleVoxelSystem
         private static string ChunkFilePath(int cx, int cz)
             => Path.Combine(ChunkDir, $"chunk_{cx}_{cz}.json");
         private static string ChunkPrefsKey(int cx, int cz)
-            => $"lobby_chunk_{cx}_{cz}";
+            => $"lobby_chunk_v2_{cx}_{cz}";
 
         // â”€â”€â”€ Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ Ð·Ð¾Ð½ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private static string ShopSavePath =>
             Path.Combine(Application.persistentDataPath, "lobby_shopzones.json");
-        private const string ShopSavePrefsKey = "lobby_shopzones_json";
+        private const string ShopSavePrefsKey = "lobby_shopzones_v2_json";
         private ShopZoneSaveData shopSaveData = new ShopZoneSaveData();
         private readonly List<ShopZone> spawnedZones = new List<ShopZone>();
 
@@ -183,9 +189,10 @@ namespace SimpleVoxelSystem
         };
         private static readonly string[] BtnLabels =
         {
-            "Земля", "Камень", "Железо", "Золото"
+            "Dirt", "Stone", "Iron", "Gold"
         };
         private MobileTouchControls mobileControls;
+        private LobbyRealtimeSync realtimeSync;
         private float nextAutoSaveTime;
         private float lastMobileLookTapTime = -10f;
         private Vector2 lastMobileLookTapPos;
@@ -199,6 +206,13 @@ namespace SimpleVoxelSystem
             if (wellGenerator == null)
                 wellGenerator = FindFirstObjectByType<WellGenerator>();
             mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
+            realtimeSync = GetComponent<LobbyRealtimeSync>();
+            if (realtimeSync == null)
+                realtimeSync = gameObject.AddComponent<LobbyRealtimeSync>();
+            realtimeSync.enableSync = enableSharedLobbySync;
+            realtimeSync.endpointUrl = sharedLobbyEndpoint;
+            realtimeSync.roomId = string.IsNullOrWhiteSpace(sharedLobbyRoomId) ? "global_lobby" : sharedLobbyRoomId;
+            realtimeSync.verboseLogs = sharedLobbyVerboseLogs;
             if (editorCamera == null)
                 editorCamera = ResolveEditorCamera();
             if (wellGenerator != null)
@@ -250,8 +264,11 @@ namespace SimpleVoxelSystem
             if (Vector3.SqrMagnitude(wellGenerator.transform.position) > 1.0f) return;
 
             island = wellGenerator.GetComponent<VoxelIsland>();
-            LoadAndApplyLayout();
-            LoadAndApplyShopZones();
+            if (ShouldUseLocalPersistence())
+            {
+                LoadAndApplyLayout();
+                LoadAndApplyShopZones();
+            }
         }
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -456,7 +473,8 @@ namespace SimpleVoxelSystem
             else
             {
                 bool placePressed = IsLeftJustPressed() || (mobileActive && mobileLookDoubleTap && !mobileControls.RemoveHeld);
-                bool removePressed = IsRightJustPressed() || (mobileActive && mobileLookDoubleTap && mobileControls.RemoveHeld);
+                bool removePressed = IsRightJustPressed() || (mobileActive && mobileControls.RemovePressedThisFrame)
+                                  || (mobileActive && mobileLookDoubleTap && mobileControls.RemoveHeld);
                 if (placePressed && pendingPlacePos.HasValue) PlaceBlock(pendingPlacePos.Value);
                 if (removePressed && pendingRemovePos.HasValue) RemoveBlock(pendingRemovePos.Value);
             }
@@ -495,6 +513,7 @@ namespace SimpleVoxelSystem
                 avatar.RequestPlaceBlockServerRpc(pos, (int)selectedBlockType);
             
             ApplyNetworkPlaceBlock(pos, selectedBlockType);
+            realtimeSync?.NotifyLocalPlace(pos, selectedBlockType);
         }
 
         void RemoveBlock(Vector3Int pos)
@@ -506,6 +525,7 @@ namespace SimpleVoxelSystem
                 avatar.RequestRemoveBlockServerRpc(pos);
 
             ApplyNetworkRemoveBlock(pos);
+            realtimeSync?.NotifyLocalRemove(pos);
         }
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -525,19 +545,19 @@ namespace SimpleVoxelSystem
                 Vector2.zero, new Vector2(320f, 260f),
                 new Color(0.08f, 0.08f, 0.14f, 0.97f));
 
-            string title = "🛒 МАГАЗИН ШАХТ";
-            if (type == ShopZoneType.Pickaxe) title = "⚒️ МАГАЗИН КИРОК";
-            else if (type == ShopZoneType.Sell) title = "💰 ТОЧКА ПРОДАЖИ";
+            string title = "MINE SHOP";
+            if (type == ShopZoneType.Pickaxe) title = "PICKAXE SHOP";
+            else if (type == ShopZoneType.Sell) title = "SELL POINT";
             // Ð—Ð°Ð³Ð¾Ð»Ð¾Ð²Ð¾Ðº
             MakeLabelOff(dialogPanel.transform, "DlgTitle",
-                $"{title}\nВведите размер:", 14, TextAnchor.UpperCenter,
+                $"{title}\nEnter zone size:", 14, TextAnchor.UpperCenter,
                 new Vector2(10, -36), new Vector2(-10, 0), bold: true);
 
             // ÐŸÐ¾Ð»Ñ Ð²Ð²Ð¾Ð´Ð°
             float y = -95f;
-            inputSizeX = MakeInputField(dialogPanel.transform, "InputX", "Ширина X (блоков):", ref y);
-            inputSizeY = MakeInputField(dialogPanel.transform, "InputY", "Высота Y (блоков):", ref y);
-            inputSizeZ = MakeInputField(dialogPanel.transform, "InputZ", "Длина  Z (блоков):", ref y);
+            inputSizeX = MakeInputField(dialogPanel.transform, "InputX", "Width X (blocks):", ref y);
+            inputSizeY = MakeInputField(dialogPanel.transform, "InputY", "Height Y (blocks):", ref y);
+            inputSizeZ = MakeInputField(dialogPanel.transform, "InputZ", "Length Z (blocks):", ref y);
 
             inputSizeX.text = "3";
             inputSizeY.text = "3";
@@ -545,14 +565,14 @@ namespace SimpleVoxelSystem
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ¸ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ / Ð¾Ñ‚Ð¼ÐµÐ½Ð°
             Button okBtn = MakeBtn(dialogPanel.transform, "OkBtn",
-                "✅ Поставить зону",
+                "Place Zone",
                 new Color(0.2f, 0.65f, 0.3f, 1f),
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(-80f, 14f), new Vector2(148f, 36f));
             okBtn.onClick.AddListener(() => ConfirmShopPlace(worldPos, type));
 
             Button cancelBtn = MakeBtn(dialogPanel.transform, "CancelBtn",
-                "✖ Отмена",
+                "Cancel",
                 new Color(0.6f, 0.2f, 0.2f, 1f),
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(80f, 14f), new Vector2(148f, 36f));
@@ -745,6 +765,9 @@ namespace SimpleVoxelSystem
 
         void TryAutoSave()
         {
+            if (!ShouldUseLocalPersistence())
+                return;
+
             if (!autoSaveLayout || island == null || dirtyChunks.Count == 0)
                 return;
 
@@ -757,6 +780,9 @@ namespace SimpleVoxelSystem
 
         void FlushPendingSaves()
         {
+            if (!ShouldUseLocalPersistence())
+                return;
+
             if (dirtyChunks.Count > 0)
                 SaveLayout();
 
@@ -860,9 +886,11 @@ namespace SimpleVoxelSystem
                     json = PlayerPrefs.GetString(ChunkPrefsKey(cx, cz));
                 else
                 {
+#if !UNITY_WEBGL || UNITY_EDITOR
                     string file = ChunkFilePath(cx, cz);
                     if (File.Exists(file))
                         json = File.ReadAllText(file);
+#endif
                 }
 
                 if (string.IsNullOrWhiteSpace(json))
@@ -928,8 +956,13 @@ namespace SimpleVoxelSystem
             string json = null;
             if (PlayerPrefs.HasKey(ShopSavePrefsKey))
                 json = PlayerPrefs.GetString(ShopSavePrefsKey);
-            else if (File.Exists(ShopSavePath))
+            else
+            {
+#if !UNITY_WEBGL || UNITY_EDITOR
+                if (File.Exists(ShopSavePath))
                 json = File.ReadAllText(ShopSavePath);
+#endif
+            }
 
             if (string.IsNullOrWhiteSpace(json)) { shopSaveData = new ShopZoneSaveData(); return; }
             try { shopSaveData = JsonUtility.FromJson<ShopZoneSaveData>(json) ?? new ShopZoneSaveData(); }
@@ -1040,7 +1073,7 @@ namespace SimpleVoxelSystem
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ°-Ñ‚Ð¾Ð³Ð³Ð»
             toggleBtn = MakeBtn(rootCanvas.transform, "LobbyEditToggle",
-                "✏️ Редактор [F2]",
+                "Lobby Editor [F2]",
                 new Color(0.25f, 0.65f, 0.25f, 1f),
                 new Vector2(1f, 1f), new Vector2(1f, 1f),
                 new Vector2(-10f, -110f), new Vector2(168f, 36f));
@@ -1053,10 +1086,10 @@ namespace SimpleVoxelSystem
                 new Color(0.07f, 0.07f, 0.11f, 0.93f));
 
             MakeLabelOff(editorPanel.transform, "EdTitle",
-                "✏️ РЕДАКТОР ЛОББИ", 13, TextAnchor.UpperCenter,
+                "LOBBY EDITOR", 13, TextAnchor.UpperCenter,
                 new Vector2(4, -30), new Vector2(-4, 0), bold: true);
             MakeLabelOff(editorPanel.transform, "EdHint",
-                "ЛКМ — поставить\nПКМ — удалить",
+                "LMB - place\nRMB - remove",
                 11, TextAnchor.UpperCenter,
                 new Vector2(4, -54), new Vector2(-4, -32));
 
@@ -1080,7 +1113,7 @@ namespace SimpleVoxelSystem
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð° Â«ÐœÐ°Ð³Ð°Ð·Ð¸Ð½ Ð¨Ð°Ñ…Ñ‚Â»
             shopToolBtn = MakeBtn(editorPanel.transform, "ShopTool",
-                "🛒 Зона шахт",
+                "Mine Shop Zone",
                 new Color(0.15f, 0.35f, 0.80f, 1f),
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -(86f + BtnTypes.Length * 46f)), new Vector2(148f, 38f));
@@ -1088,14 +1121,14 @@ namespace SimpleVoxelSystem
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð° Â«ÐœÐ°Ð³Ð°Ð·Ð¸Ð½ ÐšÐ¸Ñ€Ð¾ÐºÂ»
             pickaxeShopToolBtn = MakeBtn(editorPanel.transform, "PickaxeShopTool",
-                "⚒️ Зона кирок",
+                "Pickaxe Zone",
                 new Color(0.25f, 0.45f, 0.25f, 1f),
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -(86f + (BtnTypes.Length + 1) * 46f)), new Vector2(148f, 38f));
             pickaxeShopToolBtn.onClick.AddListener(() => SetToolMode(EditorToolMode.PickaxeShop));
             // Кнопка инструмента «Точка продажи»
             sellPointToolBtn = MakeBtn(editorPanel.transform, "SellPointTool",
-                "💰 Точка продажи",
+                "Sell Point",
                 new Color(0.60f, 0.45f, 0.12f, 1f),
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -(86f + (BtnTypes.Length + 2) * 46f)), new Vector2(148f, 38f));
@@ -1103,7 +1136,7 @@ namespace SimpleVoxelSystem
 
             // Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ
             Button saveBtn = MakeBtn(editorPanel.transform, "ManualSaveBtn",
-                "💾 Сохранить",
+                "Save",
                 new Color(0.2f, 0.45f, 0.9f, 1f),
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 10f), new Vector2(148f, 38f));
@@ -1286,6 +1319,11 @@ namespace SimpleVoxelSystem
 #else
             return false;
 #endif
+        }
+
+        bool ShouldUseLocalPersistence()
+        {
+            return realtimeSync == null || !realtimeSync.UseAuthoritativeServerState;
         }
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•

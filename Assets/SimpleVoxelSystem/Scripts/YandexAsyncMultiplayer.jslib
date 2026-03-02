@@ -22,6 +22,7 @@
             try {
                 if (ysdk && ysdk.features && ysdk.features.GameplayAPI && ysdk.features.GameplayAPI.start) {
                     ysdk.features.GameplayAPI.start();
+                    window.__yandexGameplayStarted = true;
                 }
             } catch (e) {
                 console.warn('[YandexMP] GameplayAPI.start failed', e);
@@ -90,7 +91,16 @@
 
         try {
             var payload = payloadJson ? JSON.parse(payloadJson) : {};
-            tryStartGameplay();
+            if (!window.__yandexGameplayStarted) {
+                try {
+                    if (ysdk && ysdk.features && ysdk.features.GameplayAPI && ysdk.features.GameplayAPI.start) {
+                        ysdk.features.GameplayAPI.start();
+                        window.__yandexGameplayStarted = true;
+                    }
+                } catch (e2) {
+                    console.warn('[YandexMP] GameplayAPI.start failed in commit', e2);
+                }
+            }
             ysdk.multiplayer.sessions.commit(payload);
         } catch (e) {
             console.warn('[YandexMP] commit parse error', e);

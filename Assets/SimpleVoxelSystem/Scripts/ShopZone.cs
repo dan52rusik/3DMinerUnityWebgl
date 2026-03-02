@@ -231,7 +231,7 @@ namespace SimpleVoxelSystem
                     string shopName = "магазин шахт";
                     if (currentZone.zoneType == ShopZoneType.Pickaxe) shopName = "магазин кирок";
                     else if (currentZone.zoneType == ShopZoneType.Sell) shopName = "точку продажи";
-                    promptText.text = $"Нажмите <color=#FFD700><b>[{keyStr}]</b></color> — открыть {shopName}";
+                    promptText.text = $"Press <color=#FFD700><b>[{keyStr}]</b></color> to open {shopName}";
                 }
                 promptPanel.SetActive(v); 
             } 
@@ -267,7 +267,7 @@ namespace SimpleVoxelSystem
             promptText.alignment = TextAnchor.MiddleCenter;
             promptText.color     = Color.white;
             promptText.supportRichText = true;
-            promptText.text = "Нажмите <color=#FFD700><b>[B]</b></color> — открыть магазин шахт";
+            promptText.text = "Press <color=#FFD700><b>[B]</b></color> to open mine shop";
 
             promptPanel.SetActive(false);
         }
