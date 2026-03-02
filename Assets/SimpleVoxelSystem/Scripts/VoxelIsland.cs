@@ -10,6 +10,7 @@ namespace SimpleVoxelSystem
     /// Вместо одного огромного меша разбивает остров на Чанки (16x16x16).
     /// Использует NativeArray для хранения данных, что позволяет передавать их в Job System.
     /// </summary>
+    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
     public class VoxelIsland : MonoBehaviour
     {
         public int sizeX, sizeY, sizeZ;
@@ -53,7 +54,9 @@ namespace SimpleVoxelSystem
 
             int total = TotalX * TotalY * TotalZ;
             if (isDataCreated) voxels.Dispose();
-            voxels = new NativeArray<byte>(total, Allocator.Persistent);
+            
+            // Используем NativeArrayOptions.ClearMemory для гарантии нулевых вокселей
+            voxels = new NativeArray<byte>(total, Allocator.Persistent, NativeArrayOptions.ClearMemory);
             isDataCreated = true;
 
             SyncColors();
@@ -63,7 +66,29 @@ namespace SimpleVoxelSystem
         public void SyncColors()
         {
             if (blockColorsNative.IsCreated) blockColorsNative.Dispose();
-            blockColorsNative = new NativeArray<Color>(blockColors, Allocator.Persistent);
+            
+            // Динамически определяем размер массива цветов на основе enum.
+            // Grass = 5, значит нам нужно минимум 6 слотов (индексы 0-5).
+            int maxEnumVal = 0;
+            foreach (int val in System.Enum.GetValues(typeof(BlockType))) 
+                if (val > maxEnumVal) maxEnumVal = val;
+
+            Color[] finalCols = new Color[maxEnumVal + 1];
+            for (int i = 0; i < finalCols.Length; i++)
+            {
+                if (i < blockColors.Length) finalCols[i] = blockColors[i];
+                else finalCols[i] = Color.gray; // Fallback
+            }
+
+            // Прямая поддержка Grass (5) если массив короче
+            if (maxEnumVal >= 5)
+            {
+                 // Если Grass еще не задан или за пределами blockColors
+                 if (finalCols[5] == Color.gray || finalCols[5] == Color.clear)
+                     finalCols[5] = new Color(0.2f, 0.8f, 0.2f); // Green for Grass
+            }
+
+            blockColorsNative = new NativeArray<Color>(finalCols, Allocator.Persistent);
         }
 
         private void CreateChunks()
@@ -72,6 +97,9 @@ namespace SimpleVoxelSystem
             chunksContainer = new GameObject("Chunks");
             chunksContainer.transform.SetParent(this.transform, false);
             chunks.Clear();
+
+            MeshRenderer parentMR = GetComponent<MeshRenderer>();
+            Material sharedMat = (parentMR != null) ? parentMR.sharedMaterial : null;
 
             for (int x = 0; x < TotalX; x += chunkSize)
             for (int y = 0; y < TotalY; y += chunkSize)
@@ -86,17 +114,15 @@ namespace SimpleVoxelSystem
                 chunk.chunkPos = pos;
                 chunk.chunkSize = chunkSize;
 
-                // Передаем материал от родителя (если есть)
-                var mr = chunk.GetComponent<MeshRenderer>();
-                var parentMR = GetComponent<MeshRenderer>();
-                if (parentMR != null) mr.material = parentMR.sharedMaterial;
+                if (sharedMat != null)
+                {
+                    chunk.GetComponent<MeshRenderer>().sharedMaterial = sharedMat;
+                }
 
                 chunks.Add(pos, chunk);
             }
             
-            // Отключаем рендерер на самом острове, так как теперь рисуют чанки
-            var mainMR = GetComponent<MeshRenderer>();
-            if (mainMR != null) mainMR.enabled = false;
+            if (parentMR != null) parentMR.enabled = false;
         }
 
         public void SetVoxel(int x, int y, int z, BlockType type)
@@ -144,7 +170,6 @@ namespace SimpleVoxelSystem
             {
                 chunk.Rebuild(voxels, dims, blockColorsNative);
             }
-            // Сброс физики (синхронизация происходит внутри чанков, но на всякий случай)
             Physics.SyncTransforms();
         }
 
