@@ -241,6 +241,7 @@ namespace SimpleVoxelSystem
 
             int depth = data.RollDepth();
             pendingMine = new MineInstance(data, depth, 0);
+            AsyncGameplayEvents.PublishBuyMine(data.displayName, depth, -data.buyPrice);
 
             if (verboseLogs) Debug.Log($"[MineMarket] Куплена '{data.displayName}'. Режим установки ВКЛЮЧЕН.");
             IsPlacementMode = true; 
@@ -262,6 +263,7 @@ namespace SimpleVoxelSystem
                 GlobalEconomy.Money += mine.SellPrice;
             }
 
+            AsyncGameplayEvents.PublishSellMine(mine.shopData != null ? mine.shopData.displayName : string.Empty, mine.SellPrice);
             OnMineSold?.Invoke(mine);
             WellGen.DemolishMine();
         }
@@ -279,6 +281,7 @@ namespace SimpleVoxelSystem
 
             if (verboseLogs) Debug.Log($"[MineMarket] Установка шахты в сетку: {gx}, {gz}");
             WellGen.GenerateMineAt(pendingMine, gx, gz);
+            AsyncGameplayEvents.PublishPlaceMine(pendingMine.shopData != null ? pendingMine.shopData.displayName : string.Empty, gx, gz);
             OnMinePlaced?.Invoke(pendingMine);
             pendingMine = null;
             IsPlacementMode = false;

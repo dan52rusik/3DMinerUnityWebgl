@@ -85,18 +85,15 @@ namespace SimpleVoxelSystem
         public void ApplyNetworkPlaceBlock(Vector3Int pos, SimpleVoxelSystem.Data.BlockType type)
         {
             if (island == null) return;
-            island.SetVoxel(pos.x, pos.y, pos.z, type);
-            // mesh rebuilt in apply
-            // dirty in apply
-            // save in apply
+            island.SetVoxel(pos.x, pos.y, pos.z, type, true);
+            dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
         }
 
         public void ApplyNetworkRemoveBlock(Vector3Int pos)
         {
             if (island == null) return;
             island.RemoveVoxel(pos.x, pos.y, pos.z, true);
-            // dirty in apply
-            // save in apply
+            dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
         }
 
         [Header("Ð¡ÑÑ‹Ð»ÐºÐ¸")]
@@ -1185,7 +1182,7 @@ namespace SimpleVoxelSystem
         static Font GetFont()
         {
             if (_font != null) return _font;
-            _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return _font;
         }
 

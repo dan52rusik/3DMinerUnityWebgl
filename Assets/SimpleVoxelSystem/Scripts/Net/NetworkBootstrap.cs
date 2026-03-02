@@ -86,6 +86,12 @@ namespace SimpleVoxelSystem.Net
 
         System.Collections.IEnumerator Start()
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // WebGL release uses Yandex async multiplayer instead of NGO host/client.
+            showDebugGui = false;
+            autoStart = AutoStartMode.Disabled;
+            yield break;
+#else
             // Ждем 1 кадр, чтобы WellGenerator.Start() успел сгенерировать остров 
             // и переместить оффлайн-игрока в правильную позицию спавна (в центр).
             yield return null;
@@ -97,6 +103,7 @@ namespace SimpleVoxelSystem.Net
 
             if (autoStart == AutoStartMode.Host) StartHost();
             if (autoStart == AutoStartMode.Client) StartClient();
+#endif
         }
 
         void OnDestroy()

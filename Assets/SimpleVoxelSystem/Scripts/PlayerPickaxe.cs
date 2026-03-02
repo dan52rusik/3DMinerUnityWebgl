@@ -236,6 +236,7 @@ namespace SimpleVoxelSystem
             // Начисление опыта
             int xp = data.xpReward;
             if (xp <= 0) xp = 2; // Минимальный XP
+            bool inLobby = wellGenerator != null && wellGenerator.IsInLobbyMode;
 
             // Локальный апдейт острова (Client-side prediction)
             if (wellGenerator != null)
@@ -243,10 +244,11 @@ namespace SimpleVoxelSystem
             else
                 island.RemoveVoxel(gx, gy, gz);
 
+            AsyncGameplayEvents.PublishMineBlock(gx, gy, gz, data.type, xp, inLobby);
+
             // СИНХРОНИЗАЦИЯ: Отправляем на сервер
             if (networkAvatar != null && networkAvatar.IsSpawned)
             {
-                bool inLobby = wellGenerator != null && wellGenerator.IsInLobbyMode;
                 networkAvatar.RequestMineBlockServerRpc(new Vector3Int(gx, gy, gz), inLobby);
                 networkAvatar.AddRewardsServerRpc(0, xp); // Деньги при продаже, XP сейчас
             }
@@ -348,6 +350,8 @@ namespace SimpleVoxelSystem
             {
                 GlobalEconomy.Money += totalValueInBackpack;
             }
+
+            AsyncGameplayEvents.PublishSellBackpack(totalValueInBackpack);
 
             Debug.Log($"Продано на {totalValueInBackpack}₽. Итого: {GlobalEconomy.Money}₽");
             ClearBackpack();

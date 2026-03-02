@@ -125,10 +125,12 @@ namespace SimpleVoxelSystem
             if (parentMR != null) parentMR.enabled = false;
         }
 
-        public void SetVoxel(int x, int y, int z, BlockType type)
+        public void SetVoxel(int x, int y, int z, BlockType type, bool rebuildMesh = false)
         {
             if (!InBounds(x, y, z)) return;
             voxels[GetIdx(x, y, z)] = (byte)((int)type + 1);
+            if (rebuildMesh)
+                RebuildAffectedChunks(x, y, z);
         }
 
         public bool TryGetBlockType(int x, int y, int z, out BlockType type)
