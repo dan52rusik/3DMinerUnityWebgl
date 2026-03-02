@@ -14,6 +14,7 @@ namespace SimpleVoxelSystem
         [Range(1, 10)] public int opponentsToLoad = 2;
         [Min(50)] public int maxOpponentTurnTimeMs = 250;
         [Min(0.05f)] public float commitInterval = 0.25f;
+        [Min(5f)] public float autoPushIntervalSeconds = 25f;
         public bool verboseLogs = true;
 
         private WellGenerator wellGenerator;
@@ -22,6 +23,7 @@ namespace SimpleVoxelSystem
         private bool initRequested;
         private bool initialized;
         private float nextCommitTime;
+        private float nextPushTime;
         private int totalIncomingTransactions;
 
         private readonly Dictionary<string, GhostAvatar> ghosts = new Dictionary<string, GhostAvatar>();
@@ -187,6 +189,12 @@ namespace SimpleVoxelSystem
                 CommitLocalState();
                 nextCommitTime = Time.unscaledTime + commitInterval;
             }
+
+            if (Time.unscaledTime >= nextPushTime)
+            {
+                PushSession();
+                nextPushTime = Time.unscaledTime + Mathf.Max(5f, autoPushIntervalSeconds);
+            }
         }
 
         private void OnGUI()
@@ -207,6 +215,12 @@ namespace SimpleVoxelSystem
         private void OnApplicationQuit()
         {
             PushSession();
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+                PushSession();
         }
 
         private void OnSdkReady()
@@ -258,6 +272,7 @@ namespace SimpleVoxelSystem
             {
                 initialized = true;
                 nextCommitTime = Time.unscaledTime + commitInterval;
+                nextPushTime = Time.unscaledTime + Mathf.Max(5f, autoPushIntervalSeconds);
                 FlushPendingCommits();
                 if (verboseLogs)
                     Debug.Log($"[YandexAsyncMP] Init OK. Opponents loaded: {response.opponentsCount}");
@@ -363,6 +378,12 @@ namespace SimpleVoxelSystem
             };
 
             CommitPayloadJson(JsonUtility.ToJson(payload));
+
+            if (e.Type == AsyncGameplayEventType.WorldSwitch)
+            {
+                PushSession();
+                nextPushTime = Time.unscaledTime + Mathf.Max(5f, autoPushIntervalSeconds);
+            }
         }
 
         private void CommitPayloadJson(string payloadJson)

@@ -176,6 +176,7 @@ namespace SimpleVoxelSystem
         {
             "Земля", "Камень", "Железо", "Золото"
         };
+        private MobileTouchControls mobileControls;
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Unity
@@ -185,6 +186,7 @@ namespace SimpleVoxelSystem
         {
             if (wellGenerator == null)
                 wellGenerator = FindFirstObjectByType<WellGenerator>();
+            mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
             if (editorCamera == null)
                 editorCamera = ResolveEditorCamera();
             if (wellGenerator != null)
@@ -1113,6 +1115,9 @@ namespace SimpleVoxelSystem
 
         Vector2 GetPointerPos()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.AimScreenPosition;
+
 #if ENABLE_LEGACY_INPUT_MANAGER
             // Ð”Ð»Ñ Ð»ÑƒÑ‡Ð° Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ñ‡Ð¸Ñ‚Ð°ÐµÐ¼ ÐºÐ¾Ð¾Ñ€Ð´Ð¸Ð½Ð°Ñ‚Ñ‹ legacy Input, ÐºÐ¾Ð³Ð´Ð° Ð¾Ð½ Ð´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½.
             Vector2 legacyPos = Input.mousePosition;
@@ -1143,6 +1148,9 @@ namespace SimpleVoxelSystem
 
         bool IsLeftJustPressed()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.MinePressedThisFrame || mobileControls.LookTapPressedThisFrame;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current?.leftButton.wasPressedThisFrame ?? false;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -1154,6 +1162,9 @@ namespace SimpleVoxelSystem
 
         bool IsRightJustPressed()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.RemovePressedThisFrame;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current?.rightButton.wasPressedThisFrame ?? false;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -1165,6 +1176,9 @@ namespace SimpleVoxelSystem
 
         bool IsRightHeld()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.RemoveHeld;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current?.rightButton.isPressed ?? false;
 #elif ENABLE_LEGACY_INPUT_MANAGER

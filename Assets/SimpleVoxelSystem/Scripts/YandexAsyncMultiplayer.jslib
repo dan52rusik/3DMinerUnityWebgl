@@ -18,6 +18,16 @@
             }
         }
 
+        function tryStartGameplay() {
+            try {
+                if (ysdk && ysdk.features && ysdk.features.GameplayAPI && ysdk.features.GameplayAPI.start) {
+                    ysdk.features.GameplayAPI.start();
+                }
+            } catch (e) {
+                console.warn('[YandexMP] GameplayAPI.start failed', e);
+            }
+        }
+
         if (typeof ysdk === 'undefined' || ysdk === null || !ysdk.multiplayer || !ysdk.multiplayer.sessions) {
             safeSend(initMethod, JSON.stringify({ ok: false, reason: 'multiplayer_unavailable' }));
             return;
@@ -64,6 +74,7 @@
 
         ysdk.multiplayer.sessions.init(options)
             .then(function (opponents) {
+                tryStartGameplay();
                 var count = Array.isArray(opponents) ? opponents.length : 0;
                 safeSend(initMethod, JSON.stringify({ ok: true, opponentsCount: count }));
             })
@@ -79,6 +90,7 @@
 
         try {
             var payload = payloadJson ? JSON.parse(payloadJson) : {};
+            tryStartGameplay();
             ysdk.multiplayer.sessions.commit(payload);
         } catch (e) {
             console.warn('[YandexMP] commit parse error', e);

@@ -62,6 +62,7 @@ namespace SimpleVoxelSystem
         private float autoMoveStopDistance = 1.5f;
         private float cameraLiftOffset;
         private float obstructionLiftOffset;
+        private MobileTouchControls mobileControls;
 
         void Awake()
         {
@@ -84,6 +85,8 @@ namespace SimpleVoxelSystem
             else
                 SetCursorLocked(false);
 
+            mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
+
             // Подписываемся на смену мира, чтобы отменять автобег при телепортации
             WellGenerator wg = FindFirstObjectByType<WellGenerator>();
             if (wg != null)
@@ -103,7 +106,10 @@ namespace SimpleVoxelSystem
 
         void Update()
         {
-            SetCursorLocked(IsLookButtonHeld());
+            if (mobileControls != null && mobileControls.IsActive)
+                SetCursorLocked(false);
+            else
+                SetCursorLocked(IsLookButtonHeld());
 
             HandleLook();
             HandleZoom();
@@ -218,7 +224,9 @@ namespace SimpleVoxelSystem
         {
             if (!enableZoomWhileLooking || cameraHolder == null)
                 return;
-            if (!IsLookButtonHeld())
+
+            bool mobileActive = mobileControls != null && mobileControls.IsActive;
+            if (!mobileActive && !IsLookButtonHeld())
                 return;
 
             float zoomInput = ReadZoomInput();
@@ -339,6 +347,9 @@ namespace SimpleVoxelSystem
 
         Vector2 ReadMoveInput()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return Vector2.ClampMagnitude(mobileControls.MoveVector, 1f);
+
 #if ENABLE_INPUT_SYSTEM
             if (Keyboard.current == null)
                 return Vector2.zero;
@@ -359,6 +370,9 @@ namespace SimpleVoxelSystem
 
         Vector2 ReadLookDelta()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.LookDelta;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null ? Mouse.current.delta.ReadValue() * 0.02f : Vector2.zero;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -370,6 +384,9 @@ namespace SimpleVoxelSystem
 
         bool IsRunPressed()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.RunHeld;
+
 #if ENABLE_INPUT_SYSTEM
             return Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -381,6 +398,9 @@ namespace SimpleVoxelSystem
 
         bool WasJumpPressed()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.JumpPressedThisFrame;
+
 #if ENABLE_INPUT_SYSTEM
             return Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -392,6 +412,9 @@ namespace SimpleVoxelSystem
 
         bool IsLookButtonHeld()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.IsLookHeld;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.middleButton.isPressed;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -403,6 +426,9 @@ namespace SimpleVoxelSystem
 
         float ReadZoomInput()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.ZoomDelta;
+
 #if ENABLE_INPUT_SYSTEM
             if (Mouse.current == null)
                 return 0f;

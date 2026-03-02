@@ -44,6 +44,7 @@ namespace SimpleVoxelSystem
         private float nextBackpackLogTime;
 
         private Net.NetPlayerAvatar networkAvatar;
+        private MobileTouchControls mobileControls;
 
         void Awake()
         {
@@ -54,6 +55,7 @@ namespace SimpleVoxelSystem
                 wellGenerator = FindFirstObjectByType<WellGenerator>();
 
             networkAvatar = GetComponent<Net.NetPlayerAvatar>();
+            mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
 
             RebuildDataCache();
         }
@@ -294,6 +296,9 @@ namespace SimpleVoxelSystem
 
         bool IsMinePressedDown()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.MinePressedThisFrame || mobileControls.LookTapPressedThisFrame;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -305,6 +310,9 @@ namespace SimpleVoxelSystem
 
         Vector2 ReadPointerPosition()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.AimScreenPosition;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 #elif ENABLE_LEGACY_INPUT_MANAGER
