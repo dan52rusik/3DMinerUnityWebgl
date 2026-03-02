@@ -254,7 +254,7 @@ namespace SimpleVoxelSystem
             rt.offsetMax = Vector2.zero;
 
             var t = labelGo.AddComponent<Text>();
-            t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.font = RuntimeUiFont.Get();
             t.fontSize = size;
             t.supportRichText = false;
             t.color = Color.white;

@@ -788,6 +788,38 @@ namespace SimpleVoxelSystem
         }
     }
 
+    public static class RuntimeUiFont
+    {
+        private static Font cached;
+
+        public static Font Get()
+        {
+            if (cached != null)
+                return cached;
+
+            cached = Resources.Load<Font>("Roboto-Regular");
+            if (cached != null)
+                return cached;
+
+            try
+            {
+                cached = Font.CreateDynamicFontFromOSFont(
+                    new[] { "Segoe UI", "Arial", "Roboto", "Noto Sans", "Tahoma", "Verdana" },
+                    16
+                );
+            }
+            catch
+            {
+                cached = null;
+            }
+
+            if (cached == null)
+                cached = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            return cached;
+        }
+    }
+
     public enum AsyncGameplayEventType
     {
         MineBlock,

@@ -108,6 +108,12 @@ namespace SimpleVoxelSystem
         public LayerMask miningLayers = Physics.DefaultRaycastLayers;
         [Tooltip("ÐœÐ°Ð»Ð¾Ðµ ÑÐ¼ÐµÑ‰ÐµÐ½Ð¸Ðµ Ð»ÑƒÑ‡Ð° Ð¿Ð¾ Ð½Ð¾Ñ€Ð¼Ð°Ð»Ð¸ Ð¿Ñ€Ð¸ Ð²Ñ‹Ð±Ð¾Ñ€Ðµ ÑÑ‡ÐµÐ¹ÐºÐ¸, Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð½Ðµ Ð¿ÐµÑ€ÐµÑÐºÐ°ÐºÐ¸Ð²Ð°Ñ‚ÑŒ Ð½Ð° ÑÐ¾ÑÐµÐ´Ð½Ð¸Ð¹ Ð±Ð»Ð¾Ðº.")]
         public float hoverSurfaceEpsilon = 0.01f;
+        [Header("Auto Save")]
+        public bool autoSaveLayout = true;
+        [Min(0.2f)] public float autoSaveInterval = 1.5f;
+        [Header("Mobile Input")]
+        [Min(0.12f)] public float mobileDoubleTapWindow = 0.32f;
+        [Min(8f)] public float mobileDoubleTapMaxDistance = 80f;
 
         [Header("Ð”ÐµÐ±Ð°Ð³ Ñ‡Ð°Ð½ÐºÐ¾Ð²")]
         [Tooltip("ÐŸÐ¾ÐºÐ°Ð·Ñ‹Ð²Ð°Ñ‚ÑŒ Ð³Ñ€Ð°Ð½Ð¸Ñ†Ñ‹ Ñ‡Ð°Ð½ÐºÐ¾Ð² 16Ã—16 Ð² Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Ñ€ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€Ð°.")]
@@ -140,10 +146,13 @@ namespace SimpleVoxelSystem
             => new Vector2Int(x / ChunkSize, z / ChunkSize);
         private static string ChunkFilePath(int cx, int cz)
             => Path.Combine(ChunkDir, $"chunk_{cx}_{cz}.json");
+        private static string ChunkPrefsKey(int cx, int cz)
+            => $"lobby_chunk_{cx}_{cz}";
 
         // â”€â”€â”€ Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ Ð·Ð¾Ð½ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private static string ShopSavePath =>
             Path.Combine(Application.persistentDataPath, "lobby_shopzones.json");
+        private const string ShopSavePrefsKey = "lobby_shopzones_json";
         private ShopZoneSaveData shopSaveData = new ShopZoneSaveData();
         private readonly List<ShopZone> spawnedZones = new List<ShopZone>();
 
@@ -177,6 +186,9 @@ namespace SimpleVoxelSystem
             "Земля", "Камень", "Железо", "Золото"
         };
         private MobileTouchControls mobileControls;
+        private float nextAutoSaveTime;
+        private float lastMobileLookTapTime = -10f;
+        private Vector2 lastMobileLookTapPos;
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Unity
@@ -204,16 +216,29 @@ namespace SimpleVoxelSystem
         {
             if (wellGenerator != null)
                 wellGenerator.OnFlatPlotReady -= OnFlatPlotReady;
+            FlushPendingSaves();
+        }
+
+        void OnApplicationPause(bool pause)
+        {
+            if (pause)
+                FlushPendingSaves();
+        }
+
+        void OnApplicationQuit()
+        {
+            FlushPendingSaves();
         }
 
         void Update()
         {
             if (IsToggleKeyDown()) ToggleEditMode();
-            if (!IsEditMode) { HidePreview(); return; }
-            if (dialogOpen) return; // Ð’Ð²Ð¾Ð´ Ð´Ð¸Ð°Ð»Ð¾Ð³Ð° Ð±Ð»Ð¾ÐºÐ¸Ñ€ÑƒÐµÑ‚ Ð²ÑÑ‘ Ð¾ÑÑ‚Ð°Ð»ÑŒÐ½Ð¾Ðµ
+            if (!IsEditMode) { HidePreview(); TryAutoSave(); return; }
+            if (dialogOpen) { TryAutoSave(); return; } // Ð’Ð²Ð¾Ð´ Ð´Ð¸Ð°Ð»Ð¾Ð³Ð° Ð±Ð»Ð¾ÐºÐ¸Ñ€ÑƒÐµÑ‚ Ð²ÑÑ‘ Ð¾ÑÑ‚Ð°Ð»ÑŒÐ½Ð¾Ðµ
 
             UpdateHover();
             HandleInput();
+            TryAutoSave();
 
             if (showChunkDebug) DrawChunkDebug();
         }
@@ -312,7 +337,8 @@ namespace SimpleVoxelSystem
             editorCamera = ResolveEditorCamera();
             if (editorCamera == null) { HidePreview(); return; }
 
-            if (IsPointerOverUI()) { HidePreview(); return; }
+            bool allowUiBypass = IsMobileControlsActive() && (mobileControls.RemoveHeld || mobileControls.RemovePressedThisFrame);
+            if (IsPointerOverUI() && !allowUiBypass) { HidePreview(); return; }
 
             Vector2 pointerPos = GetPointerPos();
             Ray ray = editorCamera.ScreenPointToRay(pointerPos);
@@ -333,7 +359,7 @@ namespace SimpleVoxelSystem
             var activeIsland = (island != null) ? island : hitIsland;
             if (hitIsland != activeIsland) { HidePreview(); return; }
 
-            bool rmb = IsRightHeld();
+            bool rmb = IsRightHeld() || (IsMobileControlsActive() && mobileControls.RemovePressedThisFrame);
 
             if (ToolMode == EditorToolMode.Shop || ToolMode == EditorToolMode.PickaxeShop || ToolMode == EditorToolMode.SellPoint)
             {
@@ -412,11 +438,14 @@ namespace SimpleVoxelSystem
 
         void HandleInput()
         {
+            bool mobileActive = IsMobileControlsActive();
+            bool mobileLookDoubleTap = ConsumeMobileLookDoubleTap();
+
             if (ToolMode == EditorToolMode.Shop || ToolMode == EditorToolMode.PickaxeShop || ToolMode == EditorToolMode.SellPoint)
             {
                 if (IsRightJustPressed() && hoveredZone != null)
                     DeleteShopZone(hoveredZone);
-                else if (IsLeftJustPressed() && pendingShopWorldPos.HasValue)
+                else if ((IsLeftJustPressed() || (mobileActive && mobileLookDoubleTap)) && pendingShopWorldPos.HasValue)
                 {
                     ShopZoneType zoneType = ShopZoneType.Mine;
                     if (ToolMode == EditorToolMode.PickaxeShop) zoneType = ShopZoneType.Pickaxe;
@@ -426,8 +455,10 @@ namespace SimpleVoxelSystem
             }
             else
             {
-                if (IsLeftJustPressed()  && pendingPlacePos.HasValue)  PlaceBlock(pendingPlacePos.Value);
-                if (IsRightJustPressed() && pendingRemovePos.HasValue) RemoveBlock(pendingRemovePos.Value);
+                bool placePressed = IsLeftJustPressed() || (mobileActive && mobileLookDoubleTap && !mobileControls.RemoveHeld);
+                bool removePressed = IsRightJustPressed() || (mobileActive && mobileLookDoubleTap && mobileControls.RemoveHeld);
+                if (placePressed && pendingPlacePos.HasValue) PlaceBlock(pendingPlacePos.Value);
+                if (removePressed && pendingRemovePos.HasValue) RemoveBlock(pendingRemovePos.Value);
             }
         }
 
@@ -691,6 +722,48 @@ namespace SimpleVoxelSystem
             return int.TryParse(s, out int v) ? v : def;
         }
 
+        bool IsMobileControlsActive()
+        {
+            return mobileControls != null && mobileControls.IsActive;
+        }
+
+        bool ConsumeMobileLookDoubleTap()
+        {
+            if (!IsMobileControlsActive() || !mobileControls.LookTapPressedThisFrame)
+                return false;
+
+            float now = Time.unscaledTime;
+            Vector2 pos = mobileControls.AimScreenPosition;
+            bool isDoubleTap =
+                now - lastMobileLookTapTime <= Mathf.Max(0.12f, mobileDoubleTapWindow) &&
+                Vector2.Distance(pos, lastMobileLookTapPos) <= Mathf.Max(8f, mobileDoubleTapMaxDistance);
+
+            lastMobileLookTapTime = now;
+            lastMobileLookTapPos = pos;
+            return isDoubleTap;
+        }
+
+        void TryAutoSave()
+        {
+            if (!autoSaveLayout || island == null || dirtyChunks.Count == 0)
+                return;
+
+            if (Time.unscaledTime < nextAutoSaveTime)
+                return;
+
+            SaveLayout();
+            nextAutoSaveTime = Time.unscaledTime + Mathf.Max(0.2f, autoSaveInterval);
+        }
+
+        void FlushPendingSaves()
+        {
+            if (dirtyChunks.Count > 0)
+                SaveLayout();
+
+            SaveShopZones();
+            PlayerPrefs.Save();
+        }
+
         // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         //  Ð§Ð°Ð½ÐºÐ¾Ð²Ð¾Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ â€” Minecraft-ÑÑ‚Ð¸Ð»ÑŒ
         //  ÐšÐ°Ð¶Ð´Ñ‹Ð¹ Ñ‡Ð°Ð½Ðº 16Ã—16 Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑÑ Ð² lobby_chunks/chunk_cx_cz.json.
@@ -718,6 +791,7 @@ namespace SimpleVoxelSystem
             foreach (var cc in dirtyChunks)
                 SaveChunk(cc.x, cc.y);
 
+            PlayerPrefs.Save();
             if (verboseLogs) Debug.Log($"[LobbyEditor] Ð¡Ð±Ñ€Ð¾ÑˆÐµÐ½Ð¾ {dirtyChunks.Count} Ñ‡Ð°Ð½Ðº(Ð¾Ð²) Ð½Ð° Ð´Ð¸ÑÐº.");
             dirtyChunks.Clear();
         }
@@ -734,7 +808,7 @@ namespace SimpleVoxelSystem
             for (int cx = 0; cx < chunkCountX; cx++)
             for (int cz = 0; cz < chunkCountZ; cz++)
                 dirtyChunks.Add(new Vector2Int(cx, cz));
-            // save in apply
+            SaveLayout();
         }
 
         private void SaveChunk(int cx, int cz)
@@ -757,7 +831,12 @@ namespace SimpleVoxelSystem
                 }
             }
 
-            try { File.WriteAllText(ChunkFilePath(cx, cz), JsonUtility.ToJson(data, true)); }
+            string json = JsonUtility.ToJson(data, true);
+            try
+            {
+                PlayerPrefs.SetString(ChunkPrefsKey(cx, cz), json);
+                File.WriteAllText(ChunkFilePath(cx, cz), json);
+            }
             catch (System.Exception ex)
             { Debug.LogError($"[LobbyEditor] ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð¿Ð¸ÑÐ¸ Ñ‡Ð°Ð½ÐºÐ° {cx},{cz}: {ex.Message}"); }
         }
@@ -769,19 +848,28 @@ namespace SimpleVoxelSystem
         public void LoadAndApplyLayout()
         {
             if (island == null) return;
-            if (!Directory.Exists(ChunkDir)) return;
-
-            string[] files;
-            try { files = Directory.GetFiles(ChunkDir, "chunk_*.json"); }
-            catch { return; }
-
-            if (files.Length == 0) return;
-
+            int chunkCountX = Mathf.CeilToInt((float)island.TotalX / ChunkSize);
+            int chunkCountZ = Mathf.CeilToInt((float)island.TotalZ / ChunkSize);
             int loaded = 0;
-            foreach (string file in files)
+
+            for (int cx = 0; cx < chunkCountX; cx++)
+            for (int cz = 0; cz < chunkCountZ; cz++)
             {
+                string json = null;
+                if (PlayerPrefs.HasKey(ChunkPrefsKey(cx, cz)))
+                    json = PlayerPrefs.GetString(ChunkPrefsKey(cx, cz));
+                else
+                {
+                    string file = ChunkFilePath(cx, cz);
+                    if (File.Exists(file))
+                        json = File.ReadAllText(file);
+                }
+
+                if (string.IsNullOrWhiteSpace(json))
+                    continue;
+
                 ChunkSaveData data;
-                try { data = JsonUtility.FromJson<ChunkSaveData>(File.ReadAllText(file)); }
+                try { data = JsonUtility.FromJson<ChunkSaveData>(json); }
                 catch { continue; }
                 if (data == null) continue;
 
@@ -821,7 +909,13 @@ namespace SimpleVoxelSystem
 
         public void SaveShopZones()
         {
-            try { File.WriteAllText(ShopSavePath, JsonUtility.ToJson(shopSaveData, true)); }
+            string json = JsonUtility.ToJson(shopSaveData, true);
+            try
+            {
+                PlayerPrefs.SetString(ShopSavePrefsKey, json);
+                PlayerPrefs.Save();
+                File.WriteAllText(ShopSavePath, json);
+            }
             catch (System.Exception ex) { Debug.LogError($"[LobbyEditor] Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ Ð·Ð¾Ð½: {ex.Message}"); }
         }
 
@@ -831,8 +925,14 @@ namespace SimpleVoxelSystem
             foreach (var z in spawnedZones) if (z != null) Destroy(z.gameObject);
             spawnedZones.Clear();
 
-            if (!File.Exists(ShopSavePath)) { shopSaveData = new ShopZoneSaveData(); return; }
-            try { shopSaveData = JsonUtility.FromJson<ShopZoneSaveData>(File.ReadAllText(ShopSavePath)) ?? new ShopZoneSaveData(); }
+            string json = null;
+            if (PlayerPrefs.HasKey(ShopSavePrefsKey))
+                json = PlayerPrefs.GetString(ShopSavePrefsKey);
+            else if (File.Exists(ShopSavePath))
+                json = File.ReadAllText(ShopSavePath);
+
+            if (string.IsNullOrWhiteSpace(json)) { shopSaveData = new ShopZoneSaveData(); return; }
+            try { shopSaveData = JsonUtility.FromJson<ShopZoneSaveData>(json) ?? new ShopZoneSaveData(); }
             catch { shopSaveData = new ShopZoneSaveData(); return; }
 
             foreach (var e in shopSaveData.zones)
@@ -1149,7 +1249,7 @@ namespace SimpleVoxelSystem
         bool IsLeftJustPressed()
         {
             if (mobileControls != null && mobileControls.IsActive)
-                return mobileControls.MinePressedThisFrame || mobileControls.LookTapPressedThisFrame;
+                return mobileControls.MinePressedThisFrame;
 
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current?.leftButton.wasPressedThisFrame ?? false;
@@ -1196,7 +1296,7 @@ namespace SimpleVoxelSystem
         static Font GetFont()
         {
             if (_font != null) return _font;
-            _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _font = RuntimeUiFont.Get();
             return _font;
         }
 

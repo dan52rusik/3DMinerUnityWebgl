@@ -189,7 +189,7 @@ namespace SimpleVoxelSystem
             rt.offsetMax = Vector2.zero;
 
             Text t = go.AddComponent<Text>();
-            t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.font = RuntimeUiFont.Get();
             t.text = text;
             t.fontSize = size;
             t.alignment = align;
@@ -211,7 +211,7 @@ namespace SimpleVoxelSystem
             rt.offsetMax = new Vector2(offsetBottomRight.x, offsetTopLeft.y);
 
             Text t = go.AddComponent<Text>();
-            t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.font = RuntimeUiFont.Get();
             t.text = text;
             t.fontSize = size;
             t.alignment = align;

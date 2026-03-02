@@ -262,7 +262,7 @@ namespace SimpleVoxelSystem
             trt.sizeDelta = Vector2.zero;
 
             promptText = tGo.AddComponent<Text>();
-            promptText.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            promptText.font      = RuntimeUiFont.Get();
             promptText.fontSize  = 16;
             promptText.alignment = TextAnchor.MiddleCenter;
             promptText.color     = Color.white;
