@@ -1,64 +1,47 @@
 using UnityEngine;
 using System.Collections.Generic;
 using SimpleVoxelSystem.Data;
+using Unity.Collections;
 
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Хранит весь массив воксельных данных острова и строит единый меш.
-    /// Весь остров = 1 MeshRenderer = 1 draw call (vertex colors).
-    ///
-    /// Система координат сетки:
-    ///   y = 0   — поверхность (верхний слой)
-    ///   y = N   — N единиц НИЖЕ поверхности
-    /// В локальных координатах Unity: блок с grid.y = Y расположен на localY = -Y
-    /// (т.е. глубина идёт в отрицательный Y).
+    /// Оптимизированная версия VoxelIsland.
+    /// Вместо одного огромного меша разбивает остров на Чанки (16x16x16).
+    /// Использует NativeArray для хранения данных, что позволяет передавать их в Job System.
     /// </summary>
-    [RequireComponent(typeof(MeshFilter))]
-    [RequireComponent(typeof(MeshRenderer))]
-    [RequireComponent(typeof(MeshCollider))]
     public class VoxelIsland : MonoBehaviour
     {
-        // ─── Размеры ───────────────────────────────────────────────────────────
-        public int sizeX;        // ширина колодца
-        public int sizeY;        // глубина колодца
-        public int sizeZ;        // длина колодца
-        public int paddingX;     // паддинг по X (земля вокруг)
-        public int paddingZ;     // паддинг по Z
+        public int sizeX, sizeY, sizeZ;
+        public int paddingX, paddingZ;
+        public int chunkSize = 16;
 
         public int TotalX => sizeX + paddingX * 2;
         public int TotalY => sizeY;
         public int TotalZ => sizeZ + paddingZ * 2;
 
-        // ─── Данные ────────────────────────────────────────────────────────────
-        // 0 = воздух, 1+ = (int)BlockType + 1
-        private byte[,,] voxels;
+        // Данные вокселей в плоском массиве (для Job System)
+        private NativeArray<byte> voxels;
+        private bool isDataCreated = false;
 
-        // ─── Цвета ────────────────────────────────────────────────────────────
-        // Синхронизируются из BlockDataConfig через WellGenerator
         public Color[] blockColors = new Color[]
         {
-            new Color(0.55f, 0.27f, 0.07f), // Dirt  — коричневый
-            new Color(0.50f, 0.50f, 0.50f), // Stone — серый
-            new Color(0.65f, 0.44f, 0.40f), // Iron  — ржавый
-            new Color(1.00f, 0.84f, 0.00f), // Gold  — жёлтый
-            new Color(0.20f, 0.40f, 0.90f), // Shop  — синий (для магазина)
+            new Color(0.55f, 0.27f, 0.07f),
+            new Color(0.50f, 0.50f, 0.50f),
+            new Color(0.65f, 0.44f, 0.40f),
+            new Color(1.00f, 0.84f, 0.00f),
+            new Color(0.20f, 0.40f, 0.90f),
         };
+        private NativeArray<Color> blockColorsNative;
 
-        // ─── Компоненты ────────────────────────────────────────────────────────
-        private MeshFilter   meshFilter;
-        private MeshRenderer meshRenderer;
-        private MeshCollider meshCollider;
-        private Mesh         mesh;
+        private Dictionary<Vector3Int, VoxelChunk> chunks = new Dictionary<Vector3Int, VoxelChunk>();
+        private GameObject chunksContainer;
 
-        // ─── Буферы для построения меша ────────────────────────────────────────
-        private readonly List<Vector3> verts  = new List<Vector3>(8192);
-        private readonly List<int>     tris   = new List<int>(16384);
-        private readonly List<Color>   colors = new List<Color>(8192);
-
-        // ══════════════════════════════════════════════════════════════════════
-        // Публичное API
-        // ══════════════════════════════════════════════════════════════════════
+        private void OnDestroy()
+        {
+            if (isDataCreated) voxels.Dispose();
+            if (blockColorsNative.IsCreated) blockColorsNative.Dispose();
+        }
 
         public void Init(int sx, int sy, int sz, int px, int pz)
         {
@@ -67,218 +50,154 @@ namespace SimpleVoxelSystem
             sizeZ = Mathf.Max(1, sz);
             paddingX = px;
             paddingZ = pz;
-            voxels = new byte[TotalX, TotalY, TotalZ];
+
+            int total = TotalX * TotalY * TotalZ;
+            if (isDataCreated) voxels.Dispose();
+            voxels = new NativeArray<byte>(total, Allocator.Persistent);
+            isDataCreated = true;
+
+            SyncColors();
+            CreateChunks();
         }
 
-        public void ClearVoxels()
+        public void SyncColors()
         {
-            if (voxels == null) return;
-            System.Array.Clear(voxels, 0, voxels.Length);
+            if (blockColorsNative.IsCreated) blockColorsNative.Dispose();
+            blockColorsNative = new NativeArray<Color>(blockColors, Allocator.Persistent);
+        }
+
+        private void CreateChunks()
+        {
+            if (chunksContainer != null) Destroy(chunksContainer);
+            chunksContainer = new GameObject("Chunks");
+            chunksContainer.transform.SetParent(this.transform, false);
+            chunks.Clear();
+
+            for (int x = 0; x < TotalX; x += chunkSize)
+            for (int y = 0; y < TotalY; y += chunkSize)
+            for (int z = 0; z < TotalZ; z += chunkSize)
+            {
+                Vector3Int pos = new Vector3Int(x, y, z);
+                GameObject chunkGO = new GameObject($"Chunk_{x}_{y}_{z}");
+                chunkGO.transform.SetParent(chunksContainer.transform, false);
+                chunkGO.transform.localPosition = Vector3.zero;
+
+                VoxelChunk chunk = chunkGO.AddComponent<VoxelChunk>();
+                chunk.chunkPos = pos;
+                chunk.chunkSize = chunkSize;
+
+                // Передаем материал от родителя (если есть)
+                var mr = chunk.GetComponent<MeshRenderer>();
+                var parentMR = GetComponent<MeshRenderer>();
+                if (parentMR != null) mr.material = parentMR.sharedMaterial;
+
+                chunks.Add(pos, chunk);
+            }
+            
+            // Отключаем рендерер на самом острове, так как теперь рисуют чанки
+            var mainMR = GetComponent<MeshRenderer>();
+            if (mainMR != null) mainMR.enabled = false;
         }
 
         public void SetVoxel(int x, int y, int z, BlockType type)
         {
             if (!InBounds(x, y, z)) return;
-            voxels[x, y, z] = (byte)((int)type + 1);
+            voxels[GetIdx(x, y, z)] = (byte)((int)type + 1);
         }
 
         public bool TryGetBlockType(int x, int y, int z, out BlockType type)
         {
-            if (!InBounds(x, y, z) || voxels[x, y, z] == 0)
+            if (!InBounds(x, y, z))
             {
                 type = BlockType.Dirt;
                 return false;
             }
-            type = (BlockType)(voxels[x, y, z] - 1);
+            byte v = voxels[GetIdx(x, y, z)];
+            if (v == 0)
+            {
+                type = BlockType.Dirt;
+                return false;
+            }
+            type = (BlockType)(v - 1);
             return true;
         }
 
-        public void RemoveVoxel(int x, int y, int z)
-        {
-            RemoveVoxel(x, y, z, true);
-        }
-
-        public void RemoveVoxel(int x, int y, int z, bool rebuildMesh)
+        public void RemoveVoxel(int x, int y, int z, bool rebuildMesh = true)
         {
             if (!InBounds(x, y, z)) return;
-            voxels[x, y, z] = 0;
+            voxels[GetIdx(x, y, z)] = 0;
             if (rebuildMesh)
-                RebuildMesh();
+                RebuildAffectedChunks(x, y, z);
         }
 
         public bool IsSolid(int x, int y, int z)
         {
             if (!InBounds(x, y, z)) return false;
-            return voxels[x, y, z] != 0;
+            return voxels[GetIdx(x, y, z)] != 0;
         }
-
-        // ══════════════════════════════════════════════════════════════════════
-        // Построение меша
-        // ══════════════════════════════════════════════════════════════════════
 
         public void RebuildMesh()
         {
-            EnsureComponents();
-            verts.Clear();
-            tris.Clear();
-            colors.Clear();
-
-            for (int x = 0; x < TotalX; x++)
-            for (int y = 0; y < TotalY; y++)
-            for (int z = 0; z < TotalZ; z++)
+            SyncColors();
+            Vector3Int dims = new Vector3Int(TotalX, TotalY, TotalZ);
+            foreach (var chunk in chunks.Values)
             {
-                if (voxels[x, y, z] == 0) continue;
-                BuildBlockFaces(x, y, z);
+                chunk.Rebuild(voxels, dims, blockColorsNative);
             }
-
-            if (mesh == null)
-                mesh = new Mesh { name = "VoxelIslandMesh" };
-            else
-                mesh.Clear();
-
-            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-            mesh.SetVertices(verts);
-            mesh.SetTriangles(tris, 0);
-            mesh.SetColors(colors);
-
-            // RecalculateNormals корректно работает, т.к. каждая грань имеет
-            // собственные 4 вершины (не разделяемые с соседями)
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-            mesh.UploadMeshData(false);
-
-            meshFilter.sharedMesh   = mesh;
-            // Сброс меша для обновления физического коллайдера
-            meshCollider.sharedMesh = null;
-            meshCollider.sharedMesh = mesh;
-
-            // Срочная синхронизация физики
+            // Сброс физики (синхронизация происходит внутри чанков, но на всякий случай)
             Physics.SyncTransforms();
         }
 
-        // ══════════════════════════════════════════════════════════════════════
-        // Грани — ядро системы
-        // ══════════════════════════════════════════════════════════════════════
-
-        // Сетка: y=0 = верх, y растёт вниз.
-        // World localY = -gridY, поэтому origin блока = (x, -y, z).
-        // Блок занимает локальное пространство: [x, x+1] × [-y, -y+1] × [z, z+1].
-        //
-        // Проверки видимости граней:
-        //   Верхняя  (+Y нормаль): является ли блок выше (grid y-1) воздухом?
-        //   Нижняя   (-Y нормаль): является ли блок ниже  (grid y+1) воздухом?
-        //
-        // Порядок вершин: CCW (contre le sens des aiguilles d'une montre) при виде
-        // снаружи = стандарт Unity / WebGL (OpenGL ES CCW = лицевая сторона).
-
-        // Заранее заданные вершины граней. Ключ: относительно origin = (x,-y,z).
-        // top-уровень блока = localY+1, bottom = localY+0.
-
-        //  Y
-        //  |  Z
-        //  | /
-        //  |/___X
-        //
-        // Каждая грань — 4 вершины, образующие quad:
-        // tri1: 0,1,2  tri2: 0,2,3
-
-        private static readonly Vector3[][] FaceVerts = new[]
+        private void RebuildAffectedChunks(int x, int y, int z)
         {
-            // 0 — TOP (+Y нормаль), y_offset = 1
-            // Проверено: v01=(0,0,1) × v02=(1,0,1) → normal=(0,+1,0) ✓
-            new[] { new Vector3(0,1,0), new Vector3(0,1,1), new Vector3(1,1,1), new Vector3(1,1,0) },
+            Vector3Int dims = new Vector3Int(TotalX, TotalY, TotalZ);
+            
+            // Основной чанк
+            RebuildChunkAt(x, y, z, dims);
 
-            // 1 — BOTTOM (-Y нормаль), y_offset = 0
-            // Проверено: v01=(0,0,-1) × v02=(1,0,-1) → normal=(0,-1,0) ✓
-            new[] { new Vector3(0,0,1), new Vector3(0,0,0), new Vector3(1,0,0), new Vector3(1,0,1) },
-
-            // 2 — EAST (+X нормаль), x_offset = 1
-            // Вид со стороны +X: CCW в YZ
-            new[] { new Vector3(1,0,0), new Vector3(1,1,0), new Vector3(1,1,1), new Vector3(1,0,1) },
-
-            // 3 — WEST (-X нормаль), x_offset = 0
-            // Вид со стороны -X: CCW в YZ
-            new[] { new Vector3(0,0,1), new Vector3(0,1,1), new Vector3(0,1,0), new Vector3(0,0,0) },
-
-            // 4 — NORTH (+Z нормаль), z_offset = 1
-            // Вид со стороны +Z: CCW в XY
-            new[] { new Vector3(1,0,1), new Vector3(1,1,1), new Vector3(0,1,1), new Vector3(0,0,1) },
-
-            // 5 — SOUTH (-Z нормаль), z_offset = 0
-            // Вид со стороны -Z: CCW в XY
-            new[] { new Vector3(0,0,0), new Vector3(0,1,0), new Vector3(1,1,0), new Vector3(1,0,0) },
-        };
-
-        private void BuildBlockFaces(int x, int y, int z)
-        {
-            Color col = GetColor(voxels[x, y, z]);
-            // Локальный origin блока. Grid-y инвертирован в world Y.
-            Vector3 origin = new Vector3(x, -y, z);
-
-            // TOP: выше в сетке = меньший y-индекс
-            if (!IsSolid(x, y - 1, z)) AddFace(origin, 0, col);
-            // BOTTOM: ниже в сетке = больший y-индекс
-            if (!IsSolid(x, y + 1, z)) AddFace(origin, 1, col);
-            // X соседи
-            if (!IsSolid(x + 1, y, z)) AddFace(origin, 2, col);
-            if (!IsSolid(x - 1, y, z)) AddFace(origin, 3, col);
-            // Z соседи
-            if (!IsSolid(x, y, z + 1)) AddFace(origin, 4, col);
-            if (!IsSolid(x, y, z - 1)) AddFace(origin, 5, col);
+            // Если блок на границе чанка, нужно обновить и соседа (т.к. грань может открыться)
+            if (x % chunkSize == 0) RebuildChunkAt(x - 1, y, z, dims);
+            if ((x + 1) % chunkSize == 0) RebuildChunkAt(x + 1, y, z, dims);
+            if (y % chunkSize == 0) RebuildChunkAt(x, y - 1, z, dims);
+            if ((y + 1) % chunkSize == 0) RebuildChunkAt(x, y + 1, z, dims);
+            if (z % chunkSize == 0) RebuildChunkAt(x, y, z - 1, dims);
+            if ((z + 1) % chunkSize == 0) RebuildChunkAt(x, y, z + 1, dims);
         }
 
-        private void AddFace(Vector3 origin, int faceIdx, Color col)
+        private void RebuildChunkAt(int x, int y, int z, Vector3Int dims)
         {
-            int baseIdx = verts.Count;
-            Vector3[] fv = FaceVerts[faceIdx];
+            if (!InBounds(x, y, z)) return;
+            int cx = (x / chunkSize) * chunkSize;
+            int cy = (y / chunkSize) * chunkSize;
+            int cz = (z / chunkSize) * chunkSize;
+            Vector3Int cpos = new Vector3Int(cx, cy, cz);
 
-            for (int i = 0; i < 4; i++)
-            {
-                verts.Add(origin + fv[i]);
-                colors.Add(col);
-            }
-
-            tris.Add(baseIdx + 0);
-            tris.Add(baseIdx + 1);
-            tris.Add(baseIdx + 2);
-
-            tris.Add(baseIdx + 0);
-            tris.Add(baseIdx + 2);
-            tris.Add(baseIdx + 3);
+            if (chunks.TryGetValue(cpos, out VoxelChunk chunk))
+                chunk.Rebuild(voxels, dims, blockColorsNative);
         }
 
-        // ══════════════════════════════════════════════════════════════════════
-        // Вспомогательные
-        // ══════════════════════════════════════════════════════════════════════
-
-        private void EnsureComponents()
-        {
-            if (meshFilter   == null) meshFilter   = GetComponent<MeshFilter>();
-            if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
-            if (meshCollider == null) meshCollider = GetComponent<MeshCollider>();
-        }
-
-        public bool IsInBounds(int x, int y, int z) => InBounds(x, y, z);
+        private int GetIdx(int x, int y, int z) => x + (y * TotalX) + (z * TotalX * TotalY);
 
         public bool InBounds(int x, int y, int z)
             => x >= 0 && x < TotalX
             && y >= 0 && y < TotalY
             && z >= 0 && z < TotalZ;
 
-        // voxelByte — сырое значение из массива (1+ = блок)
-        private Color GetColor(byte voxelByte)
-        {
-            int idx = voxelByte - 1;
-            if (idx < 0 || idx >= blockColors.Length) return Color.magenta;
-            return blockColors[idx];
-        }
+        public bool IsInBounds(int x, int y, int z) => InBounds(x, y, z);
 
-        // Конвертировать сеточную позицию в локальное пространство (для UI/дебага)
         public Vector3 GridToLocal(int x, int y, int z) => new Vector3(x, -y, z);
 
         public Vector3Int LocalToGrid(Vector3 local)
         {
             return new Vector3Int(Mathf.RoundToInt(local.x), Mathf.RoundToInt(-local.y), Mathf.RoundToInt(local.z));
+        }
+
+        public void ClearVoxels()
+        {
+            if (isDataCreated)
+            {
+                for (int i = 0; i < voxels.Length; i++) voxels[i] = 0;
+            }
         }
     }
 }
