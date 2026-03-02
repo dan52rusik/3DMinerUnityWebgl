@@ -160,7 +160,17 @@ namespace SimpleVoxelSystem
                 return;
             }
 
-            GlobalEconomy.Money -= data.buyPrice;
+            // Синхронизация через сервер
+            var networkAvatar = playerPickaxe != null ? playerPickaxe.GetComponent<Net.NetPlayerAvatar>() : null;
+            if (networkAvatar != null && networkAvatar.IsSpawned)
+            {
+                networkAvatar.AddRewardsServerRpc(-data.buyPrice, 0);
+            }
+            else
+            {
+                GlobalEconomy.Money -= data.buyPrice;
+            }
+
             if (playerPickaxe != null)
                 playerPickaxe.currentPickaxe = data;
 

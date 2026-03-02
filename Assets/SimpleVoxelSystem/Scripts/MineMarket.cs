@@ -228,7 +228,17 @@ namespace SimpleVoxelSystem
             if (WellGen != null && WellGen.IsMineGenerated) { if (verboseLogs) Debug.Log("[MineMarket] Участок занят."); return false; }
             if (GlobalEconomy.Money < data.buyPrice) { if (verboseLogs) Debug.Log("[MineMarket] Мало денег."); return false; }
 
-            GlobalEconomy.Money -= data.buyPrice;
+            // Синхронизация через сервер
+            var networkAvatar = GetLocalNetworkAvatar();
+            if (networkAvatar != null && networkAvatar.IsSpawned)
+            {
+                networkAvatar.AddRewardsServerRpc(-data.buyPrice, 0);
+            }
+            else
+            {
+                GlobalEconomy.Money -= data.buyPrice;
+            }
+
             int depth = data.RollDepth();
             pendingMine = new MineInstance(data, depth, 0);
 
@@ -241,7 +251,17 @@ namespace SimpleVoxelSystem
         {
             if (WellGen == null || !WellGen.IsMineGenerated || WellGen.ActiveMine == null) return;
             MineInstance mine = WellGen.ActiveMine;
-            GlobalEconomy.Money += mine.SellPrice;
+            
+            var networkAvatar = GetLocalNetworkAvatar();
+            if (networkAvatar != null && networkAvatar.IsSpawned)
+            {
+                networkAvatar.AddRewardsServerRpc(mine.SellPrice, 0);
+            }
+            else
+            {
+                GlobalEconomy.Money += mine.SellPrice;
+            }
+
             OnMineSold?.Invoke(mine);
             WellGen.DemolishMine();
         }
@@ -267,7 +287,14 @@ namespace SimpleVoxelSystem
 
         void CancelPlacement()
         {
-            if (pendingMine != null) GlobalEconomy.Money += pendingMine.shopData.buyPrice;
+            if (pendingMine != null)
+            {
+                var networkAvatar = GetLocalNetworkAvatar();
+                if (networkAvatar != null && networkAvatar.IsSpawned)
+                    networkAvatar.AddRewardsServerRpc(pendingMine.shopData.buyPrice, 0);
+                else
+                    GlobalEconomy.Money += pendingMine.shopData.buyPrice;
+            }
             pendingMine = null;
             IsPlacementMode = false;
             ShowPreview(false);
@@ -309,6 +336,13 @@ namespace SimpleVoxelSystem
                 previewInstance.transform.localScale = new Vector3(w, 0.5f, l);
             }
             previewInstance.SetActive(true);
+        }
+
+        private Net.NetPlayerAvatar GetLocalNetworkAvatar()
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null) return player.GetComponent<Net.NetPlayerAvatar>();
+            return null;
         }
 
         bool IsConfirmPressed()

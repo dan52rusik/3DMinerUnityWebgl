@@ -68,6 +68,37 @@ namespace SimpleVoxelSystem
     /// </summary>
     public class LobbyEditor : MonoBehaviour
     {
+                
+        // MULTIPLAYER SYNC HELPERS (Called via SendMessage from NetPlayerAvatar)
+        public void ApplyNetworkPlaceBlockManual(object args) {
+            object[] a = (object[])args;
+            Vector3Int pos = (Vector3Int)a[0];
+            int type = (int)a[1];
+            ApplyNetworkPlaceBlock(pos, (SimpleVoxelSystem.Data.BlockType)type);
+        }
+
+        public void ApplyNetworkRemoveBlockManual(object arg) {
+            Vector3Int pos = (Vector3Int)arg;
+            ApplyNetworkRemoveBlock(pos);
+        }
+
+        public void ApplyNetworkPlaceBlock(Vector3Int pos, SimpleVoxelSystem.Data.BlockType type)
+        {
+            if (island == null) return;
+            island.SetVoxel(pos.x, pos.y, pos.z, type);
+            // mesh rebuilt in apply
+            // dirty in apply
+            // save in apply
+        }
+
+        public void ApplyNetworkRemoveBlock(Vector3Int pos)
+        {
+            if (island == null) return;
+            island.RemoveVoxel(pos.x, pos.y, pos.z, true);
+            // dirty in apply
+            // save in apply
+        }
+
         [Header("Ð¡ÑÑ‹Ð»ÐºÐ¸")]
         public WellGenerator wellGenerator;
         public Camera        editorCamera;
@@ -428,18 +459,23 @@ namespace SimpleVoxelSystem
         void PlaceBlock(Vector3Int pos)
         {
             if (island == null || island.IsSolid(pos.x, pos.y, pos.z)) return;
-            island.SetVoxel(pos.x, pos.y, pos.z, selectedBlockType);
-            island.RebuildMesh();
-            dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
-            SaveLayout();
+
+            var avatar = FindLocalNetworkAvatar();
+            if (avatar != null && avatar.IsSpawned)
+                avatar.RequestPlaceBlockServerRpc(pos, (int)selectedBlockType);
+            
+            ApplyNetworkPlaceBlock(pos, selectedBlockType);
         }
 
         void RemoveBlock(Vector3Int pos)
         {
             if (island == null || !island.IsSolid(pos.x, pos.y, pos.z)) return;
-            island.RemoveVoxel(pos.x, pos.y, pos.z, true);
-            dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
-            SaveLayout();
+
+            var avatar = FindLocalNetworkAvatar();
+            if (avatar != null && avatar.IsSpawned)
+                avatar.RequestRemoveBlockServerRpc(pos);
+
+            ApplyNetworkRemoveBlock(pos);
         }
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -699,7 +735,7 @@ namespace SimpleVoxelSystem
             for (int cx = 0; cx < chunkCountX; cx++)
             for (int cz = 0; cz < chunkCountZ; cz++)
                 dirtyChunks.Add(new Vector2Int(cx, cz));
-            SaveLayout();
+            // save in apply
         }
 
         private void SaveChunk(int cx, int cz)
@@ -775,7 +811,7 @@ namespace SimpleVoxelSystem
 
             if (loaded > 0)
             {
-                island.RebuildMesh();
+                // mesh rebuilt in apply
                 if (verboseLogs) Debug.Log($"[LobbyEditor] Ð—Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð¾ {loaded} Ñ‡Ð°Ð½Ðº(Ð¾Ð²).");
             }
         }

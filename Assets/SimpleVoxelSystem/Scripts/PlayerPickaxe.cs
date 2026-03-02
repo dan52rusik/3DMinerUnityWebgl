@@ -43,6 +43,8 @@ namespace SimpleVoxelSystem
         private static readonly BlockData FallbackData = new BlockData { maxHealth = 1, reward = 1, type = BlockType.Dirt, blockColor = Color.white };
         private float nextBackpackLogTime;
 
+        private Net.NetPlayerAvatar networkAvatar;
+
         void Awake()
         {
             if (miningCamera == null)
@@ -50,6 +52,8 @@ namespace SimpleVoxelSystem
 
             if (wellGenerator == null)
                 wellGenerator = FindFirstObjectByType<WellGenerator>();
+
+            networkAvatar = GetComponent<Net.NetPlayerAvatar>();
 
             RebuildDataCache();
         }
@@ -191,7 +195,7 @@ namespace SimpleVoxelSystem
             if (wellGenerator != null && !wellGenerator.CanMineVoxel(gx, gy, gz))
             {
                 // Показываем причину в консоль раз в 1 сек, чтобы пользователь видел блокировку
-                if (Time.frameCount % 60 == 0)
+                if (Time.frameCount % 90 == 0)
                     Debug.Log($"[Pickaxe] Не могу копать в [{gx},{gy},{gz}]. Проверьте глубину вашей шахты!");
                 return;
             }
@@ -231,22 +235,26 @@ namespace SimpleVoxelSystem
             
             // Начисление опыта
             int xp = data.xpReward;
-            // Если в данных стоит 0 (баг сериализации), даем минимум 2 для земли и больше для ценных руд
-            if (xp <= 0)
-            {
-                if (data.type == BlockType.Dirt || data.type == BlockType.Grass) xp = 2;
-                else if (data.type == BlockType.Stone) xp = 10;
-                else xp = 50;
-            }
+            if (xp <= 0) xp = 2; // Минимальный XP
 
-            GlobalEconomy.AddMiningXP(xp);
-            if (verboseLogs)
-                Debug.Log($"<color=cyan>+{xp} XP ({data.type})</color>");
-
+            // Локальный апдейт острова (Client-side prediction)
             if (wellGenerator != null)
                 wellGenerator.MineVoxel(gx, gy, gz);
             else
                 island.RemoveVoxel(gx, gy, gz);
+
+            // СИНХРОНИЗАЦИЯ: Отправляем на сервер
+            if (networkAvatar != null && networkAvatar.IsSpawned)
+            {
+                bool inLobby = wellGenerator != null && wellGenerator.IsInLobbyMode;
+                networkAvatar.RequestMineBlockServerRpc(new Vector3Int(gx, gy, gz), inLobby);
+                networkAvatar.AddRewardsServerRpc(0, xp); // Деньги при продаже, XP сейчас
+            }
+            else
+            {
+                // Если не в сети — просто локально
+                GlobalEconomy.AddMiningXP(xp);
+            }
         }
 
         int GetOrCreateBlockHealth(Vector3Int key, BlockData data)
@@ -332,7 +340,15 @@ namespace SimpleVoxelSystem
             if (currentBackpackLoad <= 0)
                 return;
 
-            GlobalEconomy.Money += totalValueInBackpack;
+            if (networkAvatar != null && networkAvatar.IsSpawned)
+            {
+                networkAvatar.AddRewardsServerRpc(totalValueInBackpack, 0);
+            }
+            else
+            {
+                GlobalEconomy.Money += totalValueInBackpack;
+            }
+
             Debug.Log($"Продано на {totalValueInBackpack}₽. Итого: {GlobalEconomy.Money}₽");
             ClearBackpack();
         }
