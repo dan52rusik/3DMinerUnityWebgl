@@ -1185,7 +1185,7 @@ namespace SimpleVoxelSystem
         static Font GetFont()
         {
             if (_font != null) return _font;
-            _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             return _font;
         }
 

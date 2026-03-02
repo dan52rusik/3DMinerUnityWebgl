@@ -398,6 +398,12 @@ namespace SimpleVoxelSystem
 
             Physics.SyncTransforms();
 
+            if (ActiveMine != null)
+            {
+                ApplyMineVoxels(ActiveMine);
+                RestoreElevatorForActiveMine();
+            }
+
             if (returnToLastIslandPosition && hasIslandSpawnPos)
             {
                 SpawnPlayerAt(islandSpawnPos);
@@ -436,6 +442,30 @@ namespace SimpleVoxelSystem
 
             OnWorldSwitch?.Invoke(true);
             UpdateLobbyStreamingVisibility();
+        }
+
+        public void EnsurePrivateIslandAtOffset(Vector3 offset)
+        {
+            privateIslandOffset = offset;
+
+            if (playerIsland == null)
+                CreatePlayerIsland();
+
+            SetIslandActive(playerIsland, !IsInLobbyMode);
+            SetIslandActive(lobbyIsland, true);
+            UpdateLobbyStreamingVisibility();
+        }
+
+        public void RestoreMineFromSave(MineInstance mine)
+        {
+            ActiveMine = mine;
+            IsMineGenerated = mine != null;
+
+            if (ActiveMine == null || IsInLobbyMode)
+                return;
+
+            ApplyMineVoxels(ActiveMine);
+            RestoreElevatorForActiveMine();
         }
 
         private void RememberCurrentIslandSpawnPoint()
