@@ -12,6 +12,9 @@ namespace SimpleVoxelSystem
     {
         private const string LocalSaveKey = "svs_progress_v1";
         private const float AutosaveIntervalSeconds = 8f;
+        private const int ResetMoneyValue = 0;
+        private const int ResetXpValue = 0;
+        private const int ResetLevelValue = 1;
 
         [Serializable]
         private class ProgressSaveData
@@ -386,6 +389,74 @@ namespace SimpleVoxelSystem
 
             dirty = false;
             nextAutosaveTime = Time.unscaledTime + AutosaveIntervalSeconds;
+        }
+
+        public void ResetProgressToNewPlayer()
+        {
+            if (wellGenerator == null)
+                wellGenerator = FindFirstObjectByType<WellGenerator>();
+            if (mineMarket == null)
+                mineMarket = FindFirstObjectByType<MineMarket>();
+
+            if (mineMarket != null)
+                mineMarket.CancelPlacementPublic();
+
+            if (wellGenerator != null)
+                wellGenerator.ResetPlayerWorldForNewProgress();
+
+            GlobalEconomy.Money = ResetMoneyValue;
+            GlobalEconomy.MiningXP = ResetXpValue;
+            GlobalEconomy.MiningLevel = ResetLevelValue;
+
+            isLoaded = true;
+            loadRequested = true;
+            dirty = false;
+            nextAutosaveTime = Time.unscaledTime + AutosaveIntervalSeconds;
+            CaptureStateCache();
+
+            SaveResetStateToStorage();
+        }
+
+        public static void ResetStoredProgressToNewPlayer()
+        {
+            string json = BuildDefaultResetJson();
+            PlayerPrefs.SetString(LocalSaveKey, json);
+            PlayerPrefs.Save();
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (YandexCloud_IsReady() == 1)
+                YandexCloud_Save(json);
+#endif
+        }
+
+        private void SaveResetStateToStorage()
+        {
+            ProgressSaveData resetSave = BuildSaveData();
+            string json = JsonUtility.ToJson(resetSave);
+            if (string.IsNullOrWhiteSpace(json))
+                json = BuildDefaultResetJson();
+
+            PlayerPrefs.SetString(LocalSaveKey, json);
+            PlayerPrefs.Save();
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (YandexCloud_IsReady() == 1)
+                YandexCloud_Save(json);
+#endif
+        }
+
+        private static string BuildDefaultResetJson()
+        {
+            ProgressSaveData reset = new ProgressSaveData
+            {
+                money = ResetMoneyValue,
+                miningXP = ResetXpValue,
+                miningLevel = ResetLevelValue,
+                hasPrivateIsland = false,
+                hasMine = false
+            };
+
+            return JsonUtility.ToJson(reset);
         }
 
         private ProgressSaveData BuildSaveData()

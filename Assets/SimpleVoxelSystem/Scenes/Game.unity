@@ -574,6 +574,9 @@ MonoBehaviour:
   wellGenerator: {fileID: 0}
   editorCamera: {fileID: 0}
   toggleKey: 283
+  allowRuntimeEditing: 1
+  disableRuntimeEditingInPlayerBuild: 1
+  allowRuntimeEditingInEditorPlayMode: 0
   placementRange: 200
   miningLayers:
     serializedVersion: 2
@@ -589,7 +592,7 @@ MonoBehaviour:
   sharedLobbyVerboseLogs: 0
   preferSharedSyncOverLocalSave: 1
   logPersistenceModeOnStart: 1
-  persistLocalLobbyLayout: 1
+  persistLocalLobbyLayout: 0
   clearSavedLobbyOnPlay: 0
   showChunkDebug: 1
   verboseLogs: 0

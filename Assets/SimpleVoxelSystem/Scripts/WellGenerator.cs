@@ -471,6 +471,38 @@ namespace SimpleVoxelSystem
             RestoreElevatorForActiveMine();
         }
 
+        public void ResetPlayerWorldForNewProgress()
+        {
+            if (!IsInLobbyMode)
+                SwitchToLobby();
+
+            foreach (SimpleElevator elev in GetComponentsInChildren<SimpleElevator>())
+            {
+                if (elev == null) continue;
+                if (Application.isPlaying) Destroy(elev.gameObject);
+                else DestroyImmediate(elev.gameObject);
+            }
+
+            ActiveMine = null;
+            IsMineGenerated = false;
+
+            if (playerIsland != null)
+            {
+                if (Application.isPlaying) Destroy(playerIsland.gameObject);
+                else DestroyImmediate(playerIsland.gameObject);
+                playerIsland = null;
+            }
+
+            hasIslandSpawnPos = false;
+            islandSpawnPos = Vector3.zero;
+            IsInLobbyMode = true;
+
+            if (lobbyIsland != null)
+                SetIslandActive(lobbyIsland, true);
+
+            UpdateLobbyStreamingVisibility();
+        }
+
         private void RememberCurrentIslandSpawnPoint()
         {
             if (playerIsland == null) return;

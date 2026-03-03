@@ -102,6 +102,13 @@ namespace SimpleVoxelSystem
 
         [Header("Hotkeys")]
         public KeyCode toggleKey = KeyCode.F2;
+        [Header("Runtime Editing")]
+        [Tooltip("Disable to make lobby non-editable in runtime build (F2/UI/place/remove are blocked).")]
+        public bool allowRuntimeEditing = true;
+        [Tooltip("When enabled, runtime editing is blocked only in non-Editor player builds.")]
+        public bool disableRuntimeEditingInPlayerBuild = true;
+        [Tooltip("Allow runtime lobby editing while Play Mode is running inside Unity Editor.")]
+        public bool allowRuntimeEditingInEditorPlayMode = false;
 
         [Header("Distance")]
         public float placementRange = 200f;
@@ -228,7 +235,8 @@ namespace SimpleVoxelSystem
                 editorCamera = ResolveEditorCamera();
             if (wellGenerator != null)
                 wellGenerator.OnFlatPlotReady += OnFlatPlotReady;
-            BuildUI();
+            if (IsRuntimeEditingEnabled())
+                BuildUI();
             LogPersistenceModeIfNeeded();
         }
 
@@ -258,6 +266,9 @@ namespace SimpleVoxelSystem
 
         void Update()
         {
+            if (!IsRuntimeEditingEnabled())
+                return;
+
             if (IsToggleKeyDown()) ToggleEditMode();
             if (!IsEditMode) { HidePreview(); TryAutoSave(); return; }
             if (dialogOpen) { TryAutoSave(); return; } // Ð’Ð²Ð¾Ð´ Ð´Ð¸Ð°Ð»Ð¾Ð³Ð° Ð±Ð»Ð¾ÐºÐ¸Ñ€ÑƒÐµÑ‚ Ð²ÑÑ‘ Ð¾ÑÑ‚Ð°Ð»ÑŒÐ½Ð¾Ðµ
@@ -529,6 +540,9 @@ namespace SimpleVoxelSystem
 
         void PlaceBlock(Vector3Int pos)
         {
+            if (!IsRuntimeEditingEnabled())
+                return;
+
             if (island == null || island.IsSolid(pos.x, pos.y, pos.z)) return;
 
             var avatar = FindLocalNetworkAvatar();
@@ -541,6 +555,9 @@ namespace SimpleVoxelSystem
 
         void RemoveBlock(Vector3Int pos)
         {
+            if (!IsRuntimeEditingEnabled())
+                return;
+
             if (island == null || !island.IsSolid(pos.x, pos.y, pos.z)) return;
 
             var avatar = FindLocalNetworkAvatar();
@@ -1392,6 +1409,24 @@ namespace SimpleVoxelSystem
                     localPersistenceReasonLogged = true;
                     Debug.Log("[LobbyEditor] Local persistence OFF: shared lobby sync is active and has priority.");
                 }
+                return false;
+            }
+
+            return true;
+        }
+
+        bool IsRuntimeEditingEnabled()
+        {
+            if (!allowRuntimeEditing)
+                return false;
+
+            if (Application.isEditor)
+            {
+                if (Application.isPlaying && !allowRuntimeEditingInEditorPlayMode)
+                    return false;
+            }
+            else if (disableRuntimeEditingInPlayerBuild)
+            {
                 return false;
             }
 
