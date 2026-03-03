@@ -3,7 +3,6 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using SimpleVoxelSystem.Data;
-
 using UnityEngine.EventSystems;
 using Unity.Netcode;
 using SimpleVoxelSystem.Net;
@@ -14,271 +13,140 @@ using UnityEngine.InputSystem.UI;
 
 namespace SimpleVoxelSystem
 {
-    // â”€â”€â”€ Ð”Ð°Ð½Ð½Ñ‹Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ñ Ð²Ð¾ÐºÑÐµÐ»ÐµÐ¹ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    [System.Serializable]
-    public class LobbyVoxelEntry
-    {
-        public int x, y, z;
-        public int blockTypeId;
-    }
-
-    [System.Serializable]
-    public class LobbyLayoutSaveData
-    {
-        public List<LobbyVoxelEntry> entries = new List<LobbyVoxelEntry>();
-    }
-
-    // â”€â”€â”€ Ð”Ð°Ð½Ð½Ñ‹Ðµ Ð¾Ð´Ð½Ð¾Ð³Ð¾ Ñ‡Ð°Ð½ÐºÐ° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    [System.Serializable]
-    public class ChunkSaveData
-    {
-        public int chunkX, chunkZ;   // ÐºÐ¾Ð¾Ñ€Ð´Ð¸Ð½Ð°Ñ‚Ñ‹ Ñ‡Ð°Ð½ÐºÐ° Ð² Ñ‡Ð°Ð½ÐºÐ¾Ð²Ð¾Ð¼ Ð¿Ñ€Ð¾ÑÑ‚Ñ€Ð°Ð½ÑÑ‚Ð²Ðµ
-        public List<LobbyVoxelEntry> entries = new List<LobbyVoxelEntry>();
-    }
-
-    // â”€â”€â”€ Ð”Ð°Ð½Ð½Ñ‹Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ñ Ð·Ð¾Ð½ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    [System.Serializable]
-    public class ShopZoneEntry
-    {
-        public float worldX, worldY, worldZ;
-        public int   sizeX, sizeY, sizeZ;
-        public ShopZoneType zoneType = ShopZoneType.Mine;
-    }
-
-    [System.Serializable]
-    public class ShopZoneSaveData
-    {
-        public List<ShopZoneEntry> zones = new List<ShopZoneEntry>();
-    }
-
-    // â”€â”€â”€ Ð ÐµÐ¶Ð¸Ð¼ Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    public enum EditorToolMode { Block, Shop, PickaxeShop, SellPoint }
-
-    // â”€â”€â”€ ÐžÑÐ½Ð¾Ð²Ð½Ð¾Ð¹ ÑÐºÑ€Ð¸Ð¿Ñ‚ Ñ€ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€Ð° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
     /// <summary>
-    /// Ð ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€ Ð»Ð¾Ð±Ð±Ð¸-Ð¿Ð»Ð¾Ñ‰Ð°Ð´ÐºÐ¸.
-    /// F2 â€” Ð²ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ/Ð²Ñ‹ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ.
-    /// Ð’ Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Block: Ð›ÐšÐœ ÑÑ‚Ð°Ð²Ð¸Ñ‚ Ð²Ð¾ÐºÑÐµÐ»ÑŒ, ÐŸÐšÐœ ÑƒÐ´Ð°Ð»ÑÐµÑ‚.
-    /// Ð’ Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Shop:  Ð›ÐšÐœ Ð¾Ñ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ Ð´Ð¸Ð°Ð»Ð¾Ð³ Ñ€Ð°Ð·Ð¼ÐµÑ€Ð° â†’ ÑÑ‚Ð°Ð²Ð¸Ñ‚ Ð½ÐµÐ²Ð¸Ð´Ð¸Ð¼Ñ‹Ð¹ Ñ‚Ñ€Ð¸Ð³Ð³ÐµÑ€-ÐºÑƒÐ±.
+    /// Редактор лобби-площадки.
+    /// Основной скрипт, делегирующий работу под-системам.
     /// </summary>
     public class LobbyEditor : MonoBehaviour
     {
-                
-        // MULTIPLAYER SYNC HELPERS (Called via SendMessage from NetPlayerAvatar)
-        public void ApplyNetworkPlaceBlockManual(object args) {
-            object[] a = (object[])args;
-            Vector3Int pos = (Vector3Int)a[0];
-            int type = (int)a[1];
-            ApplyNetworkPlaceBlock(pos, (SimpleVoxelSystem.Data.BlockType)type);
-        }
-
-        public void ApplyNetworkRemoveBlockManual(object arg) {
-            Vector3Int pos = (Vector3Int)arg;
-            ApplyNetworkRemoveBlock(pos);
-        }
-
-        public void ApplyNetworkPlaceBlock(Vector3Int pos, SimpleVoxelSystem.Data.BlockType type)
-        {
-            if (island == null) return;
-            island.SetVoxel(pos.x, pos.y, pos.z, type, true);
-            dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
-        }
-
-        public void ApplyNetworkRemoveBlock(Vector3Int pos)
-        {
-            if (island == null) return;
-            island.RemoveVoxel(pos.x, pos.y, pos.z, true);
-            dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
-        }
-
         [Header("References")]
         public WellGenerator wellGenerator;
-        public Camera        editorCamera;
+        public Camera editorCamera;
 
         [Header("Hotkeys")]
         public KeyCode toggleKey = KeyCode.F2;
+
         [Header("Runtime Editing")]
-        [Tooltip("Disable to make lobby non-editable in runtime build (F2/UI/place/remove are blocked).")]
         public bool allowRuntimeEditing = true;
-        [Tooltip("When enabled, runtime editing is blocked only in non-Editor player builds.")]
         public bool disableRuntimeEditingInPlayerBuild = true;
-        [Tooltip("Allow runtime lobby editing while Play Mode is running inside Unity Editor.")]
         public bool allowRuntimeEditingInEditorPlayMode = false;
 
         [Header("Distance")]
         public float placementRange = 200f;
         public LayerMask miningLayers = Physics.DefaultRaycastLayers;
-        [Tooltip("Малое смещение луча по нормали при выборе ячейки, чтобы не перескакивать на соседний блок.")]
         public float hoverSurfaceEpsilon = 0.01f;
+
         [Header("Auto Save")]
         public bool autoSaveLayout = true;
-        [Min(0.2f)] public float autoSaveInterval = 1.5f;
+        public float autoSaveInterval = 1.5f;
+
         [Header("Mobile Input")]
-        [Min(0.12f)] public float mobileDoubleTapWindow = 0.32f;
-        [Min(8f)] public float mobileDoubleTapMaxDistance = 80f;
+        public float mobileDoubleTapWindow = 0.32f;
+        public float mobileDoubleTapMaxDistance = 80f;
+
         [Header("Shared Lobby Sync")]
         public bool enableSharedLobbySync = false;
-        [Tooltip("HTTPS URL to lobby_sync.php. Example: https://your-domain.com/lobby_sync.php")]
         public string sharedLobbyEndpoint = "";
         public string sharedLobbyRoomId = "global_lobby";
         public bool sharedLobbyVerboseLogs = false;
-        [Tooltip("When shared sync endpoint is active, disable local PlayerPrefs/file save-load to avoid state conflicts.")]
         public bool preferSharedSyncOverLocalSave = true;
-        [Tooltip("Print current lobby persistence mode in Console on startup.")]
         public bool logPersistenceModeOnStart = true;
+
         [Header("Local Lobby Persistence")]
-        [Tooltip("When disabled, lobby starts from clean floor every play session.")]
         public bool persistLocalLobbyLayout = true;
-        [Tooltip("Delete previously saved local lobby chunks/zones once on play start.")]
         public bool clearSavedLobbyOnPlay = false;
+
         [Header("Baked Lobby Layout")]
-        [Tooltip("Loads baked static lobby layout from Resources when local persistence is disabled.")]
         public bool useBakedLobbyLayout = true;
-        [Tooltip("Resources path without extension. Example: LobbyBakedLayout")]
         public string bakedLobbyLayoutResourcePath = "LobbyBakedLayout";
-        [Tooltip("Resources path for baked shop zones JSON without extension. Example: LobbyBakedShopZones")]
         public string bakedShopZonesResourcePath = "LobbyBakedShopZones";
 
         [Header("Chunk Debug")]
-        [Tooltip("Show 16x16 chunk boundaries in editor mode.")]
         public bool showChunkDebug = true;
         public bool verboseLogs = false;
 
-        public Color previewColorPlace  = new Color(0.2f, 1f, 0.5f,  0.40f);
-        public Color previewColorRemove = new Color(1f,   0.2f, 0.2f, 0.40f);
-        public Color previewColorShop   = new Color(0.3f, 0.6f, 1.0f, 0.45f);
+        public Color previewColorPlace = new Color(0.2f, 1f, 0.5f, 0.40f);
+        public Color previewColorRemove = new Color(1f, 0.2f, 0.2f, 0.40f);
+        public Color previewColorShop = new Color(0.3f, 0.6f, 1.0f, 0.45f);
 
-        // â”€â”€â”€ Runtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        public bool          IsEditMode   { get; private set; }
-        public EditorToolMode ToolMode    { get; private set; } = EditorToolMode.Block;
+        // --- Runtime State ---
+        public bool IsEditMode { get; private set; }
+        public EditorToolMode ToolMode { get; private set; } = EditorToolMode.Block;
 
-        private BlockType   selectedBlockType = BlockType.Stone;
+        private BlockType selectedBlockType = BlockType.Stone;
         private VoxelIsland island;
-        private GameObject  previewCube;
+        private GameObject previewCube;
         private Vector3Int? pendingPlacePos;
         private Vector3Int? pendingRemovePos;
-        private Vector3?    pendingShopWorldPos;  // Ð¼Ð¸Ñ€Ð¾Ð²Ð°Ñ Ð¿Ð¾Ð·Ð¸Ñ†Ð¸Ñ Ð´Ð»Ñ shop
-        private ShopZone    hoveredZone;          // Ð·Ð¾Ð½Ð° Ð¿Ð¾Ð´ ÐºÑƒÑ€ÑÐ¾Ñ€Ð¾Ð¼
+        private Vector3? pendingShopWorldPos;
+        private ShopZone hoveredZone;
 
-        // â”€â”€â”€ Ð§Ð°Ð½ÐºÐ¾Ð²Ð¾Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ Ð²Ð¾ÐºÑÐµÐ»ÐµÐ¹ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        private const int ChunkSize = 16;
-        private static string ChunkDir =>
-            Path.Combine(Application.persistentDataPath, "lobby_chunks");
-        private readonly HashSet<Vector2Int> dirtyChunks = new HashSet<Vector2Int>();
-
-        private static Vector2Int VoxelToChunk(int x, int z)
-            => new Vector2Int(x / ChunkSize, z / ChunkSize);
-        private static string ChunkFilePath(int cx, int cz)
-            => Path.Combine(ChunkDir, $"chunk_{cx}_{cz}.json");
-        private static string ChunkPrefsKey(int cx, int cz)
-            => $"lobby_chunk_v2_{cx}_{cz}";
-
-        // â”€â”€â”€ Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ Ð·Ð¾Ð½ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        private static string ShopSavePath =>
-            Path.Combine(Application.persistentDataPath, "lobby_shopzones.json");
-        private const string ShopSavePrefsKey = "lobby_shopzones_v2_json";
-        private ShopZoneSaveData shopSaveData = new ShopZoneSaveData();
-        private readonly List<ShopZone> spawnedZones = new List<ShopZone>();
-
-        // â”€â”€â”€ UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        private Canvas     rootCanvas;
-        private GameObject editorPanel;
-        private Button     toggleBtn;
-        private readonly List<Button> typeButtons = new List<Button>();
-        private Button     shopToolBtn;
-        private Button     pickaxeShopToolBtn;
-        private Button     sellPointToolBtn;
-
-        // Ð”Ð¸Ð°Ð»Ð¾Ð³ Ñ€Ð°Ð·Ð¼ÐµÑ€Ð° Ð·Ð¾Ð½Ñ‹
-        private GameObject dialogPanel;
-        private InputField  inputSizeX, inputSizeY, inputSizeZ;
-        private bool        dialogOpen;
-
-        private static readonly Color[] BtnColors =
-        {
-            new Color(0.55f, 0.27f, 0.07f),
-            new Color(0.50f, 0.50f, 0.50f),
-            new Color(0.65f, 0.44f, 0.40f),
-            new Color(1.00f, 0.84f, 0.00f),
-        };
-        private static readonly BlockType[] BtnTypes =
-        {
-            BlockType.Dirt, BlockType.Stone, BlockType.Iron, BlockType.Gold
-        };
-        private static readonly string[] BtnLabels =
-        {
-            "Dirt", "Stone", "Iron", "Gold"
-        };
+        private LobbyPersistenceManager persistence;
+        private LobbyEditorUIManager uiManager;
         private MobileTouchControls mobileControls;
         private LobbyRealtimeSync realtimeSync;
+
+        private readonly HashSet<Vector2Int> dirtyChunks = new HashSet<Vector2Int>();
         private float nextAutoSaveTime;
         private float lastMobileLookTapTime = -10f;
         private Vector2 lastMobileLookTapPos;
         private bool startupCleanupDone;
         private bool localPersistenceReasonLogged;
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Unity
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        private const int ChunkSize = 16;
 
         void Awake()
         {
-            if (wellGenerator == null)
-                wellGenerator = FindFirstObjectByType<WellGenerator>();
+            if (wellGenerator == null) wellGenerator = FindFirstObjectByType<WellGenerator>();
             mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
-            realtimeSync = GetComponent<LobbyRealtimeSync>();
-            if (realtimeSync == null)
-                realtimeSync = gameObject.AddComponent<LobbyRealtimeSync>();
+            realtimeSync = GetComponent<LobbyRealtimeSync>() ?? gameObject.AddComponent<LobbyRealtimeSync>();
+
             realtimeSync.enableSync = enableSharedLobbySync;
             realtimeSync.endpointUrl = sharedLobbyEndpoint;
             realtimeSync.roomId = string.IsNullOrWhiteSpace(sharedLobbyRoomId) ? "global_lobby" : sharedLobbyRoomId;
             realtimeSync.verboseLogs = sharedLobbyVerboseLogs;
-            if (editorCamera == null)
-                editorCamera = ResolveEditorCamera();
-            if (wellGenerator != null)
-                wellGenerator.OnFlatPlotReady += OnFlatPlotReady;
+
+            if (wellGenerator != null) wellGenerator.OnFlatPlotReady += OnFlatPlotReady;
+
             if (IsRuntimeEditingEnabled())
-                BuildUI();
+            {
+                var rootCanvas = FindFirstObjectByType<Canvas>();
+                if (rootCanvas == null)
+                {
+                    var cGo = new GameObject("LobbyEditorCanvas");
+                    rootCanvas = cGo.AddComponent<Canvas>();
+                    rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                    cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                    cGo.AddComponent<GraphicRaycaster>();
+                }
+                uiManager = new LobbyEditorUIManager(this, rootCanvas.transform);
+                uiManager.BuildUI(ToggleEditMode, (bt) => selectedBlockType = bt, SetToolMode, SaveLayoutFull, ClearLobbyToBaseFloor);
+            }
             LogPersistenceModeIfNeeded();
         }
 
         void Start()
         {
-            if (wellGenerator != null)
-                island = wellGenerator.GetComponent<VoxelIsland>();
+            if (wellGenerator != null) island = wellGenerator.GetComponent<VoxelIsland>();
+            persistence = new LobbyPersistenceManager(island, verboseLogs);
         }
 
         void OnDestroy()
         {
-            if (wellGenerator != null)
-                wellGenerator.OnFlatPlotReady -= OnFlatPlotReady;
+            if (wellGenerator != null) wellGenerator.OnFlatPlotReady -= OnFlatPlotReady;
             FlushPendingSaves();
         }
 
-        void OnApplicationPause(bool pause)
-        {
-            if (pause)
-                FlushPendingSaves();
-        }
-
-        void OnApplicationQuit()
-        {
-            FlushPendingSaves();
-        }
+        void OnApplicationPause(bool pause) { if (pause) FlushPendingSaves(); }
+        void OnApplicationQuit() { FlushPendingSaves(); }
 
         void Update()
         {
-            if (!IsRuntimeEditingEnabled())
-                return;
+            if (!IsRuntimeEditingEnabled()) return;
 
             if (IsToggleKeyDown()) ToggleEditMode();
             if (!IsEditMode) { HidePreview(); TryAutoSave(); return; }
-            if (dialogOpen) { TryAutoSave(); return; } // Ð’Ð²Ð¾Ð´ Ð´Ð¸Ð°Ð»Ð¾Ð³Ð° Ð±Ð»Ð¾ÐºÐ¸Ñ€ÑƒÐµÑ‚ Ð²ÑÑ‘ Ð¾ÑÑ‚Ð°Ð»ÑŒÐ½Ð¾Ðµ
+            if (uiManager != null && uiManager.IsDialogOpen) { TryAutoSave(); return; }
 
             UpdateHover();
             HandleInput();
@@ -287,17 +155,18 @@ namespace SimpleVoxelSystem
             if (showChunkDebug) DrawChunkDebug();
         }
 
+        // --- Core Events ---
+
         private void OnFlatPlotReady()
         {
-            // Ð–ÐµÑÑ‚ÐºÐ¾Ðµ ÑƒÑÐ»Ð¾Ð²Ð¸Ðµ: Ð»Ð¾Ð±Ð±Ð¸ Ð³Ñ€ÑƒÐ·Ð¸Ð¼ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐºÐ¾Ð³Ð´Ð° Ð¼Ñ‹ Ð² Ñ†ÐµÐ½Ñ‚Ñ€Ðµ Ð¼Ð¸Ñ€Ð° Ð¸ Ð² Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Ð»Ð¾Ð±Ð±Ð¸
             if (wellGenerator == null || !wellGenerator.IsInLobbyMode) return;
-
             island = wellGenerator.GetComponent<VoxelIsland>();
+            persistence = new LobbyPersistenceManager(island, verboseLogs);
+
             if (!startupCleanupDone)
             {
                 startupCleanupDone = true;
-                if (clearSavedLobbyOnPlay)
-                    ClearStoredLobbyData();
+                if (clearSavedLobbyOnPlay) persistence.ClearAllData(island);
             }
 
             if (ShouldUseLocalPersistence() && !clearSavedLobbyOnPlay)
@@ -308,149 +177,98 @@ namespace SimpleVoxelSystem
             else
             {
                 ClearRuntimeShopZonesOnly();
-                shopSaveData = new ShopZoneSaveData();
+                persistence.SaveShopZones(new ShopZoneSaveData());
                 TryApplyBakedLayout();
                 TryApplyBakedShopZones();
             }
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ð’Ð¸Ð·ÑƒÐ°Ð»Ð¸Ð·Ð°Ñ†Ð¸Ñ Ñ‡Ð°Ð½ÐºÐ¾Ð² (Debug.DrawLine â€” Ð²Ð¸Ð´Ð½Ð¾ Ð² Scene view Ð²Ð¾ Ð²Ñ€ÐµÐ¼Ñ Play)
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-        void DrawChunkDebug()
+        public void ToggleEditMode()
         {
-            if (island == null || wellGenerator == null) return;
-
-            int totalX = island.TotalX;
-            int totalZ = island.TotalZ;
-
-            // Y Ð¿Ð¾Ð²ÐµÑ€Ñ…Ð½Ð¾ÑÑ‚Ð¸ Ð¿Ð¾Ð»Ð° = localY = -(lobbyFloorY) + 1 (Ð½Ð° 1 Ð±Ð»Ð¾Ðº Ð²Ñ‹ÑˆÐµ Ð¿Ð¾Ð²ÐµÑ€Ñ…Ð½Ð¾ÑÑ‚Ð¸ Ð¿Ð¾Ð»Ð°)
-            float ly = -(wellGenerator.LobbyFloorY - 1) + 0.05f;
-
-            int ccX = Mathf.CeilToInt((float)totalX / ChunkSize);
-            int ccZ = Mathf.CeilToInt((float)totalZ / ChunkSize);
-
-            // Ð“Ð¾Ð»ÑƒÐ±Ñ‹Ðµ Ð»Ð¸Ð½Ð¸Ð¸ â€” Ð²ÑÑ ÑÐµÑ‚ÐºÐ° Ñ‡Ð°Ð½ÐºÐ¾Ð²
-            Color gridColor = new Color(0f, 0.9f, 1f, 0.9f); // Ñ†Ð¸Ð°Ð½
-
-            // Ð›Ð¸Ð½Ð¸Ð¸ Ð¿Ð¾ X
-            for (int cx = 0; cx <= ccX; cx++)
+            IsEditMode = !IsEditMode;
+            if (!IsEditMode)
             {
-                int gx = Mathf.Min(cx * ChunkSize, totalX);
-                Vector3 p0 = island.transform.TransformPoint(new Vector3(gx, ly, 0));
-                Vector3 p1 = island.transform.TransformPoint(new Vector3(gx, ly, totalZ));
-                Debug.DrawLine(p0, p1, gridColor);
+                HidePreview();
+                uiManager?.CloseDialog();
+                if (hoveredZone != null) { hoveredZone.SetDeleteHover(false); hoveredZone = null; }
             }
-
-            // Ð›Ð¸Ð½Ð¸Ð¸ Ð¿Ð¾ Z
-            for (int cz = 0; cz <= ccZ; cz++)
-            {
-                int gz = Mathf.Min(cz * ChunkSize, totalZ);
-                Vector3 p0 = island.transform.TransformPoint(new Vector3(0,      ly, gz));
-                Vector3 p1 = island.transform.TransformPoint(new Vector3(totalX, ly, gz));
-                Debug.DrawLine(p0, p1, gridColor);
-            }
-
-            // Ð–Ñ‘Ð»Ñ‚Ñ‹Ð¹/Ð¾Ñ€Ð°Ð½Ð¶ÐµÐ²Ñ‹Ð¹ â€” dirty-Ñ‡Ð°Ð½ÐºÐ¸ (Ð¸Ð·Ð¼ÐµÐ½Ñ‘Ð½Ñ‹, ÐµÑ‰Ñ‘ ÑƒÐ¶Ðµ Ð·Ð°Ð¿Ð¸ÑÐ°Ð½Ñ‹ Ð°Ð²Ñ‚Ð¾)
-            foreach (var cc in dirtyChunks)
-                DrawChunkRect(cc.x, cc.y, ly, new Color(1f, 0.75f, 0f, 1f));
-
-            // Ð—ÐµÐ»Ñ‘Ð½Ñ‹Ð¹ â€” Ñ‡Ð°Ð½ÐºÐ¸ Ñ Ñ„Ð°Ð¹Ð»Ð¾Ð¼ Ð½Ð° Ð´Ð¸ÑÐºÐµ
-            for (int cx = 0; cx < ccX; cx++)
-            for (int cz = 0; cz < ccZ; cz++)
-                if (dirtyChunks.Contains(new Vector2Int(cx, cz)) == false
-                    && File.Exists(ChunkFilePath(cx, cz)))
-                    DrawChunkRect(cx, cz, ly, new Color(0.2f, 1f, 0.3f, 1f));
+            foreach (var zone in FindObjectsByType<ShopZone>(FindObjectsSortMode.None))
+                zone.SetEditorVisible(IsEditMode);
+            uiManager?.RefreshUI(IsEditMode, ToolMode, selectedBlockType);
         }
 
-        /// <summary>
-        /// Ð Ð¸ÑÑƒÐµÑ‚ Ñ€Ð°Ð¼ÐºÑƒ Ñ‡Ð°Ð½ÐºÐ° Ñ†Ð²ÐµÑ‚Ð½Ñ‹Ð¼Ð¸ Ð»Ð¸Ð½Ð¸ÑÐ¼Ð¸ + Ð´Ð¸Ð°Ð³Ð¾Ð½Ð°Ð»ÑŒ Ð´Ð»Ñ Ñ…Ð¾Ñ€Ð¾ÑˆÐµÐ¹ Ð²Ð¸Ð´Ð¸Ð¼Ð¾ÑÑ‚Ð¸.
-        /// </summary>
-        void DrawChunkRect(int cx, int cz, float localY, Color color)
+        private void SetToolMode(EditorToolMode mode)
         {
-            if (island == null) return;
-            int x0 = cx * ChunkSize,      x1 = Mathf.Min(x0 + ChunkSize, island.TotalX);
-            int z0 = cz * ChunkSize,      z1 = Mathf.Min(z0 + ChunkSize, island.TotalZ);
-
-            Vector3 a = island.transform.TransformPoint(new Vector3(x0, localY, z0));
-            Vector3 b = island.transform.TransformPoint(new Vector3(x1, localY, z0));
-            Vector3 c = island.transform.TransformPoint(new Vector3(x1, localY, z1));
-            Vector3 d = island.transform.TransformPoint(new Vector3(x0, localY, z1));
-
-            Debug.DrawLine(a, b, color);
-            Debug.DrawLine(b, c, color);
-            Debug.DrawLine(c, d, color);
-            Debug.DrawLine(d, a, color);
-            // Ð”Ð¸Ð°Ð³Ð¾Ð½Ð°Ð»Ð¸
-            Debug.DrawLine(a, c, color * 0.7f);
-            Debug.DrawLine(b, d, color * 0.7f);
+            ToolMode = mode;
+            uiManager?.RefreshUI(IsEditMode, ToolMode, selectedBlockType);
         }
+
+        public LobbyLayoutSaveData CaptureCurrentLayoutForBake()
+        {
+            if (island == null) return null;
+            LobbyLayoutSaveData data = new LobbyLayoutSaveData();
+            for (int x = 0; x < island.TotalX; x++)
+            for (int y = 0; y < island.TotalY; y++)
+            for (int z = 0; z < island.TotalZ; z++)
+            {
+                if (island.TryGetBlockType(x, y, z, out BlockType bt))
+                {
+                    int id = (int)bt;
+                    if (id > 0) data.entries.Add(new LobbyVoxelEntry { x = x, y = y, z = z, blockTypeId = id });
+                }
+            }
+            return data;
+        }
+
+        public ShopZoneSaveData CaptureCurrentShopZonesForBake()
+        {
+            ShopZoneSaveData data = new ShopZoneSaveData();
+            foreach (var z in FindObjectsByType<ShopZone>(FindObjectsSortMode.None))
+                data.zones.Add(new ShopZoneEntry { worldX = z.transform.position.x, worldY = z.transform.position.y, worldZ = z.transform.position.z, sizeX = z.sizeX, sizeY = z.sizeY, sizeZ = z.sizeZ, zoneType = z.zoneType });
+            return data;
+        }
+
+        // --- Logic extracted but simplified ---
 
         void UpdateHover()
         {
-            pendingPlacePos  = null;
-            pendingRemovePos = null;
-            pendingShopWorldPos = null;
+            pendingPlacePos = null; pendingRemovePos = null; pendingShopWorldPos = null;
+            Camera cam = ResolveEditorCamera();
+            if (cam == null) { HidePreview(); return; }
 
-            // ÐÐ°Ñ…Ð¾Ð´Ð¸Ð¼ ÐºÐ¾Ñ€Ñ€ÐµÐºÑ‚Ð½ÑƒÑŽ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½ÑƒÑŽ ÐºÐ°Ð¼ÐµÑ€Ñƒ Ð² Ð¼ÑƒÐ»ÑŒÑ‚Ð¸Ð¿Ð»ÐµÐµÑ€Ðµ.
-            editorCamera = ResolveEditorCamera();
-            if (editorCamera == null) { HidePreview(); return; }
+            if (EventSystem.current.IsPointerOverGameObject() && !(IsMobileControlsActive() && mobileControls.RemoveHeld))
+            { HidePreview(); return; }
 
-            bool allowUiBypass = IsMobileControlsActive() && (mobileControls.RemoveHeld || mobileControls.RemovePressedThisFrame);
-            if (IsPointerOverUI() && !allowUiBypass) { HidePreview(); return; }
-
-            Vector2 pointerPos = GetPointerPos();
-            Ray ray = editorCamera.ScreenPointToRay(pointerPos);
-            
-            // Ð˜Ð³Ð½Ð¾Ñ€Ð¸Ñ€ÑƒÐµÐ¼ Ð¿Ñ€ÐµÐ²ÑŒÑŽ (Layer 2)
+            Ray ray = cam.ScreenPointToRay(GetPointerPos());
             int layerMask = miningLayers & ~(1 << 2);
 
             if (!Physics.Raycast(ray, out RaycastHit hit, placementRange, layerMask, QueryTriggerInteraction.Ignore))
-            { 
-               HidePreview(); 
-               return; 
-            }
+            { HidePreview(); return; }
 
             VoxelIsland hitIsland = hit.collider.GetComponentInParent<VoxelIsland>();
-            if (hitIsland == null) { HidePreview(); return; }
-            
-            // Ð•ÑÐ»Ð¸ Ð² Ñ€ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€Ðµ Ð½Ðµ Ð·Ð°ÐºÑ€ÐµÐ¿Ð»ÐµÐ½ ÐºÐ¾Ð½ÐºÑ€ÐµÑ‚Ð½Ñ‹Ð¹ Ð¾ÑÑ‚Ñ€Ð¾Ð², Ñ€Ð°Ð±Ð¾Ñ‚Ð°ÐµÐ¼ Ñ Ñ‚ÐµÐ¼, Ð² ÐºÐ¾Ñ‚Ð¾Ñ€Ñ‹Ð¹ Ð¿Ð¾Ð¿Ð°Ð»Ð¸
-            var activeIsland = (island != null) ? island : hitIsland;
-            if (hitIsland != activeIsland) { HidePreview(); return; }
+            if (hitIsland == null || hitIsland != island) { HidePreview(); return; }
 
-            bool rmb = IsRightHeld() || (IsMobileControlsActive() && mobileControls.RemovePressedThisFrame);
+            bool rmb = IsRightHeld();
 
-            if (ToolMode == EditorToolMode.Shop || ToolMode == EditorToolMode.PickaxeShop || ToolMode == EditorToolMode.SellPoint)
+            if (ToolMode != EditorToolMode.Block)
             {
-                // Ð’ Shop-Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÐ¼ Ð¸ÑÑ…Ð¾Ð´Ð½ÑƒÑŽ Ð¼Ð°ÑÐºÑƒ (Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð»Ð¾Ð²Ð¸Ñ‚ÑŒ ÐºÐ¾Ð»Ð»Ð°Ð¹Ð´ÐµÑ€Ñ‹ Ð·Ð¾Ð½)
                 ShopZone newHovered = null;
-
                 if (Physics.Raycast(ray, out RaycastHit trigHit, placementRange, miningLayers, QueryTriggerInteraction.Collide))
-                {
                     newHovered = trigHit.collider.GetComponentInParent<ShopZone>();
-                }
 
-                if (newHovered != null)
-                {
-                    HidePreview();
-                    pendingShopWorldPos = null;
-                }
+                if (newHovered != null) { HidePreview(); pendingShopWorldPos = null; }
                 else
                 {
-                    // ÐÐ°Ð²Ð¾Ð´Ð¸Ð¼ Ð½Ð° Ð¿Ð¾Ð» â€” Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÐ¼ Ð¿Ñ€ÐµÐ²ÑŒÑŽ Ð´Ð»Ñ Ð½Ð¾Ð²Ð¾Ð¹ Ð·Ð¾Ð½Ñ‹
-                    Vector3 lp = activeIsland.transform.InverseTransformPoint(hit.point + hit.normal * hoverSurfaceEpsilon);
+                    Vector3 lp = island.transform.InverseTransformPoint(hit.point + hit.normal * hoverSurfaceEpsilon);
                     int px = Mathf.FloorToInt(lp.x), py = -Mathf.FloorToInt(lp.y), pz = Mathf.FloorToInt(lp.z);
-                    
-                    if (activeIsland.InBounds(px, py, pz))
+                    if (island.InBounds(px, py, pz))
                     {
-                        pendingShopWorldPos = activeIsland.transform.TransformPoint(new Vector3(px + 0.5f, -py + 0.5f, pz + 0.5f));
-                        ShowPreview(activeIsland, new Vector3(px, -py, pz), previewColorShop);
+                        pendingShopWorldPos = island.transform.TransformPoint(new Vector3(px + 0.5f, -py + 0.5f, pz + 0.5f));
+                        ShowPreview(island, new Vector3(px, -py, pz), previewColorShop);
                     }
                     else HidePreview();
                 }
 
-                // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ hover Ð·Ð¾Ð½Ñ‹
                 if (hoveredZone != newHovered)
                 {
                     if (hoveredZone != null) hoveredZone.SetDeleteHover(false);
@@ -458,38 +276,27 @@ namespace SimpleVoxelSystem
                     if (hoveredZone != null) hoveredZone.SetDeleteHover(true);
                 }
             }
-            else // Block editing mode
+            else
             {
+                Vector3 lp = island.transform.InverseTransformPoint(hit.point + (rmb ? -hit.normal : hit.normal) * hoverSurfaceEpsilon);
+                int px = Mathf.FloorToInt(lp.x), py = -Mathf.FloorToInt(lp.y), pz = Mathf.FloorToInt(lp.z);
+
                 if (!rmb)
                 {
-                    // Ð›ÐšÐœ (place) - ÑÑ‚Ð°Ð²Ð¸Ð¼ Ð² ÑÑ‡ÐµÐ¹ÐºÑƒ Ð¿Ð¾Ð´ ÐºÑƒÑ€ÑÐ¾Ñ€Ð¾Ð¼/Ð¿Ð¾ Ð½Ð¾Ñ€Ð¼Ð°Ð»Ð¸ Ð±ÐµÐ· Ð¿Ñ€Ñ‹Ð¶ÐºÐ° Ñ‡ÐµÑ€ÐµÐ· Ð±Ð»Ð¾Ðº
-                    Vector3 lp = activeIsland.transform.InverseTransformPoint(hit.point + hit.normal * hoverSurfaceEpsilon);
-                    int px = Mathf.FloorToInt(lp.x);
-                    int py = -Mathf.FloorToInt(lp.y);
-                    int pz = Mathf.FloorToInt(lp.z);
-
-                    if (activeIsland.InBounds(px, py, pz))
+                    if (island.InBounds(px, py, pz))
                     {
                         pendingPlacePos = new Vector3Int(px, py, pz);
                         Color bc = GetSelectedBlockPreviewColor();
-                        ShowPreview(activeIsland, new Vector3(px, -py, pz),
-                            new Color(bc.r, bc.g, bc.b, 0.45f));
+                        ShowPreview(island, new Vector3(px, -py, pz), new Color(bc.r, bc.g, bc.b, 0.45f));
                     }
                     else HidePreview();
                 }
                 else
                 {
-                    // ÐŸÐšÐœ (remove) - ÑƒÐ´Ð°Ð»ÑÐµÐ¼ ÑÐ°Ð¼Ñƒ Ð¿Ð¾Ð²ÐµÑ€Ñ…Ð½Ð¾ÑÑ‚ÑŒ
-                    Vector3 lp = activeIsland.transform.InverseTransformPoint(hit.point - hit.normal * hoverSurfaceEpsilon);
-                    int px = Mathf.FloorToInt(lp.x);
-                    int py = -Mathf.FloorToInt(lp.y);
-                    int pz = Mathf.FloorToInt(lp.z);
-
-                    if (activeIsland.IsSolid(px, py, pz))
+                    if (island.IsSolid(px, py, pz))
                     {
                         pendingRemovePos = new Vector3Int(px, py, pz);
-                        ShowPreview(activeIsland, new Vector3(px, -py, pz), previewColorRemove);
-                        hoveredZone = null; // Ensure shop zone hover is cleared when in block mode
+                        ShowPreview(island, new Vector3(px, -py, pz), previewColorRemove);
                     }
                     else HidePreview();
                 }
@@ -498,1297 +305,205 @@ namespace SimpleVoxelSystem
 
         void HandleInput()
         {
-            bool mobileActive = IsMobileControlsActive();
             bool mobileLookDoubleTap = ConsumeMobileLookDoubleTap();
 
-            if (ToolMode == EditorToolMode.Shop || ToolMode == EditorToolMode.PickaxeShop || ToolMode == EditorToolMode.SellPoint)
+            if (ToolMode != EditorToolMode.Block)
             {
-                if (IsRightJustPressed() && hoveredZone != null)
-                    DeleteShopZone(hoveredZone);
-                else if ((IsLeftJustPressed() || (mobileActive && mobileLookDoubleTap)) && pendingShopWorldPos.HasValue)
+                if (IsRightJustPressed() && hoveredZone != null) DeleteShopZone(hoveredZone);
+                else if ((IsLeftJustPressed() || mobileLookDoubleTap) && pendingShopWorldPos.HasValue)
                 {
-                    ShopZoneType zoneType = ShopZoneType.Mine;
-                    if (ToolMode == EditorToolMode.PickaxeShop) zoneType = ShopZoneType.Pickaxe;
-                    else if (ToolMode == EditorToolMode.SellPoint) zoneType = ShopZoneType.Sell;
-                    OpenSizeDialog(pendingShopWorldPos.Value, zoneType);
+                    ShopZoneType zType = ToolMode == EditorToolMode.PickaxeShop ? ShopZoneType.Pickaxe : (ToolMode == EditorToolMode.SellPoint ? ShopZoneType.Sell : ShopZoneType.Mine);
+                    uiManager.OpenSizeDialog(pendingShopWorldPos.Value, zType, SpawnShopZoneByUI);
                 }
             }
             else
             {
-                bool placePressed = IsLeftJustPressed() || (mobileActive && mobileLookDoubleTap && !mobileControls.RemoveHeld);
-                bool removePressed = IsRightJustPressed() || (mobileActive && mobileControls.RemovePressedThisFrame)
-                                  || (mobileActive && mobileLookDoubleTap && mobileControls.RemoveHeld);
-                if (placePressed && pendingPlacePos.HasValue) PlaceBlock(pendingPlacePos.Value);
-                if (removePressed && pendingRemovePos.HasValue) RemoveBlock(pendingRemovePos.Value);
+                bool place = IsLeftJustPressed() || (mobileLookDoubleTap && !mobileControls.RemoveHeld);
+                bool remove = IsRightJustPressed() || (mobileLookDoubleTap && mobileControls.RemoveHeld);
+                if (place && pendingPlacePos.HasValue) PlaceBlock(pendingPlacePos.Value);
+                if (remove && pendingRemovePos.HasValue) RemoveBlock(pendingRemovePos.Value);
             }
+        }
+
+        // --- Extraction Proxies ---
+
+        void SaveLayout()
+        {
+            if (!ShouldUseLocalPersistence() || island == null || dirtyChunks.Count == 0) return;
+            persistence.EnsureDirectory();
+            foreach (var cc in dirtyChunks)
+            {
+                List<LobbyVoxelEntry> entries = new List<LobbyVoxelEntry>();
+                int x0 = cc.x * ChunkSize, x1 = Mathf.Min(x0 + ChunkSize, island.TotalX);
+                int z0 = cc.y * ChunkSize, z1 = Mathf.Min(z0 + ChunkSize, island.TotalZ);
+                for (int x = x0; x < x1; x++)
+                for (int y = 0; y < island.TotalY; y++)
+                for (int z = z0; z < z1; z++)
+                    if (island.TryGetBlockType(x, y, z, out BlockType bt))
+                        entries.Add(new LobbyVoxelEntry { x = x, y = y, z = z, blockTypeId = (int)bt == 0 ? (int)BlockType.Dirt : (int)bt });
+                persistence.SaveChunk(cc.x, cc.y, entries);
+            }
+            dirtyChunks.Clear();
+        }
+
+        public void SaveLayoutFull()
+        {
+            if (!ShouldUseLocalPersistence() || island == null) return;
+            for (int cx = 0; cx < Mathf.CeilToInt((float)island.TotalX / ChunkSize); cx++)
+                for (int cz = 0; cz < Mathf.CeilToInt((float)island.TotalZ / ChunkSize); cz++)
+                    dirtyChunks.Add(new Vector2Int(cx, cz));
+            SaveLayout();
+            SaveShopZones();
+        }
+
+        public void LoadAndApplyLayout()
+        {
+            if (!ShouldUseLocalPersistence() || island == null) return;
+            int loaded = 0;
+            for (int cx = 0; cx < Mathf.CeilToInt((float)island.TotalX / ChunkSize); cx++)
+            for (int cz = 0; cz < Mathf.CeilToInt((float)island.TotalZ / ChunkSize); cz++)
+            {
+                var data = persistence.LoadChunk(cx, cz);
+                if (data == null) continue;
+                for (int x = cx * ChunkSize; x < Mathf.Min((cx + 1) * ChunkSize, island.TotalX); x++)
+                for (int y = 0; y < island.TotalY; y++)
+                for (int z = cz * ChunkSize; z < Mathf.Min((cz + 1) * ChunkSize, island.TotalZ); z++)
+                    island.RemoveVoxel(x, y, z, false);
+                foreach (var e in data.entries)
+                    island.SetVoxel(e.x, e.y, e.z, (BlockType)Mathf.Clamp(e.blockTypeId, 1, (int)BlockType.Grass));
+                loaded++;
+            }
+            if (loaded > 0) island.RebuildMesh();
+        }
+
+        public void SaveShopZones()
+        {
+            ShopZoneSaveData data = new ShopZoneSaveData();
+            foreach (var z in FindObjectsByType<ShopZone>(FindObjectsSortMode.None))
+                data.zones.Add(new ShopZoneEntry { worldX = z.transform.position.x, worldY = z.transform.position.y, worldZ = z.transform.position.z, sizeX = z.sizeX, sizeY = z.sizeY, sizeZ = z.sizeZ, zoneType = z.zoneType });
+            persistence.SaveShopZones(data);
+        }
+
+        public void LoadAndApplyShopZones()
+        {
+            ClearRuntimeShopZonesOnly();
+            var data = persistence.LoadShopZones();
+            if (data == null) return;
+            foreach (var e in data.zones) SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ, e.zoneType);
+        }
+
+        // --- Helpers ---
+
+        void SpawnShopZone(Vector3 pos, int sx, int sy, int sz, ShopZoneType type)
+        {
+            var go = new GameObject($"ShopZone_{type}");
+            go.transform.position = pos;
+            var zone = go.AddComponent<ShopZone>();
+            zone.zoneType = type; zone.sizeX = sx; zone.sizeY = sy; zone.sizeZ = sz;
+            zone.SetEditorVisible(IsEditMode);
+        }
+
+        void SpawnShopZoneByUI(Vector3 pos, int sx, int sy, int sz, ShopZoneType type)
+        {
+            if (TryRequestNetworkSpawnShopZone(pos, sx, sy, sz, type)) return;
+            SpawnShopZone(pos, sx, sy, sz, type);
+            SaveShopZones();
         }
 
         void DeleteShopZone(ShopZone zone)
         {
-            if (TryRequestNetworkDeleteShopZone(zone))
-            {
-                hoveredZone = null;
-                return;
-            }
-
-            int idx = spawnedZones.IndexOf(zone);
-            if (idx >= 0)
-            {
-                spawnedZones.RemoveAt(idx);
-                shopSaveData.zones.RemoveAt(idx);
-                SaveShopZones();
-            }
-            hoveredZone = null;
+            if (TryRequestNetworkDeleteShopZone(zone)) return;
+            if (hoveredZone == zone) hoveredZone = null;
             Destroy(zone.gameObject);
-            if (verboseLogs) Debug.Log("[LobbyEditor] Ð—Ð¾Ð½Ð° Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð° ÑƒÐ´Ð°Ð»ÐµÐ½Ð°.");
+            SaveShopZones();
         }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ð Ð°Ð·Ð¼ÐµÑ‰ÐµÐ½Ð¸Ðµ Ð²Ð¾ÐºÑÐµÐ»ÐµÐ¹
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         void PlaceBlock(Vector3Int pos)
         {
-            if (!IsRuntimeEditingEnabled())
-                return;
-
             if (island == null || island.IsSolid(pos.x, pos.y, pos.z)) return;
-
-            var avatar = FindLocalNetworkAvatar();
-            if (avatar != null && avatar.IsSpawned)
-                avatar.RequestPlaceBlockServerRpc(pos, (int)selectedBlockType);
-            
+            FindLocalNetworkAvatar()?.RequestPlaceBlockServerRpc(pos, (int)selectedBlockType);
             ApplyNetworkPlaceBlock(pos, selectedBlockType);
             realtimeSync?.NotifyLocalPlace(pos, selectedBlockType);
         }
 
         void RemoveBlock(Vector3Int pos)
         {
-            if (!IsRuntimeEditingEnabled())
-                return;
-
             if (island == null || !island.IsSolid(pos.x, pos.y, pos.z)) return;
-
-            var avatar = FindLocalNetworkAvatar();
-            if (avatar != null && avatar.IsSpawned)
-                avatar.RequestRemoveBlockServerRpc(pos);
-
+            FindLocalNetworkAvatar()?.RequestRemoveBlockServerRpc(pos);
             ApplyNetworkRemoveBlock(pos);
             realtimeSync?.NotifyLocalRemove(pos);
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ð”Ð¸Ð°Ð»Ð¾Ð³ Ñ€Ð°Ð·Ð¼ÐµÑ€Ð° Shop-Ð·Ð¾Ð½Ñ‹
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // --- Required Public API (For Sync) ---
 
-        void OpenSizeDialog(Vector3 worldPos, ShopZoneType type)
-        {
-            dialogOpen = true;
-            HidePreview();
+        public void ApplyNetworkPlaceBlock(Vector3Int pos, BlockType type) { if (island == null) return; island.SetVoxel(pos.x, pos.y, pos.z, type, true); dirtyChunks.Add(new Vector2Int(pos.x / ChunkSize, pos.z / ChunkSize)); }
+        public void ApplyNetworkRemoveBlock(Vector3Int pos) { if (island == null) return; island.RemoveVoxel(pos.x, pos.y, pos.z, true); dirtyChunks.Add(new Vector2Int(pos.x / ChunkSize, pos.z / ChunkSize)); }
+        public void ApplyNetworkSpawnShopZone(Vector3 pos, int sx, int sy, int sz, ShopZoneType type) { SpawnShopZone(pos, sx, sy, sz, type); SaveShopZones(); }
+        public void ApplyNetworkDeleteShopZone(Vector3 pos, ShopZoneType type) { foreach(var z in FindObjectsByType<ShopZone>(FindObjectsSortMode.None)) if(z.zoneType == type && (z.transform.position - pos).sqrMagnitude < 0.1f) { Destroy(z.gameObject); break; } SaveShopZones(); }
 
-            if (dialogPanel != null) { Destroy(dialogPanel); }
+        // --- Boilerplate & Utilities ---
 
-            // Ð¡Ð¾Ð·Ð´Ð°Ñ‘Ð¼ Ð¿Ð°Ð½ÐµÐ»ÑŒ Ð´Ð¸Ð°Ð»Ð¾Ð³Ð° Ð¿Ð¾ Ñ†ÐµÐ½Ñ‚Ñ€Ñƒ ÑÐºÑ€Ð°Ð½Ð°
-            dialogPanel = MakePanel("ShopSizeDialog", rootCanvas.transform,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(320f, 260f),
-                new Color(0.08f, 0.08f, 0.14f, 0.97f));
+        void TryAutoSave() { if (!ShouldUseLocalPersistence() || !autoSaveLayout || island == null || dirtyChunks.Count == 0 || Time.unscaledTime < nextAutoSaveTime) return; SaveLayout(); nextAutoSaveTime = Time.unscaledTime + autoSaveInterval; }
+        void FlushPendingSaves() { if (ShouldUseLocalPersistence()) { if (dirtyChunks.Count > 0) SaveLayout(); SaveShopZones(); PlayerPrefs.Save(); } }
 
-            string title = "MINE SHOP";
-            if (type == ShopZoneType.Pickaxe) title = "PICKAXE SHOP";
-            else if (type == ShopZoneType.Sell) title = "SELL POINT";
-            // Ð—Ð°Ð³Ð¾Ð»Ð¾Ð²Ð¾Ðº
-            MakeLabelOff(dialogPanel.transform, "DlgTitle",
-                $"{title}\nEnter zone size:", 14, TextAnchor.UpperCenter,
-                new Vector2(10, -36), new Vector2(-10, 0), bold: true);
-
-            // ÐŸÐ¾Ð»Ñ Ð²Ð²Ð¾Ð´Ð°
-            float y = -95f;
-            inputSizeX = MakeInputField(dialogPanel.transform, "InputX", "Width X (blocks):", ref y);
-            inputSizeY = MakeInputField(dialogPanel.transform, "InputY", "Height Y (blocks):", ref y);
-            inputSizeZ = MakeInputField(dialogPanel.transform, "InputZ", "Length Z (blocks):", ref y);
-
-            inputSizeX.text = "3";
-            inputSizeY.text = "3";
-            inputSizeZ.text = "3";
-
-            // ÐšÐ½Ð¾Ð¿ÐºÐ¸ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ / Ð¾Ñ‚Ð¼ÐµÐ½Ð°
-            Button okBtn = MakeBtn(dialogPanel.transform, "OkBtn",
-                "Place Zone",
-                new Color(0.2f, 0.65f, 0.3f, 1f),
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(-80f, 14f), new Vector2(148f, 36f));
-            okBtn.onClick.AddListener(() => ConfirmShopPlace(worldPos, type));
-
-            Button cancelBtn = MakeBtn(dialogPanel.transform, "CancelBtn",
-                "Cancel",
-                new Color(0.6f, 0.2f, 0.2f, 1f),
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(80f, 14f), new Vector2(148f, 36f));
-            cancelBtn.onClick.AddListener(CancelDialog);
-        }
-
-        void ConfirmShopPlace(Vector3 worldPos, ShopZoneType type)
-        {
-            int sx = Mathf.Max(1, ParseInt(inputSizeX?.text, 3));
-            int sy = Mathf.Max(1, ParseInt(inputSizeY?.text, 3));
-            int sz = Mathf.Max(1, ParseInt(inputSizeZ?.text, 3));
-
-            if (TryRequestNetworkSpawnShopZone(worldPos, sx, sy, sz, type))
-            {
-                CloseDialog();
-                return;
-            }
-
-            SpawnShopZone(worldPos, sx, sy, sz, type);
-
-            shopSaveData.zones.Add(new ShopZoneEntry
-            {
-                worldX = worldPos.x, worldY = worldPos.y, worldZ = worldPos.z,
-                sizeX = sx, sizeY = sy, sizeZ = sz,
-                zoneType = type
-            });
-            SaveShopZones();
-            CloseDialog();
-        }
-
-        void CancelDialog() => CloseDialog();
-
-        void CloseDialog()
-        {
-            dialogOpen = false;
-            if (dialogPanel != null) { Destroy(dialogPanel); dialogPanel = null; }
-        }
-
-        void SpawnShopZone(Vector3 worldPos, int sx, int sy, int sz, ShopZoneType type = ShopZoneType.Mine)
-        {
-            var go = new GameObject($"ShopZone_{spawnedZones.Count}");
-            go.transform.position = worldPos;
-            var zone = go.AddComponent<ShopZone>();
-            zone.zoneType = type;
-            zone.sizeX = sx;
-            zone.sizeY = sy;
-            zone.sizeZ = sz;
-            spawnedZones.Add(zone);
-            zone.SetEditorVisible(IsEditMode);
-            if (verboseLogs) Debug.Log($"[LobbyEditor] Ð—Ð¾Ð½Ð° Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð° ({type}) Ð¿Ð¾ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð° {sx}x{sy}x{sz} @ {worldPos}");
-        }
-
-        public void ApplyNetworkSpawnShopZone(Vector3 worldPos, int sx, int sy, int sz, ShopZoneType type)
-        {
-            foreach (var z in spawnedZones)
-            {
-                if (z == null || z.zoneType != type) continue;
-                if ((z.transform.position - worldPos).sqrMagnitude > 0.0001f) continue;
-                if (z.sizeX == sx && z.sizeY == sy && z.sizeZ == sz) return;
-            }
-
-            SpawnShopZone(worldPos, sx, sy, sz, type);
-            shopSaveData.zones.Add(new ShopZoneEntry
-            {
-                worldX = worldPos.x,
-                worldY = worldPos.y,
-                worldZ = worldPos.z,
-                sizeX = sx,
-                sizeY = sy,
-                sizeZ = sz,
-                zoneType = type
-            });
-            SaveShopZones();
-        }
-
-        public void ApplyNetworkDeleteShopZone(Vector3 worldPos, ShopZoneType type)
-        {
-            ShopZone target = FindClosestZone(worldPos, type);
-            if (target == null) return;
-
-            int idx = spawnedZones.IndexOf(target);
-            if (idx >= 0)
-            {
-                spawnedZones.RemoveAt(idx);
-                if (idx >= 0 && idx < shopSaveData.zones.Count)
-                    shopSaveData.zones.RemoveAt(idx);
-                SaveShopZones();
-            }
-
-            if (hoveredZone == target) hoveredZone = null;
-            Destroy(target.gameObject);
-        }
-
-        private ShopZone FindClosestZone(Vector3 worldPos, ShopZoneType type)
-        {
-            ShopZone best = null;
-            float bestSqr = float.MaxValue;
-            const float maxDistSqr = 1.0f;
-
-            foreach (var z in spawnedZones)
-            {
-                if (z == null || z.zoneType != type) continue;
-                float sqr = (z.transform.position - worldPos).sqrMagnitude;
-                if (sqr < bestSqr)
-                {
-                    bestSqr = sqr;
-                    best = z;
-                }
-            }
-
-            if (bestSqr > maxDistSqr) return null;
-            return best;
-        }
-
-        private bool TryRequestNetworkSpawnShopZone(Vector3 worldPos, int sx, int sy, int sz, ShopZoneType type)
-        {
-            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                return false;
-
-            NetPlayerAvatar avatar = FindLocalNetworkAvatar();
-            if (avatar == null)
-                return false;
-
-            avatar.RequestSpawnShopZoneServerRpc(worldPos, sx, sy, sz, (int)type);
-            return true;
-        }
-
-        private bool TryRequestNetworkDeleteShopZone(ShopZone zone)
-        {
-            if (zone == null) return false;
-            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                return false;
-
-            NetPlayerAvatar avatar = FindLocalNetworkAvatar();
-            if (avatar == null)
-                return false;
-
-            avatar.RequestDeleteShopZoneServerRpc(zone.transform.position, (int)zone.zoneType);
-            return true;
-        }
-
-        private NetPlayerAvatar FindLocalNetworkAvatar()
-        {
-            var nm = NetworkManager.Singleton;
-            if (nm != null)
-            {
-                var playerObj = nm.LocalClient?.PlayerObject;
-                if (playerObj != null)
-                {
-                    var fromLocalClient = playerObj.GetComponent<NetPlayerAvatar>();
-                    if (fromLocalClient != null && fromLocalClient.IsSpawned)
-                        return fromLocalClient;
-                }
-            }
-
-            var avatars = FindObjectsByType<NetPlayerAvatar>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (var a in avatars)
-            {
-                if (a != null && a.IsSpawned && a.IsOwner)
-                    return a;
-            }
-            return null;
-        }
-
-        static int ParseInt(string s, int def)
-        {
-            return int.TryParse(s, out int v) ? v : def;
-        }
-
-        bool IsMobileControlsActive()
-        {
-            return mobileControls != null && mobileControls.IsActive;
-        }
-
-        bool ConsumeMobileLookDoubleTap()
-        {
-            if (!IsMobileControlsActive() || !mobileControls.LookTapPressedThisFrame)
-                return false;
-
-            float now = Time.unscaledTime;
-            Vector2 pos = mobileControls.AimScreenPosition;
-            bool isDoubleTap =
-                now - lastMobileLookTapTime <= Mathf.Max(0.12f, mobileDoubleTapWindow) &&
-                Vector2.Distance(pos, lastMobileLookTapPos) <= Mathf.Max(8f, mobileDoubleTapMaxDistance);
-
-            lastMobileLookTapTime = now;
-            lastMobileLookTapPos = pos;
-            return isDoubleTap;
-        }
-
-        void TryAutoSave()
-        {
-            if (!ShouldUseLocalPersistence())
-                return;
-
-            if (!autoSaveLayout || island == null || dirtyChunks.Count == 0)
-                return;
-
-            if (Time.unscaledTime < nextAutoSaveTime)
-                return;
-
-            SaveLayout();
-            nextAutoSaveTime = Time.unscaledTime + Mathf.Max(0.2f, autoSaveInterval);
-        }
-
-        void FlushPendingSaves()
-        {
-            if (!ShouldUseLocalPersistence())
-                return;
-
-            if (dirtyChunks.Count > 0)
-                SaveLayout();
-
-            SaveShopZones();
-            PlayerPrefs.Save();
-        }
-
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        //  Ð§Ð°Ð½ÐºÐ¾Ð²Ð¾Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ â€” Minecraft-ÑÑ‚Ð¸Ð»ÑŒ
-        //  ÐšÐ°Ð¶Ð´Ñ‹Ð¹ Ñ‡Ð°Ð½Ðº 16Ã—16 Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑÑ Ð² lobby_chunks/chunk_cx_cz.json.
-        //  ÐŸÑ€Ð¸ Ð¸Ð·Ð¼ÐµÐ½ÐµÐ½Ð¸Ð¸ Ð±Ð»Ð¾ÐºÐ° Ð¿Ð¾Ð¼ÐµÑ‡Ð°ÐµÑ‚ÑÑ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÐ³Ð¾ Ñ‡Ð°Ð½Ðº (dirty).
-        //  SaveLayout() Ð¿Ð¸ÑˆÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ dirty-Ñ‡Ð°Ð½ÐºÐ¸ Ð½Ð° Ð´Ð¸ÑÐº.
-        //  LoadAndApplyLayout() Ñ‡Ð¸Ñ‚Ð°ÐµÑ‚ Ð²ÑÐµ Ñ„Ð°Ð¹Ð»Ñ‹ Ð¸ Ð¿ÐµÑ€ÐµÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ Ð¸Ð¼ÐµÐ½Ð½Ð¾ Ð¸Ñ… Ð¾Ð±Ð»Ð°ÑÑ‚ÑŒ;
-        //  Ñ‡Ð°Ð½ÐºÐ¸ Ð±ÐµÐ· Ñ„Ð°Ð¹Ð»Ð° ÑÐ¾Ñ…Ñ€Ð°Ð½ÑÑŽÑ‚ Ð±Ð°Ð·Ð¾Ð²Ñ‹Ð¹ Ð¿Ð¾Ð» Ð¸Ð· GenerateFlatPlot().         
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-        /// <summary>
-        /// Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÑÐµÑ‚ Ð½Ð° Ð´Ð¸ÑÐº Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¸Ð·Ð¼ÐµÐ½Ñ‘Ð½Ð½Ñ‹Ðµ (dirty) Ñ‡Ð°Ð½ÐºÐ¸.
-        /// ÐŸÐ¾Ð¼ÐµÑ‡Ð°ÐµÑ‚ Ð²ÑÐµ Ñ‡Ð°Ð½ÐºÐ¸ ÐºÐ°Ðº Ñ‡Ð¸ÑÑ‚Ñ‹Ðµ Ð¿Ð¾ÑÐ»Ðµ Ð·Ð°Ð¿Ð¸ÑÐ¸.
-        /// </summary>
-        public void SaveLayout()
-        {
-            if (!ShouldUseLocalPersistence())
-            {
-                dirtyChunks.Clear();
-                return;
-            }
-
-            if (island == null || dirtyChunks.Count == 0) return;
-
-            try { Directory.CreateDirectory(ChunkDir); }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"[LobbyEditor] ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Ð¿Ð°Ð¿ÐºÑƒ Ñ‡Ð°Ð½ÐºÐ¾Ð²: {ex.Message}");
-                return;
-            }
-
-            foreach (var cc in dirtyChunks)
-                SaveChunk(cc.x, cc.y);
-
-            PlayerPrefs.Save();
-            if (verboseLogs) Debug.Log($"[LobbyEditor] Ð¡Ð±Ñ€Ð¾ÑˆÐµÐ½Ð¾ {dirtyChunks.Count} Ñ‡Ð°Ð½Ðº(Ð¾Ð²) Ð½Ð° Ð´Ð¸ÑÐº.");
-            dirtyChunks.Clear();
-        }
-
-        /// <summary>
-        /// ÐŸÑ€Ð¸Ð½ÑƒÐ´Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ ÑÐ¾Ñ…Ñ€Ð°Ð½ÑÐµÑ‚ Ð’Ð¡Ð• Ñ‡Ð°Ð½ÐºÐ¸ Ð¾ÑÑ‚Ñ€Ð¾Ð²Ð° (Ð½Ð°Ð¿Ñ€Ð¸Ð¼ÐµÑ€, Ð¿Ð¾ ÐºÐ½Ð¾Ð¿ÐºÐµ Â«Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒÂ»).
-        /// </summary>
-        public void SaveLayoutFull()
-        {
-            if (!ShouldUseLocalPersistence())
-                return;
-
-            if (island == null) return;
-            // ÐŸÐ¾Ð¼ÐµÑ‡Ð°ÐµÐ¼ Ð²ÑÐµ Ñ‡Ð°Ð½ÐºÐ¸ Ð³Ñ€ÑÐ·Ð½Ñ‹Ð¼Ð¸
-            int chunkCountX = Mathf.CeilToInt((float)island.TotalX / ChunkSize);
-            int chunkCountZ = Mathf.CeilToInt((float)island.TotalZ / ChunkSize);
-            for (int cx = 0; cx < chunkCountX; cx++)
-            for (int cz = 0; cz < chunkCountZ; cz++)
-                dirtyChunks.Add(new Vector2Int(cx, cz));
-            SaveLayout();
-            SaveShopZones();
-        }
-
-        private void SaveChunk(int cx, int cz)
-        {
-            var data = new ChunkSaveData { chunkX = cx, chunkZ = cz };
-
-            int x0 = cx * ChunkSize, x1 = Mathf.Min(x0 + ChunkSize, island.TotalX);
-            int z0 = cz * ChunkSize, z1 = Mathf.Min(z0 + ChunkSize, island.TotalZ);
-
-            for (int x = x0; x < x1; x++)
-            for (int y = 0; y < island.TotalY; y++)
-            for (int z = z0; z < z1; z++)
-            {
-                if (island.TryGetBlockType(x, y, z, out BlockType bt))
-                {
-                    int id = (int)bt;
-                    // Ð’ ÑÑ‚Ð°Ñ€Ñ‹Ñ… Ñ‡Ð°Ð½ÐºÐ°Ñ… "Ð·ÐµÐ¼Ð»Ñ" Ð¼Ð¾Ð³Ð»Ð° Ð±Ñ‹Ñ‚ÑŒ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð° ÐºÐ°Ðº 0. ÐŸÐ¸ÑˆÐµÐ¼ 1 (Dirt), Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð¸Ð·Ð±ÐµÐ¶Ð°Ñ‚ÑŒ Air.
-                    if (id == 0) id = (int)BlockType.Dirt;
-                    data.entries.Add(new LobbyVoxelEntry { x = x, y = y, z = z, blockTypeId = id });
-                }
-            }
-
-            string json = JsonUtility.ToJson(data, true);
-            try
-            {
-                PlayerPrefs.SetString(ChunkPrefsKey(cx, cz), json);
-                File.WriteAllText(ChunkFilePath(cx, cz), json);
-            }
-            catch (System.Exception ex)
-            { Debug.LogError($"[LobbyEditor] ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð¿Ð¸ÑÐ¸ Ñ‡Ð°Ð½ÐºÐ° {cx},{cz}: {ex.Message}"); }
-        }
-
-        /// <summary>
-        /// Ð—Ð°Ð³Ñ€ÑƒÐ¶Ð°ÐµÑ‚ Ð²ÑÐµ ÑÐ¾Ñ…Ñ€Ð°Ð½Ñ‘Ð½Ð½Ñ‹Ðµ Ñ‡Ð°Ð½ÐºÐ¸ Ð¸ Ð½Ð°ÐºÐ»Ð°Ð´Ñ‹Ð²Ð°ÐµÑ‚ Ð¸Ñ… Ð¿Ð¾Ð²ÐµÑ€Ñ… Ð±Ð°Ð·Ð¾Ð²Ð¾Ð³Ð¾ Ð¿Ð¾Ð»Ð°.
-        /// Ð§Ð°Ð½ÐºÐ¸ Ð±ÐµÐ· Ñ„Ð°Ð¹Ð»Ð° ÐÐ• Ñ‚Ñ€Ð¾Ð³Ð°ÑŽÑ‚ÑÑ â€” Ð±Ð°Ð·Ð¾Ð²Ñ‹Ð¹ Ð¿Ð¾Ð» Ð¸Ð· GenerateFlatPlot Ð¾ÑÑ‚Ð°Ñ‘Ñ‚ÑÑ.
-        /// </summary>
-        public void LoadAndApplyLayout()
-        {
-            if (!ShouldUseLocalPersistence())
-                return;
-
-            if (island == null) return;
-            int chunkCountX = Mathf.CeilToInt((float)island.TotalX / ChunkSize);
-            int chunkCountZ = Mathf.CeilToInt((float)island.TotalZ / ChunkSize);
-            int loaded = 0;
-
-            for (int cx = 0; cx < chunkCountX; cx++)
-            for (int cz = 0; cz < chunkCountZ; cz++)
-            {
-                string json = null;
-                if (PlayerPrefs.HasKey(ChunkPrefsKey(cx, cz)))
-                    json = PlayerPrefs.GetString(ChunkPrefsKey(cx, cz), string.Empty);
-
-                if (string.IsNullOrWhiteSpace(json))
-                {
-#if !UNITY_WEBGL || UNITY_EDITOR
-                    string file = ChunkFilePath(cx, cz);
-                    if (File.Exists(file))
-                        json = File.ReadAllText(file);
-#endif
-                }
-
-                if (string.IsNullOrWhiteSpace(json))
-                    continue;
-
-                ChunkSaveData data;
-                try { data = JsonUtility.FromJson<ChunkSaveData>(json); }
-                catch { continue; }
-                if (data == null) continue;
-
-                // ÐžÑ‡Ð¸Ñ‰Ð°ÐµÐ¼ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¾Ð±Ð»Ð°ÑÑ‚ÑŒ ÑÑ‚Ð¾Ð³Ð¾ Ñ‡Ð°Ð½ÐºÐ°
-                int x0 = data.chunkX * ChunkSize, x1 = Mathf.Min(x0 + ChunkSize, island.TotalX);
-                int z0 = data.chunkZ * ChunkSize, z1 = Mathf.Min(z0 + ChunkSize, island.TotalZ);
-
-                for (int x = x0; x < x1; x++)
-                for (int y = 0; y < island.TotalY; y++)
-                for (int z = z0; z < z1; z++)
-                    island.RemoveVoxel(x, y, z, false);
-
-                // Ð’Ð¾ÑÑÑ‚Ð°Ð½Ð°Ð²Ð»Ð¸Ð²Ð°ÐµÐ¼ Ð¸Ð· Ñ„Ð°Ð¹Ð»Ð°
-                if (data.entries != null)
-                    foreach (var e in data.entries)
-                    {
-                        int raw = e.blockTypeId;
-                        // Ð¡Ð¾Ð²Ð¼ÐµÑÑ‚Ð¸Ð¼Ð¾ÑÑ‚ÑŒ ÑÐ¾ ÑÑ‚Ð°Ñ€Ñ‹Ð¼Ð¸ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸ÑÐ¼Ð¸ Ð»Ð¾Ð±Ð±Ð¸: 0 Ñ‚Ñ€Ð°ÐºÑ‚ÑƒÐµÐ¼ ÐºÐ°Ðº Dirt.
-                        if (raw <= 0) raw = (int)BlockType.Dirt;
-                        if (raw > (int)BlockType.Grass) raw = (int)BlockType.Dirt;
-                        island.SetVoxel(e.x, e.y, e.z, (BlockType)raw);
-                    }
-
-                loaded++;
-            }
-
-            if (loaded > 0)
-            {
-                island.RebuildMesh();
-                if (verboseLogs) Debug.Log($"[LobbyEditor] Ð—Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð¾ {loaded} Ñ‡Ð°Ð½Ðº(Ð¾Ð²).");
-            }
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Save / Load Ð·Ð¾Ð½ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-        public void SaveShopZones()
-        {
-            if (!ShouldUseLocalPersistence())
-                return;
-
-            string json = JsonUtility.ToJson(shopSaveData, true);
-            try
-            {
-                PlayerPrefs.SetString(ShopSavePrefsKey, json);
-                PlayerPrefs.Save();
-                File.WriteAllText(ShopSavePath, json);
-            }
-            catch (System.Exception ex) { Debug.LogError($"[LobbyEditor] Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ðµ Ð·Ð¾Ð½: {ex.Message}"); }
-        }
-
-        public void LoadAndApplyShopZones()
-        {
-            if (!ShouldUseLocalPersistence())
-                return;
-
-            // Ð£Ð´Ð°Ð»ÑÐµÐ¼ ÑÑ‚Ð°Ñ€Ñ‹Ðµ
-            foreach (var z in spawnedZones) if (z != null) Destroy(z.gameObject);
-            spawnedZones.Clear();
-
-            string json = null;
-            if (PlayerPrefs.HasKey(ShopSavePrefsKey))
-                json = PlayerPrefs.GetString(ShopSavePrefsKey, string.Empty);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-#if !UNITY_WEBGL || UNITY_EDITOR
-                if (File.Exists(ShopSavePath))
-                    json = File.ReadAllText(ShopSavePath);
-#endif
-            }
-
-            if (string.IsNullOrWhiteSpace(json)) { shopSaveData = new ShopZoneSaveData(); return; }
-            try { shopSaveData = JsonUtility.FromJson<ShopZoneSaveData>(json) ?? new ShopZoneSaveData(); }
-            catch { shopSaveData = new ShopZoneSaveData(); return; }
-
-            foreach (var e in shopSaveData.zones)
-                SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ, e.zoneType);
-
-            if (verboseLogs) Debug.Log($"[LobbyEditor] Ð—Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð¾ {spawnedZones.Count} Ð·Ð¾Ð½ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°.");
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Preview cube
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-        void ShowPreview(VoxelIsland targetIsland, Vector3 gridLocalOrigin, Color color)
-        {
-            EnsurePreview();
-            previewCube.SetActive(true);
-
-            // world position. gridLocalOrigin.y - Ð¸Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€Ð¾Ð²Ð°Ð½, Ð¿Ð¾ÑÑ‚Ð¾Ð¼Ñƒ (x, y, z)
-            Vector3 worldPos = targetIsland.transform.TransformPoint(gridLocalOrigin + new Vector3(0.5f, 0.5f, 0.5f));
-            previewCube.transform.position = worldPos;
-            previewCube.transform.rotation = targetIsland.transform.rotation;
-            previewCube.transform.localScale = targetIsland.transform.lossyScale;
-
-            var mr = previewCube.GetComponent<MeshRenderer>();
-            if (mr != null) mr.material.color = color;
-        }
-
-        void HidePreview() { if (previewCube != null) previewCube.SetActive(false); }
-
-        void EnsurePreview()
-        {
-            if (previewCube != null) return;
-            previewCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            previewCube.name = "LobbyEditorPreview";
-            previewCube.layer = 2; // Ignore Raycast
-            Destroy(previewCube.GetComponent<Collider>());
-            var mr = previewCube.GetComponent<MeshRenderer>();
-            Shader sh = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            var mat = new Material(sh);
-            mat.color = previewColorPlace;
-            if (mat.HasProperty("_Surface"))  mat.SetFloat("_Surface",  1f);
-            if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            if (mat.HasProperty("_ZWrite"))   mat.SetFloat("_ZWrite",   0f);
-            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-            mr.material = mat;
-            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Toggle
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-        public void ToggleEditMode()
-        {
-            IsEditMode = !IsEditMode;
-            if (!IsEditMode)
-            {
-                HidePreview();
-                CloseDialog();
-                // Ð¡Ð±Ñ€Ð°ÑÑ‹Ð²Ð°ÐµÐ¼ hover-ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ðµ
-                if (hoveredZone != null) { hoveredZone.SetDeleteHover(false); hoveredZone = null; }
-            }
-            RefreshZoneVisibility();
-            RefreshUI();
-        }
-
-        void RefreshZoneVisibility()
-        {
-            foreach (var zone in spawnedZones)
-                if (zone != null) zone.SetEditorVisible(IsEditMode);
-        }
-
-        void SetToolMode(EditorToolMode mode)
-        {
-            ToolMode = mode;
-            RefreshUI();
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // UI
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-        void BuildUI()
-        {
-            rootCanvas = FindFirstObjectByType<Canvas>();
-            if (rootCanvas == null)
-            {
-                var cGo = new GameObject("LobbyEditorCanvas");
-                rootCanvas = cGo.AddComponent<Canvas>();
-                rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                cGo.AddComponent<GraphicRaycaster>();
-            }
-            if (EventSystem.current == null)
-            {
-                var es = new GameObject("EventSystem");
-                es.AddComponent<EventSystem>();
+        private bool IsToggleKeyDown() { return 
 #if ENABLE_INPUT_SYSTEM
-                es.AddComponent<InputSystemUIInputModule>();
+            Keyboard.current?[Key.F2].wasPressedThisFrame ?? false;
 #else
-                es.AddComponent<StandaloneInputModule>();
+            Input.GetKeyDown(toggleKey);
 #endif
-            }
-
-            // ÐšÐ½Ð¾Ð¿ÐºÐ°-Ñ‚Ð¾Ð³Ð³Ð»
-            toggleBtn = MakeBtn(rootCanvas.transform, "LobbyEditToggle",
-                "Lobby Editor [F2]",
-                new Color(0.25f, 0.65f, 0.25f, 1f),
-                new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-10f, -110f), new Vector2(168f, 36f));
-            toggleBtn.onClick.AddListener(ToggleEditMode);
-
-            // ÐŸÐ°Ð½ÐµÐ»ÑŒ Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð¾Ð² (Ð²Ñ‹ÑÐ¾Ñ‚Ð° 450 â€” ÑƒÑ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÑ‚ Ð¸ Shop-ÐºÐ½Ð¾Ð¿ÐºÑƒ)
-            editorPanel = MakePanel("LobbyEditorPanel", rootCanvas.transform,
-                new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
-                new Vector2(-10f, 0f), new Vector2(168f, 500f),
-                new Color(0.07f, 0.07f, 0.11f, 0.93f));
-
-            MakeLabelOff(editorPanel.transform, "EdTitle",
-                "LOBBY EDITOR", 13, TextAnchor.UpperCenter,
-                new Vector2(4, -30), new Vector2(-4, 0), bold: true);
-            MakeLabelOff(editorPanel.transform, "EdHint",
-                "LMB - place\nRMB - remove",
-                11, TextAnchor.UpperCenter,
-                new Vector2(4, -54), new Vector2(-4, -32));
-
-            // Ð‘Ð»Ð¾Ñ‡Ð½Ñ‹Ðµ Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ñ‹
-            for (int i = 0; i < BtnTypes.Length; i++)
-            {
-                int idx = i;
-                Color c = BtnColors[i];
-                Button btn = MakeBtn(editorPanel.transform, $"BType_{i}",
-                    BtnLabels[i],
-                    new Color(c.r * 0.65f, c.g * 0.65f, c.b * 0.65f, 1f),
-                    new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                    new Vector2(0f, -(86f + i * 46f)), new Vector2(148f, 38f));
-                btn.onClick.AddListener(() =>
-                {
-                    selectedBlockType = BtnTypes[idx];
-                    SetToolMode(EditorToolMode.Block);
-                });
-                typeButtons.Add(btn);
-            }
-
-            // ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð° Â«ÐœÐ°Ð³Ð°Ð·Ð¸Ð½ Ð¨Ð°Ñ…Ñ‚Â»
-            shopToolBtn = MakeBtn(editorPanel.transform, "ShopTool",
-                "Mine Shop Zone",
-                new Color(0.15f, 0.35f, 0.80f, 1f),
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -(86f + BtnTypes.Length * 46f)), new Vector2(148f, 38f));
-            shopToolBtn.onClick.AddListener(() => SetToolMode(EditorToolMode.Shop));
-
-            // ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð° Â«ÐœÐ°Ð³Ð°Ð·Ð¸Ð½ ÐšÐ¸Ñ€Ð¾ÐºÂ»
-            pickaxeShopToolBtn = MakeBtn(editorPanel.transform, "PickaxeShopTool",
-                "Pickaxe Zone",
-                new Color(0.25f, 0.45f, 0.25f, 1f),
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -(86f + (BtnTypes.Length + 1) * 46f)), new Vector2(148f, 38f));
-            pickaxeShopToolBtn.onClick.AddListener(() => SetToolMode(EditorToolMode.PickaxeShop));
-            // Кнопка инструмента «Точка продажи»
-            sellPointToolBtn = MakeBtn(editorPanel.transform, "SellPointTool",
-                "Sell Point",
-                new Color(0.60f, 0.45f, 0.12f, 1f),
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -(86f + (BtnTypes.Length + 2) * 46f)), new Vector2(148f, 38f));
-            sellPointToolBtn.onClick.AddListener(() => SetToolMode(EditorToolMode.SellPoint));
-
-            // Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ
-            Button saveBtn = MakeBtn(editorPanel.transform, "ManualSaveBtn",
-                "Save",
-                new Color(0.2f, 0.45f, 0.9f, 1f),
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 10f), new Vector2(148f, 38f));
-            saveBtn.onClick.AddListener(() => { SaveLayoutFull(); SaveShopZones(); });
-
-            Button clearBtn = MakeBtn(editorPanel.transform, "ClearLobbyBtn",
-                "Clear Lobby",
-                new Color(0.6f, 0.2f, 0.2f, 1f),
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 56f), new Vector2(148f, 34f));
-            clearBtn.onClick.AddListener(ClearLobbyToBaseFloor);
-
-            editorPanel.SetActive(false);
         }
-
-        void RefreshUI()
-        {
-            if (editorPanel != null) editorPanel.SetActive(IsEditMode);
-            if (toggleBtn != null)
-            {
-                var img = toggleBtn.GetComponent<Image>();
-                if (img != null)
-                    img.color = IsEditMode ? new Color(0.9f, 0.55f, 0.1f, 1f)
-                                           : new Color(0.25f, 0.65f, 0.25f, 1f);
-            }
-            // Ð’Ñ‹Ð´ÐµÐ»ÑÐµÐ¼ Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ð¹ Ð±Ð»Ð¾Ðº
-            for (int i = 0; i < typeButtons.Count && i < BtnTypes.Length; i++)
-            {
-                if (typeButtons[i] == null) continue;
-                bool sel = ToolMode == EditorToolMode.Block && BtnTypes[i] == selectedBlockType;
-                var img = typeButtons[i].GetComponent<Image>();
-                Color c = BtnColors[i];
-                if (img != null) img.color = sel ? Color.white : new Color(c.r*0.65f, c.g*0.65f, c.b*0.65f, 1f);
-                var txt = typeButtons[i].GetComponentInChildren<Text>();
-                if (txt != null) txt.color = sel ? Color.black : Color.white;
-            }
-            // Ð’Ñ‹Ð´ÐµÐ»ÑÐµÐ¼ ÐºÐ½Ð¾Ð¿ÐºÑƒ Shop
-            if (shopToolBtn != null)
-            {
-                bool sel = ToolMode == EditorToolMode.Shop;
-                var img = shopToolBtn.GetComponent<Image>();
-                if (img != null) img.color = sel ? Color.white : new Color(0.15f, 0.35f, 0.80f, 1f);
-                var txt = shopToolBtn.GetComponentInChildren<Text>();
-                if (txt != null) txt.color = sel ? Color.black : Color.white;
-            }
-
-            // Ð’Ñ‹Ð´ÐµÐ»ÑÐµÐ¼ ÐºÐ½Ð¾Ð¿ÐºÑƒ PickaxeShop
-            if (pickaxeShopToolBtn != null)
-            {
-                bool sel = ToolMode == EditorToolMode.PickaxeShop;
-                var img = pickaxeShopToolBtn.GetComponent<Image>();
-                if (img != null) img.color = sel ? Color.white : new Color(0.25f, 0.45f, 0.25f, 1f);
-                var txt = pickaxeShopToolBtn.GetComponentInChildren<Text>();
-                if (txt != null) txt.color = sel ? Color.black : Color.white;
-            }
-
-            // Выделяем кнопку SellPoint
-            if (sellPointToolBtn != null)
-            {
-                bool sel = ToolMode == EditorToolMode.SellPoint;
-                var img = sellPointToolBtn.GetComponent<Image>();
-                if (img != null) img.color = sel ? Color.white : new Color(0.60f, 0.45f, 0.12f, 1f);
-                var txt = sellPointToolBtn.GetComponentInChildren<Text>();
-                if (txt != null) txt.color = sel ? Color.black : Color.white;
-            }
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Input
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-        bool IsPointerOverUI()
-        {
-            if (EventSystem.current == null) return false;
-            // Ð‘Ð¾Ð»ÐµÐµ Ð½Ð°Ð´ÐµÐ¶Ð½Ð°Ñ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ° Ð´Ð»Ñ Ñ€ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€Ð° Ð¸ WebGL
-            return EventSystem.current.IsPointerOverGameObject();
-        }
-
-        Camera ResolveEditorCamera()
-        {
-            if (editorCamera != null && editorCamera.isActiveAndEnabled)
-                return editorCamera;
-
-            // Ð’ Ð¼ÑƒÐ»ÑŒÑ‚Ð¸Ð¿Ð»ÐµÐµÑ€Ðµ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ Ð°Ð²Ð°Ñ‚Ð°Ñ€ Ð¿Ð¾Ð¼ÐµÑ‡Ð°ÐµÑ‚ÑÑ Ñ‚ÐµÐ³Ð¾Ð¼ Player.
-            GameObject localPlayer = GameObject.FindGameObjectWithTag("Player");
-            if (localPlayer != null)
-            {
-                Camera localCam = localPlayer.GetComponentInChildren<Camera>(true);
-                if (localCam != null && localCam.isActiveAndEnabled)
-                {
-                    editorCamera = localCam;
-                    return editorCamera;
-                }
-            }
-
-            if (Camera.main != null && Camera.main.isActiveAndEnabled)
-            {
-                editorCamera = Camera.main;
-                return editorCamera;
-            }
-
-            Camera[] allCameras = Camera.allCameras;
-            for (int i = 0; i < allCameras.Length; i++)
-            {
-                Camera cam = allCameras[i];
-                if (cam != null && cam.isActiveAndEnabled)
-                {
-                    editorCamera = cam;
-                    return editorCamera;
-                }
-            }
-
-            editorCamera = null;
-            return null;
-        }
-
-        Vector2 GetPointerPos()
-        {
-            if (mobileControls != null && mobileControls.IsActive)
-                return mobileControls.AimScreenPosition;
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-            // Ð”Ð»Ñ Ð»ÑƒÑ‡Ð° Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ñ‡Ð¸Ñ‚Ð°ÐµÐ¼ ÐºÐ¾Ð¾Ñ€Ð´Ð¸Ð½Ð°Ñ‚Ñ‹ legacy Input, ÐºÐ¾Ð³Ð´Ð° Ð¾Ð½ Ð´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½.
-            Vector2 legacyPos = Input.mousePosition;
-            if (legacyPos.x >= 0f && legacyPos.x <= Screen.width &&
-                legacyPos.y >= 0f && legacyPos.y <= Screen.height)
-                return legacyPos;
-#endif
-
+        private bool IsLeftJustPressed() { return (mobileControls != null && mobileControls.IsActive) ? mobileControls.MinePressedThisFrame : 
 #if ENABLE_INPUT_SYSTEM
-            if (Mouse.current != null)
-            {
-                return Mouse.current.position.ReadValue();
-            }
-#endif
-            return Vector2.zero;
-        }
-
-        bool IsToggleKeyDown()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Keyboard.current?[Key.F2].wasPressedThisFrame ?? false;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetKeyDown(toggleKey);
+            Mouse.current?.leftButton.wasPressedThisFrame ?? false;
 #else
-            return false;
+            Input.GetMouseButtonDown(0);
 #endif
         }
-
-        bool IsLeftJustPressed()
-        {
-            if (mobileControls != null && mobileControls.IsActive)
-                return mobileControls.MinePressedThisFrame;
-
+        private bool IsRightJustPressed() { return (mobileControls != null && mobileControls.IsActive) ? mobileControls.RemovePressedThisFrame : 
 #if ENABLE_INPUT_SYSTEM
-            return Mouse.current?.leftButton.wasPressedThisFrame ?? false;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButtonDown(0);
+            Mouse.current?.rightButton.wasPressedThisFrame ?? false;
 #else
-            return false;
+            Input.GetMouseButtonDown(1);
 #endif
         }
-
-        bool IsRightJustPressed()
-        {
-            if (mobileControls != null && mobileControls.IsActive)
-                return mobileControls.RemovePressedThisFrame;
-
+        private bool IsRightHeld() { return (mobileControls != null && mobileControls.IsActive) ? mobileControls.RemoveHeld : 
 #if ENABLE_INPUT_SYSTEM
-            return Mouse.current?.rightButton.wasPressedThisFrame ?? false;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButtonDown(1);
+            Mouse.current?.rightButton.isPressed ?? false;
 #else
-            return false;
+            Input.GetMouseButton(1);
 #endif
         }
-
-        bool IsRightHeld()
-        {
-            if (mobileControls != null && mobileControls.IsActive)
-                return mobileControls.RemoveHeld;
-
+        private Vector2 GetPointerPos() { if (mobileControls != null && mobileControls.IsActive) return mobileControls.AimScreenPosition; 
 #if ENABLE_INPUT_SYSTEM
-            return Mouse.current?.rightButton.isPressed ?? false;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButton(1);
+            return Mouse.current?.position.ReadValue() ?? Vector2.zero;
 #else
-            return false;
+            return Input.mousePosition;
 #endif
         }
+        private Camera ResolveEditorCamera() { if (editorCamera != null && editorCamera.isActiveAndEnabled) return editorCamera; GameObject p = GameObject.FindGameObjectWithTag("Player"); if (p != null) { Camera c = p.GetComponentInChildren<Camera>(true); if (c != null && c.isActiveAndEnabled) return editorCamera = c; } return editorCamera = Camera.main; }
+        private NetPlayerAvatar FindLocalNetworkAvatar() { var nm = NetworkManager.Singleton; if (nm?.LocalClient?.PlayerObject != null) return nm.LocalClient.PlayerObject.GetComponent<NetPlayerAvatar>(); foreach (var a in FindObjectsByType<NetPlayerAvatar>(FindObjectsSortMode.None)) if (a.IsOwner) return a; return null; }
+        private bool IsMobileControlsActive() => mobileControls != null && mobileControls.IsActive;
+        private bool ConsumeMobileLookDoubleTap() { if (!IsMobileControlsActive() || !mobileControls.LookTapPressedThisFrame) return false; float now = Time.unscaledTime; Vector2 pos = mobileControls.AimScreenPosition; bool isDoubleTap = now - lastMobileLookTapTime <= mobileDoubleTapWindow && Vector2.Distance(pos, lastMobileLookTapPos) <= mobileDoubleTapMaxDistance; lastMobileLookTapTime = now; lastMobileLookTapPos = pos; return isDoubleTap; }
+        private bool ShouldUseLocalPersistence() { if (!persistLocalLobbyLayout) return false; if (preferSharedSyncOverLocalSave && realtimeSync != null && realtimeSync.UseAuthoritativeServerState) return false; return true; }
+        private bool IsRuntimeEditingEnabled() { if (!allowRuntimeEditing) return false; if (Application.isEditor) return Application.isPlaying && allowRuntimeEditingInEditorPlayMode; return !disableRuntimeEditingInPlayerBuild; }
+        private Color GetSelectedBlockPreviewColor() { for (int i = 0; i < 4; i++) if (new[] { BlockType.Dirt, BlockType.Stone, BlockType.Iron, BlockType.Gold }[i] == selectedBlockType) return new[] { new Color(0.55f, 0.27f, 0.07f), new Color(0.50f, 0.50f, 0.50f), new Color(0.65f, 0.44f, 0.40f), new Color(1.00f, 0.84f, 0.00f) }[i]; return previewColorPlace; }
 
-        bool ShouldUseLocalPersistence()
-        {
-            if (!persistLocalLobbyLayout)
-            {
-                if (verboseLogs && !localPersistenceReasonLogged)
-                {
-                    localPersistenceReasonLogged = true;
-                    Debug.Log("[LobbyEditor] Local persistence OFF: 'persistLocalLobbyLayout' is disabled.");
-                }
-                return false;
-            }
+        private void ClearRuntimeShopZonesOnly() { if (hoveredZone != null) hoveredZone.SetDeleteHover(false); hoveredZone = null; foreach (var z in FindObjectsByType<ShopZone>(FindObjectsSortMode.None)) Destroy(z.gameObject); }
+        private void ClearLobbyToBaseFloor() { if (wellGenerator == null || !wellGenerator.IsInLobbyMode || island == null) return; int floorY = Mathf.Clamp(wellGenerator.LobbyFloorY, 0, island.TotalY - 1); for (int x = 0; x < island.TotalX; x++) for (int y = 0; y < island.TotalY; y++) for (int z = 0; z < island.TotalZ; z++) island.RemoveVoxel(x, y, z, false); for (int x = 0; x < island.TotalX; x++) for (int z = 0; z < island.TotalZ; z++) island.SetVoxel(x, floorY, z, BlockType.Dirt, false); island.RebuildMesh(); dirtyChunks.Clear(); persistence.ClearAllData(island); ClearRuntimeShopZonesOnly(); }
 
-            bool sharedSyncActive = realtimeSync != null && realtimeSync.UseAuthoritativeServerState;
-            if (preferSharedSyncOverLocalSave && sharedSyncActive)
-            {
-                if (!localPersistenceReasonLogged)
-                {
-                    localPersistenceReasonLogged = true;
-                    Debug.Log("[LobbyEditor] Local persistence OFF: shared lobby sync is active and has priority.");
-                }
-                return false;
-            }
+        private void ShowPreview(VoxelIsland targetIsland, Vector3 gridLocalOrigin, Color color) { EnsurePreview(); previewCube.SetActive(true); previewCube.transform.position = targetIsland.transform.TransformPoint(gridLocalOrigin + new Vector3(0.5f, 0.5f, 0.5f)); previewCube.transform.rotation = targetIsland.transform.rotation; previewCube.transform.localScale = targetIsland.transform.lossyScale; var mr = previewCube.GetComponent<MeshRenderer>(); if (mr != null) mr.material.color = color; }
+        private void HidePreview() { if (previewCube != null) previewCube.SetActive(false); }
+        private void EnsurePreview() { if (previewCube != null) return; previewCube = GameObject.CreatePrimitive(PrimitiveType.Cube); previewCube.name = "LobbyEditorPreview"; previewCube.layer = 2; Destroy(previewCube.GetComponent<Collider>()); var mr = previewCube.GetComponent<MeshRenderer>(); Shader sh = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"); var mat = new Material(sh); mat.color = previewColorPlace; if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f); if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha); if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha); if (mat.HasProperty("_ZWrite")) mat.SetFloat("_ZWrite", 0f); mat.renderQueue = 3000; mr.material = mat; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; }
 
-            return true;
-        }
+        private void TryApplyBakedLayout() { if (!useBakedLobbyLayout || island == null) return; TextAsset asset = Resources.Load<TextAsset>(bakedLobbyLayoutResourcePath); if (asset == null || string.IsNullOrWhiteSpace(asset.text)) return; LobbyLayoutSaveData data = JsonUtility.FromJson<LobbyLayoutSaveData>(asset.text); if (data?.entries == null) return; for (int x = 0; x < island.TotalX; x++) for (int y = 0; y < island.TotalY; y++) for (int z = 0; z < island.TotalZ; z++) island.RemoveVoxel(x, y, z, false); foreach (var e in data.entries) if (island.InBounds(e.x, e.y, e.z)) island.SetVoxel(e.x, e.y, e.z, (BlockType)Mathf.Clamp(e.blockTypeId, 1, (int)BlockType.Grass), false); island.RebuildMesh(); }
+        private void TryApplyBakedShopZones() { if (!useBakedLobbyLayout) return; TextAsset asset = Resources.Load<TextAsset>(bakedShopZonesResourcePath); if (asset == null || string.IsNullOrWhiteSpace(asset.text)) return; ShopZoneSaveData data = JsonUtility.FromJson<ShopZoneSaveData>(asset.text); if (data?.zones == null) return; foreach (var e in data.zones) SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ, e.zoneType); }
 
-        bool IsRuntimeEditingEnabled()
-        {
-            if (!allowRuntimeEditing)
-                return false;
+        private void LogPersistenceModeIfNeeded() { if (!logPersistenceModeOnStart) return; string mode = (realtimeSync != null && realtimeSync.UseAuthoritativeServerState) ? "SharedSync" : (persistLocalLobbyLayout ? "LocalPersistence" : "None"); Debug.Log($"[LobbyEditor] Mode: {mode}"); }
 
-            if (Application.isEditor)
-            {
-                if (Application.isPlaying && !allowRuntimeEditingInEditorPlayMode)
-                    return false;
-            }
-            else if (disableRuntimeEditingInPlayerBuild)
-            {
-                return false;
-            }
+        private bool TryRequestNetworkSpawnShopZone(Vector3 pos, int sx, int sy, int sz, ShopZoneType type) { var av = FindLocalNetworkAvatar(); if (av == null) return false; av.RequestSpawnShopZoneServerRpc(pos, sx, sy, sz, (int)type); return true; }
+        private bool TryRequestNetworkDeleteShopZone(ShopZone zone) { var av = FindLocalNetworkAvatar(); if (av == null) return false; av.RequestDeleteShopZoneServerRpc(zone.transform.position, (int)zone.zoneType); return true; }
 
-            return true;
-        }
-
-        Color GetSelectedBlockPreviewColor()
-        {
-            for (int i = 0; i < BtnTypes.Length && i < BtnColors.Length; i++)
-            {
-                if (BtnTypes[i] == selectedBlockType)
-                    return BtnColors[i];
-            }
-
-            return previewColorPlace;
-        }
-
-        void LogPersistenceModeIfNeeded()
-        {
-            if (!logPersistenceModeOnStart)
-                return;
-
-            bool sharedSyncActive = realtimeSync != null && realtimeSync.UseAuthoritativeServerState;
-            string mode;
-            if (sharedSyncActive && preferSharedSyncOverLocalSave)
-                mode = "SharedSyncOnly";
-            else if (sharedSyncActive && persistLocalLobbyLayout)
-                mode = "Hybrid (SharedSync + Local)";
-            else if (persistLocalLobbyLayout)
-                mode = "LocalOnly";
-            else
-                mode = "NoPersistence";
-
-            Debug.Log(
-                $"[LobbyEditor] Persistence mode: {mode}. " +
-                $"local={persistLocalLobbyLayout}, clearOnPlay={clearSavedLobbyOnPlay}, " +
-                $"sharedSync={enableSharedLobbySync}, endpoint='{sharedLobbyEndpoint}', room='{sharedLobbyRoomId}'.");
-        }
-
-        public LobbyLayoutSaveData CaptureCurrentLayoutForBake()
-        {
-            if (island == null && wellGenerator != null)
-                island = wellGenerator.GetComponent<VoxelIsland>();
-            if (island == null)
-                return null;
-
-            LobbyLayoutSaveData data = new LobbyLayoutSaveData();
-            for (int x = 0; x < island.TotalX; x++)
-            for (int y = 0; y < island.TotalY; y++)
-            for (int z = 0; z < island.TotalZ; z++)
-            {
-                if (!island.TryGetBlockType(x, y, z, out BlockType bt))
-                    continue;
-
-                int id = (int)bt;
-                if (id <= 0)
-                    continue;
-
-                data.entries.Add(new LobbyVoxelEntry
-                {
-                    x = x,
-                    y = y,
-                    z = z,
-                    blockTypeId = id
-                });
-            }
-
-            return data;
-        }
-
-        public ShopZoneSaveData CaptureCurrentShopZonesForBake()
-        {
-            ShopZoneSaveData copy = new ShopZoneSaveData();
-            if (shopSaveData == null || shopSaveData.zones == null)
-                return copy;
-
-            foreach (ShopZoneEntry z in shopSaveData.zones)
-            {
-                if (z == null) continue;
-                copy.zones.Add(new ShopZoneEntry
-                {
-                    worldX = z.worldX,
-                    worldY = z.worldY,
-                    worldZ = z.worldZ,
-                    sizeX = z.sizeX,
-                    sizeY = z.sizeY,
-                    sizeZ = z.sizeZ,
-                    zoneType = z.zoneType
-                });
-            }
-
-            return copy;
-        }
-
-        void TryApplyBakedLayout()
-        {
-            if (!useBakedLobbyLayout || island == null)
-                return;
-
-            string resourcePath = string.IsNullOrWhiteSpace(bakedLobbyLayoutResourcePath)
-                ? "LobbyBakedLayout"
-                : bakedLobbyLayoutResourcePath.Trim();
-
-            TextAsset asset = Resources.Load<TextAsset>(resourcePath);
-            if (asset == null || string.IsNullOrWhiteSpace(asset.text))
-                return;
-
-            LobbyLayoutSaveData data = null;
-            try { data = JsonUtility.FromJson<LobbyLayoutSaveData>(asset.text); }
-            catch { }
-            if (data == null || data.entries == null || data.entries.Count == 0)
-                return;
-
-            for (int x = 0; x < island.TotalX; x++)
-            for (int y = 0; y < island.TotalY; y++)
-            for (int z = 0; z < island.TotalZ; z++)
-                island.RemoveVoxel(x, y, z, false);
-
-            foreach (LobbyVoxelEntry e in data.entries)
-            {
-                if (e == null || !island.InBounds(e.x, e.y, e.z))
-                    continue;
-
-                int raw = e.blockTypeId;
-                if (raw <= 0) continue;
-                if (raw > (int)BlockType.Grass) raw = (int)BlockType.Dirt;
-                island.SetVoxel(e.x, e.y, e.z, (BlockType)raw, false);
-            }
-
-            island.RebuildMesh();
-            if (verboseLogs)
-                Debug.Log($"[LobbyEditor] Baked layout applied from Resources/{resourcePath}.json");
-        }
-
-        void TryApplyBakedShopZones()
-        {
-            if (!useBakedLobbyLayout)
-                return;
-
-            string resourcePath = string.IsNullOrWhiteSpace(bakedShopZonesResourcePath)
-                ? "LobbyBakedShopZones"
-                : bakedShopZonesResourcePath.Trim();
-
-            TextAsset asset = Resources.Load<TextAsset>(resourcePath);
-            if (asset == null || string.IsNullOrWhiteSpace(asset.text))
-                return;
-
-            ShopZoneSaveData data = null;
-            try { data = JsonUtility.FromJson<ShopZoneSaveData>(asset.text); }
-            catch { }
-            if (data == null || data.zones == null)
-                return;
-
-            shopSaveData = data;
-            foreach (ShopZoneEntry e in shopSaveData.zones)
-            {
-                if (e == null) continue;
-                SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ, e.zoneType);
-            }
-
-            if (verboseLogs)
-                Debug.Log($"[LobbyEditor] Baked shop zones applied: {spawnedZones.Count}");
-        }
-
-        void ClearRuntimeShopZonesOnly()
-        {
-            if (hoveredZone != null)
-            {
-                hoveredZone.SetDeleteHover(false);
-                hoveredZone = null;
-            }
-
-            foreach (var z in spawnedZones)
-                if (z != null) Destroy(z.gameObject);
-            spawnedZones.Clear();
-        }
-
-        void ClearStoredLobbyData()
-        {
-            if (island != null)
-            {
-                int chunkCountX = Mathf.CeilToInt((float)island.TotalX / ChunkSize);
-                int chunkCountZ = Mathf.CeilToInt((float)island.TotalZ / ChunkSize);
-                for (int cx = 0; cx < chunkCountX; cx++)
-                for (int cz = 0; cz < chunkCountZ; cz++)
-                    PlayerPrefs.DeleteKey(ChunkPrefsKey(cx, cz));
-            }
-
-            PlayerPrefs.DeleteKey(ShopSavePrefsKey);
-            PlayerPrefs.Save();
-
-#if !UNITY_WEBGL || UNITY_EDITOR
-            try
-            {
-                if (Directory.Exists(ChunkDir))
-                    Directory.Delete(ChunkDir, true);
-            }
-            catch { }
-
-            try
-            {
-                if (File.Exists(ShopSavePath))
-                    File.Delete(ShopSavePath);
-            }
-            catch { }
-#endif
-        }
-
-        void ClearLobbyToBaseFloor()
-        {
-            if (wellGenerator == null || !wellGenerator.IsInLobbyMode)
-                return;
-
-            if (island == null)
-                island = wellGenerator.GetComponent<VoxelIsland>();
-            if (island == null)
-                return;
-
-            int floorY = Mathf.Clamp(wellGenerator.LobbyFloorY, 0, island.TotalY - 1);
-
-            for (int x = 0; x < island.TotalX; x++)
-            for (int y = 0; y < island.TotalY; y++)
-            for (int z = 0; z < island.TotalZ; z++)
-                island.RemoveVoxel(x, y, z, false);
-
-            for (int x = 0; x < island.TotalX; x++)
-            for (int z = 0; z < island.TotalZ; z++)
-                island.SetVoxel(x, floorY, z, BlockType.Dirt, false);
-
-            island.RebuildMesh();
-            dirtyChunks.Clear();
-
-            ClearRuntimeShopZonesOnly();
-            shopSaveData = new ShopZoneSaveData();
-
-            // On clear we always delete previously saved local layout,
-            // so future sessions start from base floor.
-            ClearStoredLobbyData();
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // UI factories
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-        static Font _font;
-        static Font GetFont()
-        {
-            if (_font != null) return _font;
-            _font = RuntimeUiFont.Get();
-            return _font;
-        }
-
-        static GameObject MakePanel(string name, Transform parent,
-            Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color color)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = anchor; rt.anchorMax = anchor;
-            rt.pivot = pivot; rt.anchoredPosition = pos; rt.sizeDelta = size;
-            go.AddComponent<Image>().color = color;
-            return go;
-        }
-
-        static Button MakeBtn(Transform parent, string name, string label, Color color,
-            Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = anchor; rt.anchorMax = anchor;
-            rt.pivot = pivot; rt.anchoredPosition = pos; rt.sizeDelta = size;
-            var img = go.AddComponent<Image>(); img.color = color;
-            var btn = go.AddComponent<Button>(); btn.targetGraphic = img;
-            var tGo = new GameObject("Label");
-            tGo.transform.SetParent(go.transform, false);
-            var trt = tGo.AddComponent<RectTransform>();
-            trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-            trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-            var txt = tGo.AddComponent<Text>();
-            txt.font = GetFont(); txt.fontSize = 13;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = Color.white; txt.text = label;
-            return btn;
-        }
-
-        static Text MakeLabelOff(Transform parent, string name, string text,
-            int fontSize, TextAnchor align,
-            Vector2 offsetMin, Vector2 offsetMax, bool bold = false)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-            rt.offsetMin = offsetMin; rt.offsetMax = offsetMax;
-            var txt = go.AddComponent<Text>();
-            txt.font = GetFont(); txt.fontSize = fontSize;
-            txt.alignment = align; txt.color = new Color(0.9f, 0.9f, 0.9f, 1f);
-            txt.text = bold ? $"<b>{text}</b>" : text;
-            txt.supportRichText = true;
-            return txt;
-        }
-
-        // Ð¡Ñ‚Ñ€Ð¾ÐºÐ° Â«ÐœÐµÑ‚ÐºÐ° + InputFieldÂ»
-        static InputField MakeInputField(Transform parent, string name, string label, ref float offsetY)
-        {
-            // ÐœÐµÑ‚ÐºÐ°
-            var lGo = new GameObject(name + "_Label");
-            lGo.transform.SetParent(parent, false);
-            var lrt = lGo.AddComponent<RectTransform>();
-            lrt.anchorMin = new Vector2(0.5f, 1f); lrt.anchorMax = new Vector2(0.5f, 1f);
-            lrt.pivot = new Vector2(0.5f, 1f);
-            lrt.anchoredPosition = new Vector2(0f, offsetY);
-            lrt.sizeDelta = new Vector2(280f, 22f);
-            var lt = lGo.AddComponent<Text>();
-            lt.font = GetFont(); lt.fontSize = 12;
-            lt.alignment = TextAnchor.MiddleLeft;
-            lt.color = new Color(0.8f, 0.8f, 0.8f, 1f);
-            lt.text = label;
-
-            offsetY -= 26f;
-
-            // Input background
-            var iGo = new GameObject(name);
-            iGo.transform.SetParent(parent, false);
-            var irt = iGo.AddComponent<RectTransform>();
-            irt.anchorMin = new Vector2(0.5f, 1f); irt.anchorMax = new Vector2(0.5f, 1f);
-            irt.pivot = new Vector2(0.5f, 1f);
-            irt.anchoredPosition = new Vector2(0f, offsetY);
-            irt.sizeDelta = new Vector2(280f, 32f);
-            var bg = iGo.AddComponent<Image>(); bg.color = new Color(0.2f, 0.2f, 0.3f, 1f);
-
-            // Text child
-            var tGo = new GameObject("Text");
-            tGo.transform.SetParent(iGo.transform, false);
-            var trt = tGo.AddComponent<RectTransform>();
-            trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-            trt.offsetMin = new Vector2(6, 2); trt.offsetMax = new Vector2(-6, -2);
-            var txt = tGo.AddComponent<Text>();
-            txt.font = GetFont(); txt.fontSize = 14;
-            txt.alignment = TextAnchor.MiddleLeft;
-            txt.color = Color.white; txt.supportRichText = false;
-
-            var field = iGo.AddComponent<InputField>();
-            field.textComponent = txt;
-            field.contentType = InputField.ContentType.IntegerNumber;
-            field.targetGraphic = bg;
-
-            offsetY -= 36f;
-            return field;
-        }
+        private void DrawChunkDebug() { if (island == null) return; float ly = -(wellGenerator.LobbyFloorY - 1) + 0.05f; Color gridColor = new Color(0f, 0.9f, 1f, 0.9f); for (int cx = 0; cx <= island.TotalX / ChunkSize; cx++) { int gx = Mathf.Min(cx * ChunkSize, island.TotalX); Debug.DrawLine(island.transform.TransformPoint(new Vector3(gx, ly, 0)), island.transform.TransformPoint(new Vector3(gx, ly, island.TotalZ)), gridColor); } for (int cz = 0; cz <= island.TotalZ / ChunkSize; cz++) { int gz = Mathf.Min(cz * ChunkSize, island.TotalZ); Debug.DrawLine(island.transform.TransformPoint(new Vector3(0, ly, gz)), island.transform.TransformPoint(new Vector3(island.TotalX, ly, gz)), gridColor); } }
     }
 }
-
-
-
