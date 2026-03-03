@@ -1,6 +1,7 @@
-﻿using UnityEngine;
-using UnityEngine.UI;
+using System;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
 using SimpleVoxelSystem.Data;
 
 namespace SimpleVoxelSystem
@@ -16,31 +17,53 @@ namespace SimpleVoxelSystem
         private Text levelText;
         private Transform buttonContainer;
 
+        private readonly List<GameObject> builtItems = new List<GameObject>();
+        private readonly HashSet<int> ownedPickaxeIndices = new HashSet<int>();
+
+        private const string OwnedPrefsKey = "svs_pickaxe_owned_indices_v1";
+        private const string EquippedPrefsKey = "svs_pickaxe_equipped_index_v1";
+
         private static readonly Color ColPanel = new Color(0.1f, 0.1f, 0.12f, 0.95f);
         private static readonly Color ColText = new Color(0.95f, 0.95f, 0.95f, 1f);
 
-        void Awake()
+        [Serializable]
+        private class IntListWrapper
+        {
+            public List<int> items = new List<int>();
+        }
+
+        private void Awake()
         {
             if (playerPickaxe == null)
                 playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();
 
             EnsureDefaultPickaxes();
+            LoadPickaxeState();
             BuildUI();
         }
 
-        void EnsureDefaultPickaxes()
+        private void EnsureDefaultPickaxes()
         {
-            if (availablePickaxes != null && availablePickaxes.Count > 0) return;
+            if (availablePickaxes != null && availablePickaxes.Count > 0)
+            {
+                bool valid = true;
+                foreach (PickaxeData d in availablePickaxes)
+                {
+                    if (d == null) { valid = false; break; }
+                }
+                if (valid) return;
+            }
+
             availablePickaxes = new List<PickaxeData>
             {
-                CreateData("Каменная кирка", "Крепче дерева. Позволяет копать быстрее.", 500, 2, 3, new Color(0.5f, 0.5f, 0.5f)),
-                CreateData("Железная кирка", "Надежный инструмент для серьезных руд.", 2000, 5, 7, new Color(0.8f, 0.8f, 0.8f)),
-                CreateData("Золотая кирка", "Очень быстрая, но дорогая.", 5000, 10, 12, new Color(1f, 0.9f, 0f)),
-                CreateData("Алмазная кирка", "Лучшее, что можно найти.", 15000, 25, 20, new Color(0.3f, 0.9f, 1f))
+                CreateData("Stone Pickaxe", "Faster than default.", 500, 2, 1, new Color(0.5f, 0.5f, 0.5f)),
+                CreateData("Iron Pickaxe", "Solid upgrade for mining.", 2000, 5, 3, new Color(0.8f, 0.8f, 0.8f)),
+                CreateData("Gold Pickaxe", "Very fast but expensive.", 5000, 10, 6, new Color(1f, 0.9f, 0f)),
+                CreateData("Diamond Pickaxe", "Top tier pickaxe.", 15000, 25, 10, new Color(0.3f, 0.9f, 1f))
             };
         }
 
-        PickaxeData CreateData(string n, string d, int p, int pow, int lvl, Color c)
+        private PickaxeData CreateData(string n, string d, int p, int pow, int lvl, Color c)
         {
             PickaxeData data = ScriptableObject.CreateInstance<PickaxeData>();
             data.displayName = n;
@@ -52,7 +75,7 @@ namespace SimpleVoxelSystem
             return data;
         }
 
-        void BuildUI()
+        private void BuildUI()
         {
             rootCanvas = FindFirstObjectByType<Canvas>();
             if (rootCanvas == null)
@@ -65,7 +88,7 @@ namespace SimpleVoxelSystem
             }
 
             overlay = MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000f, 10000f), new Color(0f, 0f, 0f, 0.6f));
-            shopPanel = MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400f, 500f), ColPanel);
+            shopPanel = MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(420f, 520f), ColPanel);
 
             MakeLabel(shopPanel.transform, "Title", "PICKAXE SHOP", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
             levelText = MakeLabel(shopPanel.transform, "LevelInfo", "Mining level: 1 (0 XP)", 14, TextAnchor.UpperCenter);
@@ -78,46 +101,55 @@ namespace SimpleVoxelSystem
             shopPanel.SetActive(false);
         }
 
-        void BuildButtons()
+        private void BuildButtons()
         {
-            foreach (var data in availablePickaxes)
+            ClearButtons();
+            if (availablePickaxes == null)
+                return;
+
+            for (int i = 0; i < availablePickaxes.Count; i++)
             {
-                GameObject item = new GameObject(data.displayName + "_Item");
+                PickaxeData data = availablePickaxes[i];
+                if (data == null)
+                    continue;
+
+                int index = i;
+                string safeName = string.IsNullOrWhiteSpace(data.displayName) ? $"Pickaxe #{i + 1}" : data.displayName;
+                string safeDesc = string.IsNullOrWhiteSpace(data.description) ? "No description." : data.description;
+
+                GameObject item = new GameObject(safeName + "_Item");
                 item.transform.SetParent(buttonContainer, false);
+                builtItems.Add(item);
 
                 RectTransform itemRt = item.AddComponent<RectTransform>();
                 itemRt.anchorMin = new Vector2(0f, 1f);
                 itemRt.anchorMax = new Vector2(1f, 1f);
                 itemRt.pivot = new Vector2(0.5f, 1f);
-                itemRt.sizeDelta = new Vector2(0f, 88f);
+                itemRt.sizeDelta = new Vector2(0f, 108f);
 
                 LayoutElement le = item.AddComponent<LayoutElement>();
-                le.minHeight = 88f;
-                le.preferredHeight = 88f;
+                le.minHeight = 108f;
+                le.preferredHeight = 108f;
 
                 Image img = item.AddComponent<Image>();
                 img.color = new Color(1f, 1f, 1f, 0.06f);
 
-                MakeLabelRect(item.transform, "Name", data.displayName, 16, TextAnchor.UpperLeft,
-                    new Vector2(10f, -26f), new Vector2(-110f, -2f), ColText);
+                string summary =
+                    $"{safeName}\n" +
+                    $"{safeDesc}\n" +
+                    $"Power: {Mathf.Max(1, data.miningPower)}    Req Lv: {Mathf.Max(1, data.requiredMiningLevel)}    " +
+                    $"Price: ${data.buyPrice}    [{BuildStateLabel(index)}]";
 
-                Text tDesc = MakeLabelRect(item.transform, "Desc", data.description, 11, TextAnchor.UpperLeft,
-                    new Vector2(10f, -58f), new Vector2(-110f, -26f), new Color(0.72f, 0.72f, 0.72f));
-                tDesc.horizontalOverflow = HorizontalWrapMode.Wrap;
-                tDesc.verticalOverflow = VerticalWrapMode.Truncate;
-
-                MakeLabelRect(item.transform, "Lvl", $"Lv. {data.requiredMiningLevel}", 12, TextAnchor.LowerLeft,
-                    new Vector2(10f, -4f), new Vector2(-160f, 22f), new Color(0.5f, 0.8f, 1f));
-
-                MakeLabelRect(item.transform, "Price", $"$ {data.buyPrice}", 16, TextAnchor.MiddleRight,
-                    new Vector2(-108f, -2f), new Vector2(-10f, 24f), Color.yellow);
+                Text tInfo = MakeLabelFill(item.transform, "Info", summary, 13, TextAnchor.UpperLeft, ColText);
+                tInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
+                tInfo.verticalOverflow = VerticalWrapMode.Truncate;
 
                 Button btn = item.AddComponent<Button>();
-                btn.onClick.AddListener(() => TryBuy(data));
+                btn.onClick.AddListener(() => TryBuy(index, data));
             }
         }
 
-        void Update()
+        private void Update()
         {
             if (shopPanel != null && shopPanel.activeSelf && levelText != null)
                 levelText.text = $"Mining level: {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
@@ -127,6 +159,7 @@ namespace SimpleVoxelSystem
         {
             EnsureUIBuilt();
             if (shopPanel == null || overlay == null) return;
+            BuildButtons();
             bool next = !shopPanel.activeSelf;
             SetPanelVisible(next);
         }
@@ -138,7 +171,7 @@ namespace SimpleVoxelSystem
             if (overlay != null) overlay.SetActive(visible);
         }
 
-        void EnsureUIBuilt()
+        private void EnsureUIBuilt()
         {
             if (shopPanel != null && overlay != null)
                 return;
@@ -146,21 +179,40 @@ namespace SimpleVoxelSystem
             BuildUI();
         }
 
-        void TryBuy(PickaxeData data)
+        private void TryBuy(int index, PickaxeData data)
         {
-            if (GlobalEconomy.Money < data.buyPrice)
+            if (data == null)
+                return;
+
+            if (playerPickaxe != null && playerPickaxe.currentPickaxe == data)
             {
-                Debug.Log("<color=red>Не хватает денег!</color>");
+                Debug.Log($"{data.displayName} is already equipped.");
+                return;
+            }
+
+            if (ownedPickaxeIndices.Contains(index))
+            {
+                if (playerPickaxe != null)
+                    playerPickaxe.currentPickaxe = data;
+                PlayerPrefs.SetInt(EquippedPrefsKey, index);
+                PlayerPrefs.Save();
+                Debug.Log($"Equipped: {data.displayName}");
+                BuildButtons();
                 return;
             }
 
             if (GlobalEconomy.MiningLevel < data.requiredMiningLevel)
             {
-                Debug.Log($"<color=orange>Нужен уровень {data.requiredMiningLevel}!</color>");
+                Debug.Log($"Need mining level {data.requiredMiningLevel}.");
                 return;
             }
 
-            // Синхронизация через сервер
+            if (GlobalEconomy.Money < data.buyPrice)
+            {
+                Debug.Log("Not enough money.");
+                return;
+            }
+
             var networkAvatar = playerPickaxe != null ? playerPickaxe.GetComponent<Net.NetPlayerAvatar>() : null;
             if (networkAvatar != null && networkAvatar.IsSpawned)
             {
@@ -171,14 +223,78 @@ namespace SimpleVoxelSystem
                 GlobalEconomy.Money -= data.buyPrice;
             }
 
+            ownedPickaxeIndices.Add(index);
+            SaveOwnedState();
+            PlayerPrefs.SetInt(EquippedPrefsKey, index);
+            PlayerPrefs.Save();
+
             if (playerPickaxe != null)
                 playerPickaxe.currentPickaxe = data;
 
-            Debug.Log($"<color=green>Куплена: {data.displayName}!</color>");
+            Debug.Log($"Bought: {data.displayName}");
+            BuildButtons();
             SetPanelVisible(false);
         }
 
-        Text MakeLabel(Transform parent, string name, string text, int size, TextAnchor align)
+        private void ClearButtons()
+        {
+            for (int i = 0; i < builtItems.Count; i++)
+            {
+                if (builtItems[i] != null)
+                    Destroy(builtItems[i]);
+            }
+            builtItems.Clear();
+        }
+
+        private string BuildStateLabel(int index)
+        {
+            PickaxeData equipped = playerPickaxe != null ? playerPickaxe.currentPickaxe : null;
+            bool isEquipped = equipped != null && index >= 0 && index < availablePickaxes.Count && availablePickaxes[index] == equipped;
+            if (isEquipped) return "EQUIPPED";
+            if (ownedPickaxeIndices.Contains(index)) return "OWNED";
+            return "BUY";
+        }
+
+        private void LoadPickaxeState()
+        {
+            ownedPickaxeIndices.Clear();
+
+            string json = PlayerPrefs.GetString(OwnedPrefsKey, string.Empty);
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                try
+                {
+                    IntListWrapper wrapper = JsonUtility.FromJson<IntListWrapper>(json);
+                    if (wrapper != null && wrapper.items != null)
+                    {
+                        for (int i = 0; i < wrapper.items.Count; i++)
+                        {
+                            int idx = wrapper.items[i];
+                            if (idx >= 0 && availablePickaxes != null && idx < availablePickaxes.Count)
+                                ownedPickaxeIndices.Add(idx);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            int equippedIndex = PlayerPrefs.GetInt(EquippedPrefsKey, -1);
+            if (playerPickaxe != null && equippedIndex >= 0 && availablePickaxes != null && equippedIndex < availablePickaxes.Count)
+                playerPickaxe.currentPickaxe = availablePickaxes[equippedIndex];
+        }
+
+        private void SaveOwnedState()
+        {
+            IntListWrapper wrapper = new IntListWrapper();
+            foreach (int idx in ownedPickaxeIndices)
+                wrapper.items.Add(idx);
+
+            string json = JsonUtility.ToJson(wrapper);
+            PlayerPrefs.SetString(OwnedPrefsKey, json);
+            PlayerPrefs.Save();
+        }
+
+        private Text MakeLabel(Transform parent, string name, string text, int size, TextAnchor align)
         {
             GameObject go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -198,7 +314,7 @@ namespace SimpleVoxelSystem
             return t;
         }
 
-        Text MakeLabelRect(Transform parent, string name, string text, int size, TextAnchor align,
+        private Text MakeLabelRect(Transform parent, string name, string text, int size, TextAnchor align,
             Vector2 offsetTopLeft, Vector2 offsetBottomRight, Color color)
         {
             GameObject go = new GameObject(name);
@@ -220,7 +336,7 @@ namespace SimpleVoxelSystem
             return t;
         }
 
-        GameObject MakePanel(string name, Transform parent, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color color)
+        private GameObject MakePanel(string name, Transform parent, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color color)
         {
             GameObject go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -234,7 +350,27 @@ namespace SimpleVoxelSystem
             return go;
         }
 
-        Transform MakeScrollContainer(Transform parent)
+        private Text MakeLabelFill(Transform parent, string name, string text, int size, TextAnchor align, Color color)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            RectTransform rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(10f, 6f);
+            rt.offsetMax = new Vector2(-10f, -6f);
+
+            Text t = go.AddComponent<Text>();
+            t.font = RuntimeUiFont.Get();
+            t.text = text;
+            t.fontSize = size;
+            t.alignment = align;
+            t.color = color;
+            t.supportRichText = true;
+            return t;
+        }
+
+        private Transform MakeScrollContainer(Transform parent)
         {
             GameObject go = new GameObject("Container");
             go.transform.SetParent(parent, false);

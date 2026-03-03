@@ -11,7 +11,7 @@ namespace SimpleVoxelSystem
     public class YandexAsyncMultiplayerManager : MonoBehaviour
     {
         [Header("Sessions")]
-        [Range(1, 10)] public int opponentsToLoad = 2;
+        [Range(1, 10)] public int opponentsToLoad = 10;
         [Min(50)] public int maxOpponentTurnTimeMs = 250;
         [Min(0.05f)] public float commitInterval = 0.25f;
         [Min(5f)] public float autoPushIntervalSeconds = 25f;
@@ -540,6 +540,9 @@ namespace SimpleVoxelSystem
                 return;
 
             ghost.inLobby = payload.inLobby;
+            ghost.miningLevel = Mathf.Max(1, payload.miningLevel);
+            if (string.IsNullOrWhiteSpace(ghost.lastEvent))
+                ghost.lastEvent = "state";
             bool localInLobby = wellGenerator == null || wellGenerator.IsInLobbyMode;
             bool shouldShow = localInLobby && ghost.inLobby;
             if (ghost.gameObject.activeSelf != shouldShow)

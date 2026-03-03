@@ -151,6 +151,12 @@ namespace SimpleVoxelSystem
         void OnTriggerEnter(Collider other)
         {
             if (!IsPlayer(other)) return;
+            if (playerInside) return;
+
+            // Switching from one zone to another must close any previously opened shop panel.
+            if (currentZone != null && currentZone != this)
+                currentZone.CloseAllShopPanels();
+
             playerInside = true;
             currentZone  = this;
             ShowPrompt(true);
@@ -159,21 +165,46 @@ namespace SimpleVoxelSystem
         void OnTriggerExit(Collider other)
         {
             if (!IsPlayer(other)) return;
+            if (!playerInside) return;
+
             playerInside = false;
+            CloseAllShopPanels();
+
             if (currentZone == this)
             {
                 currentZone = null;
                 ShowPrompt(false);
-                if (zoneType == ShopZoneType.Mine && mineShopUI != null)
-                    mineShopUI.SetPanelVisible(false);
-                else if (zoneType == ShopZoneType.Pickaxe && pickaxeShopUI != null)
-                    pickaxeShopUI.SetPanelVisible(false);
+            }
+            else if (!AnyZoneHasPlayerInside())
+            {
+                // Safety net: if we left the last zone, clear stale prompt state.
+                currentZone = null;
+                ShowPrompt(false);
             }
         }
 
         void OnDestroy()
         {
             if (currentZone == this) { currentZone = null; ShowPrompt(false); }
+        }
+
+        void CloseAllShopPanels()
+        {
+            if (mineShopUI != null)
+                mineShopUI.SetPanelVisible(false);
+            if (pickaxeShopUI != null)
+                pickaxeShopUI.SetPanelVisible(false);
+        }
+
+        static bool AnyZoneHasPlayerInside()
+        {
+            var zones = FindObjectsByType<ShopZone>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zones[i] != null && zones[i].playerInside)
+                    return true;
+            }
+            return false;
         }
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
