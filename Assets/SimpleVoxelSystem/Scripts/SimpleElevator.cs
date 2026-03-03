@@ -164,7 +164,7 @@ namespace SimpleVoxelSystem
             if (Time.time - lastMoveTime < moveCooldown)
                 return;
 
-            int clearedDepth = wellGenerator.GetContiguousClearedDepth();
+            int clearedDepth = wellGenerator.GetContiguousClearedDepthAtShaft(shaftGridX, shaftGridZ);
             float desiredY = GetWorldYForDepth(clearedDepth);
 
             // Если мы уже на месте

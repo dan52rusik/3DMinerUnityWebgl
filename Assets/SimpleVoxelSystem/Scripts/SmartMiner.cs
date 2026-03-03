@@ -29,6 +29,7 @@ namespace SimpleVoxelSystem
         private VoxelIsland currentTargetIsland;
         private PlayerPickaxe pickaxe;
         private PlayerCharacterController playerController;
+        private MobileTouchControls mobileControls;
 
         private GameObject highlightInstance;
         private Vector3Int currentTargetGridPos;
@@ -47,6 +48,7 @@ namespace SimpleVoxelSystem
             pickaxe = GetComponent<PlayerPickaxe>();
             if (pickaxe == null)
                 pickaxe = GetComponentInChildren<PlayerPickaxe>();
+            mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
 
             playerController = GetComponent<PlayerCharacterController>();
             if (playerController == null)
@@ -257,6 +259,9 @@ namespace SimpleVoxelSystem
 
         Vector2 ReadPointerPosition()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.AimScreenPosition;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -268,6 +273,9 @@ namespace SimpleVoxelSystem
 
         bool WasMinePressedDown()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.MinePressedThisFrame || mobileControls.LookTapPressedThisFrame;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -279,6 +287,9 @@ namespace SimpleVoxelSystem
 
         bool IsMineHeld()
         {
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.MinePressedThisFrame || mobileControls.LookTapPressedThisFrame;
+
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.leftButton.isPressed;
 #elif ENABLE_LEGACY_INPUT_MANAGER

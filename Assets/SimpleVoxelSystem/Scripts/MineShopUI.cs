@@ -31,6 +31,7 @@ namespace SimpleVoxelSystem
         private Button     cancelBtn;
         private Button     switchWorldBtn;
         private Button     createIslandBtn;
+        private Button     setSpawnBtn;
         private Transform  buttonContainer;
 
         private readonly List<Button> mineButtons = new List<Button>();
@@ -182,6 +183,19 @@ namespace SimpleVoxelSystem
                 mineMarket.WellGen.SwitchToMine();
             });
             createIslandBtn.gameObject.SetActive(true);
+
+            setSpawnBtn = MakeButton(rootCanvas.transform, "SetSpawnBtn",
+                "Set Spawn", new Color(0.15f, 0.65f, 0.85f, 0.95f),
+                anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
+                pos: new Vector2(-320f, -10f), size: new Vector2(140f, 40f));
+            setSpawnBtn.onClick.AddListener(() =>
+            {
+                bool ok = mineMarket != null && mineMarket.WellGen != null && mineMarket.WellGen.SaveCurrentIslandSpawnPoint();
+                SetStatus(ok
+                    ? "Spawn point saved on island."
+                    : "Can't save spawn here. Stand on solid island ground.");
+            });
+            setSpawnBtn.gameObject.SetActive(false);
 
             // â”€â”€ Ð¢Ñ‘Ð¼Ð½Ñ‹Ð¹ Ð¾Ð²ÐµÑ€Ð»ÐµÐ¹-Ñ„Ð¾Ð½ (Ð¿Ð¾Ð´ Ð¿Ð°Ð½ÐµÐ»ÑŒÑŽ) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             GameObject overlay = MakePanel("ShopOverlay", rootCanvas.transform,
@@ -386,6 +400,9 @@ namespace SimpleVoxelSystem
             // ÐšÐ½Ð¾Ð¿ÐºÐ° ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Ð»Ð¾Ð±Ð±Ð¸ Ð¸ Ð¿Ð¾ÐºÐ° Ð¾ÑÑ‚Ñ€Ð¾Ð²Ð° Ð½ÐµÑ‚
             if (createIslandBtn != null) 
                 createIslandBtn.gameObject.SetActive(inLobby && !islandBuilt);
+
+            if (setSpawnBtn != null)
+                setSpawnBtn.gameObject.SetActive(!inLobby && islandBuilt);
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¿ÐµÑ€ÐµÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ñ:
             if (switchWorldBtn != null)

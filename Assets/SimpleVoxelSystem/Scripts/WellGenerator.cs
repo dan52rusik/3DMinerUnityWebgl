@@ -54,11 +54,19 @@ namespace SimpleVoxelSystem
         [Tooltip("При возврате из лобби на остров возвращать игрока в последнюю позицию на острове.")]
         public bool returnToLastIslandPosition = true;
 
+        [Header("Fall Recovery")]
+        [Tooltip("Если игрок падает слишком низко, вернуть его в безопасную точку текущего мира.")]
+        public bool respawnOnFall = true;
+        [Min(4f)] public float fallRespawnExtraDepth = 10f;
+        [Min(0.1f)] public float fallRespawnCooldown = 1.0f;
+
         // ─── Runtime ────────────────────────────────────────────────────────
-        public bool IsMineGenerated { get; private set; }
+        public bool IsMineGenerated => placedMines.Count > 0;
         public MineInstance ActiveMine { get; private set; }
+        public IReadOnlyList<MineInstance> PlacedMines => placedMines;
         public int LobbyFloorY => lobbyBuildAbove;
         private bool mineAppliedToIsland;
+        private readonly List<MineInstance> placedMines = new List<MineInstance>();
 
         public event System.Action OnFlatPlotReady;
         public event Action<bool> OnWorldSwitch; // true=лобби, false=шахта
@@ -70,6 +78,8 @@ namespace SimpleVoxelSystem
         private Vector3 lobbySpawnPos;
         private Vector3 islandSpawnPos;
         private bool hasIslandSpawnPos;
+        private Vector3 customIslandSpawnPos;
+        private bool hasCustomIslandSpawnPos;
 
         private const int TopLayerDepth = 3;
         private const int MidLayerDepth = 7;
@@ -78,6 +88,7 @@ namespace SimpleVoxelSystem
         private VoxelIsland playerIsland;
         private MeshRenderer lobbyRenderer;
         private MeshCollider lobbyCollider;
+        private float nextFallRespawnAt;
 
         public VoxelIsland ActiveIsland => IsInLobbyMode ? lobbyIsland : (playerIsland ?? lobbyIsland);
         public bool IsIslandGenerated => playerIsland != null;
@@ -120,6 +131,7 @@ namespace SimpleVoxelSystem
         void Update()
         {
             UpdateLobbyStreamingVisibility();
+            TryRecoverFromFall();
         }
 
         private void SyncColorsToActiveIsland()
@@ -185,14 +197,18 @@ namespace SimpleVoxelSystem
 
                 SyncColorsToActiveIsland();
                 
-                if (ActiveMine != null)
+                if (placedMines.Count > 0 && !mineAppliedToIsland)
                 {
-                    if (!mineAppliedToIsland)
+                    for (int i = 0; i < placedMines.Count; i++)
                     {
-                        ApplyMineVoxels(ActiveMine);
-                        mineAppliedToIsland = true;
+                        MineInstance mine = placedMines[i];
+                        if (mine == null || mine.shopData == null) continue;
+                        ApplyMineVoxels(mine);
+                        int x0 = mine.originX - (mine.shopData.wellWidth / 2) - mine.shopData.padding;
+                        int z0 = mine.originZ - (mine.shopData.wellLength / 2) - mine.shopData.padding;
+                        CreateElevator(x0, z0);
                     }
-                    RestoreElevatorForActiveMine();
+                    mineAppliedToIsland = true;
                 }
             }
 
@@ -270,7 +286,8 @@ namespace SimpleVoxelSystem
             ActiveMine = mine;
             ActiveMine.originX = gx;
             ActiveMine.originZ = gz;
-            IsMineGenerated = true;
+            if (!placedMines.Contains(ActiveMine))
+                placedMines.Add(ActiveMine);
 
             ApplyMineVoxels(ActiveMine);
             mineAppliedToIsland = true;
@@ -285,14 +302,11 @@ namespace SimpleVoxelSystem
             
             if (!keepPlayerPositionWhenPlacingMine)
             {
-                Vector3 worldSurfacePos = ActiveIsland.transform.TransformPoint(ActiveIsland.GridToLocal(gx, LobbyFloorY, gz));
-                SpawnPlayerAt(new Vector3(worldSurfacePos.x, worldSurfacePos.y, worldSurfacePos.z - 3f));
+                // Keep player where they are; teleport-to-mine is disabled to preserve island spawn flow.
             }
-            else
-            {
-                RememberCurrentIslandSpawnPoint();
-                if (cc != null) cc.enabled = true;
-            }
+
+            RememberCurrentIslandSpawnPoint();
+            if (cc != null) cc.enabled = true;
 
             IsInLobbyMode = false;
             OnWorldSwitch?.Invoke(false);
@@ -407,34 +421,21 @@ namespace SimpleVoxelSystem
 
             Physics.SyncTransforms();
 
-            if (ActiveMine != null)
+            if (placedMines.Count > 0 && !mineAppliedToIsland)
             {
-                // Do not rebuild mine every world switch; keep current dug state.
-                // Apply only when mine was restored from save / island recreated.
-                if (!mineAppliedToIsland)
+                for (int i = 0; i < placedMines.Count; i++)
                 {
-                    ApplyMineVoxels(ActiveMine);
-                    mineAppliedToIsland = true;
+                    MineInstance mine = placedMines[i];
+                    if (mine == null || mine.shopData == null) continue;
+                    ApplyMineVoxels(mine);
+                    int x0 = mine.originX - (mine.shopData.wellWidth / 2) - mine.shopData.padding;
+                    int z0 = mine.originZ - (mine.shopData.wellLength / 2) - mine.shopData.padding;
+                    CreateElevator(x0, z0);
                 }
-                RestoreElevatorForActiveMine();
+                mineAppliedToIsland = true;
             }
 
-            if (returnToLastIslandPosition && hasIslandSpawnPos)
-            {
-                SpawnPlayerAt(islandSpawnPos);
-            }
-            else if (ActiveMine != null)
-            {
-                Vector3 worldMinePos = playerIsland.transform.TransformPoint(playerIsland.GridToLocal(ActiveMine.originX, LobbyFloorY, ActiveMine.originZ));
-                SpawnPlayerAt(new Vector3(worldMinePos.x, worldMinePos.y, worldMinePos.z - 3f));
-            }
-            else
-            {
-                float centerX = playerIsland.TotalX / 2f;
-                float centerZ = playerIsland.TotalZ / 2f;
-                // Спаун в центре острова в локальных координатах
-                SpawnPlayerAt(playerIsland.transform.TransformPoint(new Vector3(centerX, -LobbyFloorY, centerZ)));
-            }
+            SpawnPlayerAt(ResolvePreferredIslandSpawnPoint());
 
             OnWorldSwitch?.Invoke(false);
             AsyncGameplayEvents.PublishWorldSwitch(false);
@@ -475,16 +476,57 @@ namespace SimpleVoxelSystem
 
         public void RestoreMineFromSave(MineInstance mine)
         {
+            placedMines.Clear();
             ActiveMine = mine;
-            IsMineGenerated = mine != null;
             mineAppliedToIsland = false;
 
-            if (ActiveMine == null || IsInLobbyMode)
+            if (mine != null)
+                placedMines.Add(mine);
+
+            if (IsInLobbyMode)
                 return;
 
-            ApplyMineVoxels(ActiveMine);
-            mineAppliedToIsland = true;
-            RestoreElevatorForActiveMine();
+            for (int i = 0; i < placedMines.Count; i++)
+            {
+                MineInstance m = placedMines[i];
+                if (m == null) continue;
+                ApplyMineVoxels(m);
+                CreateElevator(m.originX - (m.shopData.wellWidth / 2) - m.shopData.padding,
+                               m.originZ - (m.shopData.wellLength / 2) - m.shopData.padding);
+            }
+            mineAppliedToIsland = placedMines.Count > 0;
+        }
+
+        public void RestoreMinesFromSave(List<MineInstance> mines)
+        {
+            placedMines.Clear();
+            ActiveMine = null;
+            mineAppliedToIsland = false;
+
+            if (mines != null)
+            {
+                for (int i = 0; i < mines.Count; i++)
+                {
+                    MineInstance m = mines[i];
+                    if (m == null || m.shopData == null)
+                        continue;
+                    placedMines.Add(m);
+                    ActiveMine = m;
+                }
+            }
+
+            if (IsInLobbyMode)
+                return;
+
+            for (int i = 0; i < placedMines.Count; i++)
+            {
+                MineInstance m = placedMines[i];
+                ApplyMineVoxels(m);
+                CreateElevator(m.originX - (m.shopData.wellWidth / 2) - m.shopData.padding,
+                               m.originZ - (m.shopData.wellLength / 2) - m.shopData.padding);
+            }
+
+            mineAppliedToIsland = placedMines.Count > 0;
         }
 
         public void ResetPlayerWorldForNewProgress()
@@ -500,8 +542,8 @@ namespace SimpleVoxelSystem
             }
 
             ActiveMine = null;
-            IsMineGenerated = false;
             mineAppliedToIsland = false;
+            placedMines.Clear();
 
             if (playerIsland != null)
             {
@@ -512,6 +554,8 @@ namespace SimpleVoxelSystem
 
             hasIslandSpawnPos = false;
             islandSpawnPos = Vector3.zero;
+            hasCustomIslandSpawnPos = false;
+            customIslandSpawnPos = Vector3.zero;
             IsInLobbyMode = true;
 
             if (lobbyIsland != null)
@@ -532,6 +576,39 @@ namespace SimpleVoxelSystem
 
             islandSpawnPos = player.position;
             hasIslandSpawnPos = true;
+        }
+
+        public bool SaveCurrentIslandSpawnPoint()
+        {
+            if (IsInLobbyMode || playerIsland == null)
+                return false;
+
+            Transform player = ResolveOrSpawnPlayer();
+            if (player == null)
+                return false;
+
+            if (!TryGetSurfaceYAtOnActiveIsland(player.position.x, player.position.z, out float groundY))
+                return false;
+
+            customIslandSpawnPos = new Vector3(player.position.x, groundY, player.position.z);
+            hasCustomIslandSpawnPos = true;
+            return true;
+        }
+
+        public bool HasCustomIslandSpawnPoint => hasCustomIslandSpawnPos;
+
+        public Vector3 GetCustomIslandSpawnPoint() => customIslandSpawnPos;
+
+        public void SetCustomIslandSpawnPointFromSave(Vector3 worldPos)
+        {
+            customIslandSpawnPos = worldPos;
+            hasCustomIslandSpawnPos = true;
+        }
+
+        public void ClearCustomIslandSpawnPoint()
+        {
+            hasCustomIslandSpawnPos = false;
+            customIslandSpawnPos = Vector3.zero;
         }
 
         private void UpdateLobbyStreamingVisibility()
@@ -563,18 +640,151 @@ namespace SimpleVoxelSystem
             }
         }
 
+        private void TryRecoverFromFall()
+        {
+            if (!respawnOnFall || Time.unscaledTime < nextFallRespawnAt)
+                return;
+
+            Transform player = ResolveOrSpawnPlayer();
+            if (player == null || ActiveIsland == null)
+                return;
+
+            float minAllowedY = GetMinAllowedPlayerY();
+            if (player.position.y >= minAllowedY)
+                return;
+
+            RespawnPlayerInCurrentWorld();
+            nextFallRespawnAt = Time.unscaledTime + Mathf.Max(0.1f, fallRespawnCooldown);
+        }
+
+        private float GetMinAllowedPlayerY()
+        {
+            float extra = Mathf.Max(4f, fallRespawnExtraDepth);
+
+            // Lobby floor world Y.
+            float lobbyFloorYWorld = lobbyIsland != null
+                ? lobbyIsland.transform.position.y - LobbyFloorY
+                : -LobbyFloorY;
+
+            if (IsInLobbyMode || ActiveMine == null || !IsMineGenerated)
+                return lobbyFloorYWorld - extra;
+
+            // Mine bottom world Y for current depth.
+            int mineDepth = Mathf.Max(1, ActiveMine.rolledDepth);
+            float mineBottomWorldY = ActiveIsland.transform.position.y - (LobbyFloorY + mineDepth);
+            return mineBottomWorldY - extra;
+        }
+
+        private void RespawnPlayerInCurrentWorld()
+        {
+            if (IsInLobbyMode)
+            {
+                float cx = lobbyWidth / 2f;
+                float cz = lobbyLength / 2f;
+                SpawnPlayerAt(new Vector3(cx, -LobbyFloorY, cz));
+                return;
+            }
+
+            SpawnPlayerAt(ResolvePreferredIslandSpawnPoint());
+        }
+
+        private Vector3 ResolvePreferredIslandSpawnPoint()
+        {
+            if (playerIsland == null)
+                return islandSpawnPos;
+
+            if (hasCustomIslandSpawnPos)
+            {
+                if (TryGetSurfaceYAtOnActiveIsland(customIslandSpawnPos.x, customIslandSpawnPos.z, out float customGroundY))
+                    return new Vector3(customIslandSpawnPos.x, customGroundY, customIslandSpawnPos.z);
+
+                // Saved custom point is no longer valid (e.g. floor was mined out).
+                hasCustomIslandSpawnPos = false;
+                customIslandSpawnPos = Vector3.zero;
+            }
+
+            if (returnToLastIslandPosition && hasIslandSpawnPos)
+            {
+                if (TryGetSurfaceYAtOnActiveIsland(islandSpawnPos.x, islandSpawnPos.z, out float lastGroundY))
+                    return new Vector3(islandSpawnPos.x, lastGroundY, islandSpawnPos.z);
+
+                hasIslandSpawnPos = false;
+                islandSpawnPos = Vector3.zero;
+            }
+
+            float centerX = playerIsland.TotalX / 2f;
+            float centerZ = playerIsland.TotalZ / 2f;
+            Vector3 defaultPoint = playerIsland.transform.TransformPoint(new Vector3(centerX, -LobbyFloorY, centerZ));
+            if (TryGetSurfaceYAtOnActiveIsland(defaultPoint.x, defaultPoint.z, out float defaultGroundY))
+                return new Vector3(defaultPoint.x, defaultGroundY, defaultPoint.z);
+
+            return defaultPoint;
+        }
+
+        private bool TryGetSurfaceYAtOnActiveIsland(float worldX, float worldZ, out float groundY)
+        {
+            groundY = 0f;
+            if (ActiveIsland == null)
+                return false;
+
+            // Prefer voxel-grid lookup: it is robust even when MeshCollider is not up-to-date.
+            Vector3 local = ActiveIsland.transform.InverseTransformPoint(new Vector3(worldX, ActiveIsland.transform.position.y, worldZ));
+            int gx = Mathf.FloorToInt(local.x);
+            int gz = Mathf.FloorToInt(local.z);
+            if (gx >= 0 && gz >= 0 && gx < ActiveIsland.TotalX && gz < ActiveIsland.TotalZ)
+            {
+                for (int gy = 0; gy < ActiveIsland.TotalY; gy++)
+                {
+                    if (!ActiveIsland.IsInBounds(gx, gy, gz) || !ActiveIsland.IsSolid(gx, gy, gz))
+                        continue;
+
+                    groundY = ActiveIsland.transform.TransformPoint(ActiveIsland.GridToLocal(gx, gy, gz)).y;
+                    return true;
+                }
+            }
+
+            // Fallback to collider raycast when grid lookup does not find a surface.
+            MeshCollider islandCollider = ActiveIsland.GetComponent<MeshCollider>();
+            if (islandCollider == null || !islandCollider.enabled)
+                return false;
+
+            Vector3 rayOrigin = new Vector3(worldX, ActiveIsland.transform.position.y + ActiveIsland.TotalY + 10f, worldZ);
+            Ray ray = new Ray(rayOrigin, Vector3.down);
+            if (!islandCollider.Raycast(ray, out RaycastHit hit, ActiveIsland.TotalY + 40f))
+                return false;
+
+            groundY = hit.point.y;
+            return true;
+        }
+
         public void DemolishMine()
         {
-            if (!IsMineGenerated) return;
+            if (placedMines.Count == 0)
+                return;
 
-            foreach (SimpleElevator elev in GetComponentsInChildren<SimpleElevator>())
-                Destroy(elev.gameObject);
+            MineInstance target = ActiveMine;
+            if (target == null)
+                target = placedMines[placedMines.Count - 1];
+            if (target == null)
+                return;
 
-            ActiveMine = null;
-            IsMineGenerated = false;
-            mineAppliedToIsland = false;
+            int sx = target.originX - (target.shopData.wellWidth / 2) - target.shopData.padding;
+            int sz = target.originZ - (target.shopData.wellLength / 2) - target.shopData.padding;
+            SimpleElevator[] elevators = GetComponentsInChildren<SimpleElevator>();
+            for (int i = 0; i < elevators.Length; i++)
+            {
+                SimpleElevator elev = elevators[i];
+                if (elev == null) continue;
+                if (elev.shaftGridX == sx && elev.shaftGridZ == sz)
+                {
+                    Destroy(elev.gameObject);
+                    break;
+                }
+            }
 
-            GenerateFlatPlot();
+            placedMines.Remove(target);
+            ActiveMine = placedMines.Count > 0 ? placedMines[placedMines.Count - 1] : null;
+            mineAppliedToIsland = placedMines.Count > 0;
         }
 
         public void MineVoxel(int gx, int gy, int gz)
@@ -596,8 +806,9 @@ namespace SimpleVoxelSystem
                     // Если бьем именно тот блок, на котором он стоит
                     if (gy == elevGridY)
                     {
-                        int clearedDepth = GetContiguousClearedDepth();
-                        int maxDepth = ActiveMine != null ? ActiveMine.rolledDepth : 0;
+                        int clearedDepth = GetContiguousClearedDepthAtShaft(elev.shaftGridX, elev.shaftGridZ);
+                        MineInstance shaftMine = FindMineByShaft(elev.shaftGridX, elev.shaftGridZ);
+                        int maxDepth = shaftMine != null ? shaftMine.rolledDepth : 0;
                         
                         // Если это последний возможный блок в этой шахте — ломаем
                         if (clearedDepth >= maxDepth) 
@@ -609,63 +820,38 @@ namespace SimpleVoxelSystem
                 }
             }
 
-            if (ActiveMine != null && IsInsideWellArea(gx, gz))
+            if (TryGetMineForCell(gx, gz, out MineInstance mine))
             {
-                ActiveMine.RegisterMinedBlock(gx, gy, gz);
+                mine.RegisterMinedBlock(gx, gy, gz);
             }
         }
 
         public bool IsInsideWellArea(int gx, int gz)
         {
-            if (ActiveMine == null) return false;
-            int ww = ActiveMine.shopData.wellWidth;
-            int wl = ActiveMine.shopData.wellLength;
-            int pad = ActiveMine.shopData.padding;
-            int ox = ActiveMine.originX;
-            int oz = ActiveMine.originZ;
-
-            int xMin = ox - (ww / 2) - pad;
-            int zMin = oz - (wl / 2) - pad;
-            int xMax = xMin + ww + pad * 2 - 1;
-            int zMax = zMin + wl + pad * 2 - 1;
-
-            return gx >= xMin && gx <= xMax && gz >= zMin && gz <= zMax;
+            return TryGetMineForCell(gx, gz, out _);
         }
 
         public bool CanMineVoxel(int gx, int gy, int gz)
         {
             if (IsInLobbyMode) return false;
-
-            // Если шахта не куплена/не поставлена, разрешаем копать верхние 3 слоя земли (терраформинг)
-            if (!IsMineGenerated || ActiveMine == null)
-            {
-                return (gy >= LobbyFloorY && gy < LobbyFloorY + 3);
-            }
-            
-            int mineDepth = ActiveMine.rolledDepth;
-            // Нельзя копать воздух выше земли
-            if (gy < LobbyFloorY) return false;
-            // Нельзя копать глубже, чем рассчитано для этой шахты
-            if (gy >= LobbyFloorY + mineDepth) return false;
-
-            // Пользователь разрешил копать ВЕЗДЕ на острове (стен больше нет)
-            // Поэтому IsInsideWellArea больше не ограничивает копание.
-
-            // Если блокировка слоев отключена — копаем свободно
-            if (!lockDeeperLayersUntilCleared) return true;
-
-            // Иначе проверяем слой выше
-            if (gy <= LobbyFloorY) return true;
-            return IsWellLayerCleared(gy - 1);
+            if (ActiveIsland == null) return false;
+            // Creative digging mode on private island: depth is not limited by mine tier/depth.
+            return gy >= LobbyFloorY && gy < ActiveIsland.TotalY;
         }
 
         public bool IsWellLayerCleared(int depthGridY)
         {
             if (ActiveMine == null) return false;
-            int ww = ActiveMine.shopData.wellWidth;
-            int wl = ActiveMine.shopData.wellLength;
-            int ox = ActiveMine.originX;
-            int oz = ActiveMine.originZ;
+            return IsWellLayerClearedForMine(ActiveMine, depthGridY);
+        }
+
+        private bool IsWellLayerClearedForMine(MineInstance mine, int depthGridY)
+        {
+            if (mine == null) return false;
+            int ww = mine.shopData.wellWidth;
+            int wl = mine.shopData.wellLength;
+            int ox = mine.originX;
+            int oz = mine.originZ;
             int xMin = ox - (ww / 2);
             int zMin = oz - (wl / 2);
 
@@ -688,6 +874,67 @@ namespace SimpleVoxelSystem
                 cleared++;
             }
             return cleared;
+        }
+
+        public int GetContiguousClearedDepthAtShaft(int shaftGridX, int shaftGridZ)
+        {
+            MineInstance mine = FindMineByShaft(shaftGridX, shaftGridZ);
+            if (mine == null)
+                mine = ActiveMine;
+            if (mine == null)
+                return 0;
+
+            int cleared = 0;
+            for (int y = 0; y < mine.rolledDepth; y++)
+            {
+                if (!IsWellLayerClearedForMine(mine, LobbyFloorY + y)) break;
+                cleared++;
+            }
+            return cleared;
+        }
+
+        private MineInstance FindMineByShaft(int shaftGridX, int shaftGridZ)
+        {
+            for (int i = 0; i < placedMines.Count; i++)
+            {
+                MineInstance m = placedMines[i];
+                if (m == null || m.shopData == null) continue;
+                int sx = m.originX - (m.shopData.wellWidth / 2) - m.shopData.padding;
+                int sz = m.originZ - (m.shopData.wellLength / 2) - m.shopData.padding;
+                if (sx == shaftGridX && sz == shaftGridZ)
+                    return m;
+            }
+            return null;
+        }
+
+        private bool TryGetMineForCell(int gx, int gz, out MineInstance mine)
+        {
+            for (int i = placedMines.Count - 1; i >= 0; i--)
+            {
+                MineInstance candidate = placedMines[i];
+                if (candidate == null || candidate.shopData == null)
+                    continue;
+
+                int ww = candidate.shopData.wellWidth;
+                int wl = candidate.shopData.wellLength;
+                int pad = candidate.shopData.padding;
+                int ox = candidate.originX;
+                int oz = candidate.originZ;
+
+                int xMin = ox - (ww / 2) - pad;
+                int zMin = oz - (wl / 2) - pad;
+                int xMax = xMin + ww + pad * 2 - 1;
+                int zMax = zMin + wl + pad * 2 - 1;
+
+                if (gx >= xMin && gx <= xMax && gz >= zMin && gz <= zMax)
+                {
+                    mine = candidate;
+                    return true;
+                }
+            }
+
+            mine = null;
+            return false;
         }
 
         public void GeneratePlotExtension(int offsetX, int offsetZ, int width, int length)
@@ -755,7 +1002,13 @@ namespace SimpleVoxelSystem
 
         void CreateElevator(int gx, int gz)
         {
-            foreach (var old in GetComponentsInChildren<SimpleElevator>()) Destroy(old.gameObject);
+            SimpleElevator[] existing = GetComponentsInChildren<SimpleElevator>();
+            for (int i = 0; i < existing.Length; i++)
+            {
+                SimpleElevator elev = existing[i];
+                if (elev != null && elev.shaftGridX == gx && elev.shaftGridZ == gz)
+                    return;
+            }
 
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = "AutoElevator";

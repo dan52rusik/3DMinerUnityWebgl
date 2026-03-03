@@ -25,8 +25,11 @@ namespace SimpleVoxelSystem
             public int miningLevel;
             public bool hasPrivateIsland;
             public SerializableVector3 privateIslandOffset;
+            public bool hasCustomIslandSpawnPoint;
+            public SerializableVector3 customIslandSpawnPoint;
             public bool hasMine;
             public MineSaveData mine;
+            public List<MineSaveData> mines = new List<MineSaveData>();
         }
 
         [Serializable]
@@ -100,6 +103,8 @@ namespace SimpleVoxelSystem
         private int cachedMinedBlocks;
         private bool cachedHasMine;
         private bool cachedHasIsland;
+        private bool cachedHasCustomSpawn;
+        private Vector3 cachedCustomSpawn;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -278,7 +283,41 @@ namespace SimpleVoxelSystem
             if (save.hasPrivateIsland)
                 wellGenerator.EnsurePrivateIslandAtOffset(save.privateIslandOffset.ToVector3());
 
-            if (save.hasMine && save.mine != null)
+            if (save.hasCustomIslandSpawnPoint)
+                wellGenerator.SetCustomIslandSpawnPointFromSave(save.customIslandSpawnPoint.ToVector3());
+            else
+                wellGenerator.ClearCustomIslandSpawnPoint();
+
+            if (save.mines != null && save.mines.Count > 0)
+            {
+                List<MineInstance> restored = new List<MineInstance>();
+                for (int i = 0; i < save.mines.Count; i++)
+                {
+                    MineSaveData mineSave = save.mines[i];
+                    if (mineSave == null) continue;
+                    MineShopData mineData = ResolveMineData(mineSave);
+                    if (mineData == null) continue;
+
+                    MineInstance restoredMine = new MineInstance(mineData, mineSave.rolledDepth, 0)
+                    {
+                        originX = mineSave.originX,
+                        originZ = mineSave.originZ
+                    };
+
+                    if (mineSave.minedLocalPositions != null)
+                    {
+                        foreach (SerializableVector3Int local in mineSave.minedLocalPositions)
+                            restoredMine.minedPositions.Add(local.ToVector3Int());
+
+                        restoredMine.minedBlocks = restoredMine.minedPositions.Count;
+                    }
+
+                    restored.Add(restoredMine);
+                }
+
+                wellGenerator.RestoreMinesFromSave(restored);
+            }
+            else if (save.hasMine && save.mine != null)
             {
                 MineShopData mineData = ResolveMineData(save.mine);
                 if (mineData != null)
@@ -302,7 +341,7 @@ namespace SimpleVoxelSystem
             }
             else
             {
-                wellGenerator.RestoreMineFromSave(null);
+                wellGenerator.RestoreMinesFromSave(null);
             }
 
             isLoaded = true;
@@ -334,16 +373,28 @@ namespace SimpleVoxelSystem
             int currentMoney = GlobalEconomy.Money;
             int currentXP = GlobalEconomy.MiningXP;
             int currentLevel = GlobalEconomy.MiningLevel;
-            bool hasMine = wellGenerator != null && wellGenerator.ActiveMine != null;
+            bool hasMine = wellGenerator != null && wellGenerator.PlacedMines != null && wellGenerator.PlacedMines.Count > 0;
             bool hasIsland = wellGenerator != null && wellGenerator.IsIslandGenerated;
-            int minedBlocks = hasMine ? wellGenerator.ActiveMine.minedBlocks : 0;
+            int minedBlocks = 0;
+            if (hasMine)
+            {
+                for (int i = 0; i < wellGenerator.PlacedMines.Count; i++)
+                {
+                    MineInstance m = wellGenerator.PlacedMines[i];
+                    if (m != null) minedBlocks += Mathf.Max(0, m.minedBlocks);
+                }
+            }
+            bool hasCustomSpawn = wellGenerator != null && wellGenerator.HasCustomIslandSpawnPoint;
+            Vector3 customSpawn = hasCustomSpawn ? wellGenerator.GetCustomIslandSpawnPoint() : Vector3.zero;
 
             if (currentMoney != cachedMoney ||
                 currentXP != cachedXP ||
                 currentLevel != cachedLevel ||
                 hasMine != cachedHasMine ||
                 hasIsland != cachedHasIsland ||
-                minedBlocks != cachedMinedBlocks)
+                minedBlocks != cachedMinedBlocks ||
+                hasCustomSpawn != cachedHasCustomSpawn ||
+                (hasCustomSpawn && (customSpawn - cachedCustomSpawn).sqrMagnitude > 0.0001f))
             {
                 MarkDirty();
                 CaptureStateCache();
@@ -355,9 +406,19 @@ namespace SimpleVoxelSystem
             cachedMoney = GlobalEconomy.Money;
             cachedXP = GlobalEconomy.MiningXP;
             cachedLevel = GlobalEconomy.MiningLevel;
-            cachedHasMine = wellGenerator != null && wellGenerator.ActiveMine != null;
+            cachedHasMine = wellGenerator != null && wellGenerator.PlacedMines != null && wellGenerator.PlacedMines.Count > 0;
             cachedHasIsland = wellGenerator != null && wellGenerator.IsIslandGenerated;
-            cachedMinedBlocks = cachedHasMine ? wellGenerator.ActiveMine.minedBlocks : 0;
+            cachedMinedBlocks = 0;
+            if (cachedHasMine)
+            {
+                for (int i = 0; i < wellGenerator.PlacedMines.Count; i++)
+                {
+                    MineInstance m = wellGenerator.PlacedMines[i];
+                    if (m != null) cachedMinedBlocks += Mathf.Max(0, m.minedBlocks);
+                }
+            }
+            cachedHasCustomSpawn = wellGenerator != null && wellGenerator.HasCustomIslandSpawnPoint;
+            cachedCustomSpawn = cachedHasCustomSpawn ? wellGenerator.GetCustomIslandSpawnPoint() : Vector3.zero;
         }
 
         private void MarkDirty()
@@ -467,28 +528,41 @@ namespace SimpleVoxelSystem
                 miningXP = GlobalEconomy.MiningXP,
                 miningLevel = GlobalEconomy.MiningLevel,
                 hasPrivateIsland = wellGenerator.IsIslandGenerated,
-                privateIslandOffset = new SerializableVector3(wellGenerator.privateIslandOffset)
+                privateIslandOffset = new SerializableVector3(wellGenerator.privateIslandOffset),
+                hasCustomIslandSpawnPoint = wellGenerator.HasCustomIslandSpawnPoint,
+                customIslandSpawnPoint = new SerializableVector3(wellGenerator.GetCustomIslandSpawnPoint())
             };
 
-            MineInstance mine = wellGenerator.ActiveMine;
-            if (mine == null)
+            if (wellGenerator.PlacedMines == null || wellGenerator.PlacedMines.Count == 0)
                 return save;
 
             save.hasMine = true;
-            save.mine = new MineSaveData
+            save.mines = new List<MineSaveData>();
+            for (int i = 0; i < wellGenerator.PlacedMines.Count; i++)
             {
-                mineDisplayName = mine.shopData != null ? mine.shopData.displayName : string.Empty,
-                rolledDepth = mine.rolledDepth,
-                originX = mine.originX,
-                originZ = mine.originZ,
-                mineIndex = ResolveMineIndex(mine.shopData)
-            };
+                MineInstance mine = wellGenerator.PlacedMines[i];
+                if (mine == null) continue;
 
-            if (mine.minedPositions != null)
-            {
-                foreach (Vector3Int local in mine.minedPositions)
-                    save.mine.minedLocalPositions.Add(new SerializableVector3Int(local));
+                MineSaveData mineSave = new MineSaveData
+                {
+                    mineDisplayName = mine.shopData != null ? mine.shopData.displayName : string.Empty,
+                    rolledDepth = mine.rolledDepth,
+                    originX = mine.originX,
+                    originZ = mine.originZ,
+                    mineIndex = ResolveMineIndex(mine.shopData)
+                };
+
+                if (mine.minedPositions != null)
+                {
+                    foreach (Vector3Int local in mine.minedPositions)
+                        mineSave.minedLocalPositions.Add(new SerializableVector3Int(local));
+                }
+
+                save.mines.Add(mineSave);
             }
+
+            if (save.mines.Count > 0)
+                save.mine = save.mines[save.mines.Count - 1];
 
             return save;
         }
