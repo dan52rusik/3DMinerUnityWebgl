@@ -8,6 +8,7 @@ namespace SimpleVoxelSystem
         [Header("Build")]
         public bool hideBaseRenderer = true;
         public bool rebuildOnAwake = true;
+        public bool autoAddAnimator = true;
         public string visualRootName = "BlockyMixVisual";
 
         [Header("Palette")]
@@ -120,6 +121,14 @@ namespace SimpleVoxelSystem
             {
                 pickaxeHead.transform.SetParent(pickaxeRoot.transform, false);
                 pickaxeHead.transform.localPosition = new Vector3(0f, 0.28f, 0f) * s;
+            }
+
+            if (autoAddAnimator)
+            {
+                BlockyMixAnimator animator = GetComponent<BlockyMixAnimator>();
+                if (animator == null)
+                    animator = gameObject.AddComponent<BlockyMixAnimator>();
+                animator.RebindNow();
             }
         }
 

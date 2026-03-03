@@ -83,7 +83,10 @@ namespace SimpleVoxelSystem
                 return;
 
             if (WasMinePressedDown())
+            {
+                PlayerPickaxe.NotifyMineAttempt();
                 TryStartAutoMoveToTarget();
+            }
 
             bool mineInput = autoMine || IsMineHeld();
             if (!mineInput)
@@ -100,7 +103,10 @@ namespace SimpleVoxelSystem
                 return;
 
             if (MineTargetBlock(currentTargetGridPos, currentTargetIsland))
+            {
+                PlayerPickaxe.NotifyMineAttempt();
                 lastMineTime = Time.time;
+            }
         }
 
         void HandleQueuedAutoMine()

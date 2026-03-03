@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using SimpleVoxelSystem.Data;
 #if ENABLE_INPUT_SYSTEM
@@ -13,6 +14,9 @@ namespace SimpleVoxelSystem
     /// </summary>
     public class PlayerPickaxe : MonoBehaviour
     {
+        public static event Action OnMineAttempt;
+        public static void NotifyMineAttempt() => OnMineAttempt?.Invoke();
+
         [Header("Mining Setup")]
         public int pickaxePower = 1;
         public float miningRange = 100f;
@@ -67,6 +71,8 @@ namespace SimpleVoxelSystem
 
             if (!IsMinePressedDown())
                 return;
+
+            NotifyMineAttempt();
 
             if (currentBackpackLoad >= maxBackpackCapacity)
             {
