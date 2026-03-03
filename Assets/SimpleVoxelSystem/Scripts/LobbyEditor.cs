@@ -96,17 +96,17 @@ namespace SimpleVoxelSystem
             dirtyChunks.Add(VoxelToChunk(pos.x, pos.z));
         }
 
-        [Header("Ð¡ÑÑ‹Ð»ÐºÐ¸")]
+        [Header("References")]
         public WellGenerator wellGenerator;
         public Camera        editorCamera;
 
-        [Header("Ð“Ð¾Ñ€ÑÑ‡Ð°Ñ ÐºÐ»Ð°Ð²Ð¸ÑˆÐ°")]
+        [Header("Hotkeys")]
         public KeyCode toggleKey = KeyCode.F2;
 
-        [Header("Ð”Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ")]
+        [Header("Distance")]
         public float placementRange = 200f;
         public LayerMask miningLayers = Physics.DefaultRaycastLayers;
-        [Tooltip("ÐœÐ°Ð»Ð¾Ðµ ÑÐ¼ÐµÑ‰ÐµÐ½Ð¸Ðµ Ð»ÑƒÑ‡Ð° Ð¿Ð¾ Ð½Ð¾Ñ€Ð¼Ð°Ð»Ð¸ Ð¿Ñ€Ð¸ Ð²Ñ‹Ð±Ð¾Ñ€Ðµ ÑÑ‡ÐµÐ¹ÐºÐ¸, Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð½Ðµ Ð¿ÐµÑ€ÐµÑÐºÐ°ÐºÐ¸Ð²Ð°Ñ‚ÑŒ Ð½Ð° ÑÐ¾ÑÐµÐ´Ð½Ð¸Ð¹ Ð±Ð»Ð¾Ðº.")]
+        [Tooltip("Малое смещение луча по нормали при выборе ячейки, чтобы не перескакивать на соседний блок.")]
         public float hoverSurfaceEpsilon = 0.01f;
         [Header("Auto Save")]
         public bool autoSaveLayout = true;
@@ -120,9 +120,18 @@ namespace SimpleVoxelSystem
         public string sharedLobbyEndpoint = "";
         public string sharedLobbyRoomId = "global_lobby";
         public bool sharedLobbyVerboseLogs = false;
+        [Tooltip("When shared sync endpoint is active, disable local PlayerPrefs/file save-load to avoid state conflicts.")]
+        public bool preferSharedSyncOverLocalSave = true;
+        [Tooltip("Print current lobby persistence mode in Console on startup.")]
+        public bool logPersistenceModeOnStart = true;
+        [Header("Local Lobby Persistence")]
+        [Tooltip("When disabled, lobby starts from clean floor every play session.")]
+        public bool persistLocalLobbyLayout = true;
+        [Tooltip("Delete previously saved local lobby chunks/zones once on play start.")]
+        public bool clearSavedLobbyOnPlay = false;
 
-        [Header("Ð”ÐµÐ±Ð°Ð³ Ñ‡Ð°Ð½ÐºÐ¾Ð²")]
-        [Tooltip("ÐŸÐ¾ÐºÐ°Ð·Ñ‹Ð²Ð°Ñ‚ÑŒ Ð³Ñ€Ð°Ð½Ð¸Ñ†Ñ‹ Ñ‡Ð°Ð½ÐºÐ¾Ð² 16Ã—16 Ð² Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Ñ€ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€Ð°.")]
+        [Header("Chunk Debug")]
+        [Tooltip("Show 16x16 chunk boundaries in editor mode.")]
         public bool showChunkDebug = true;
         public bool verboseLogs = false;
 
@@ -196,6 +205,8 @@ namespace SimpleVoxelSystem
         private float nextAutoSaveTime;
         private float lastMobileLookTapTime = -10f;
         private Vector2 lastMobileLookTapPos;
+        private bool startupCleanupDone;
+        private bool localPersistenceReasonLogged;
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Unity
@@ -218,6 +229,7 @@ namespace SimpleVoxelSystem
             if (wellGenerator != null)
                 wellGenerator.OnFlatPlotReady += OnFlatPlotReady;
             BuildUI();
+            LogPersistenceModeIfNeeded();
         }
 
         void Start()
@@ -261,13 +273,24 @@ namespace SimpleVoxelSystem
         {
             // Ð–ÐµÑÑ‚ÐºÐ¾Ðµ ÑƒÑÐ»Ð¾Ð²Ð¸Ðµ: Ð»Ð¾Ð±Ð±Ð¸ Ð³Ñ€ÑƒÐ·Ð¸Ð¼ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐºÐ¾Ð³Ð´Ð° Ð¼Ñ‹ Ð² Ñ†ÐµÐ½Ñ‚Ñ€Ðµ Ð¼Ð¸Ñ€Ð° Ð¸ Ð² Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Ð»Ð¾Ð±Ð±Ð¸
             if (wellGenerator == null || !wellGenerator.IsInLobbyMode) return;
-            if (Vector3.SqrMagnitude(wellGenerator.transform.position) > 1.0f) return;
 
             island = wellGenerator.GetComponent<VoxelIsland>();
-            if (ShouldUseLocalPersistence())
+            if (!startupCleanupDone)
+            {
+                startupCleanupDone = true;
+                if (clearSavedLobbyOnPlay)
+                    ClearStoredLobbyData();
+            }
+
+            if (ShouldUseLocalPersistence() && !clearSavedLobbyOnPlay)
             {
                 LoadAndApplyLayout();
                 LoadAndApplyShopZones();
+            }
+            else
+            {
+                ClearRuntimeShopZonesOnly();
+                shopSaveData = new ShopZoneSaveData();
             }
         }
 
@@ -428,7 +451,7 @@ namespace SimpleVoxelSystem
                     if (activeIsland.InBounds(px, py, pz))
                     {
                         pendingPlacePos = new Vector3Int(px, py, pz);
-                        Color bc = BtnColors[(int)selectedBlockType];
+                        Color bc = GetSelectedBlockPreviewColor();
                         ShowPreview(activeIsland, new Vector3(px, -py, pz),
                             new Color(bc.r, bc.g, bc.b, 0.45f));
                     }
@@ -805,6 +828,12 @@ namespace SimpleVoxelSystem
         /// </summary>
         public void SaveLayout()
         {
+            if (!ShouldUseLocalPersistence())
+            {
+                dirtyChunks.Clear();
+                return;
+            }
+
             if (island == null || dirtyChunks.Count == 0) return;
 
             try { Directory.CreateDirectory(ChunkDir); }
@@ -827,6 +856,9 @@ namespace SimpleVoxelSystem
         /// </summary>
         public void SaveLayoutFull()
         {
+            if (!ShouldUseLocalPersistence())
+                return;
+
             if (island == null) return;
             // ÐŸÐ¾Ð¼ÐµÑ‡Ð°ÐµÐ¼ Ð²ÑÐµ Ñ‡Ð°Ð½ÐºÐ¸ Ð³Ñ€ÑÐ·Ð½Ñ‹Ð¼Ð¸
             int chunkCountX = Mathf.CeilToInt((float)island.TotalX / ChunkSize);
@@ -835,6 +867,7 @@ namespace SimpleVoxelSystem
             for (int cz = 0; cz < chunkCountZ; cz++)
                 dirtyChunks.Add(new Vector2Int(cx, cz));
             SaveLayout();
+            SaveShopZones();
         }
 
         private void SaveChunk(int cx, int cz)
@@ -873,6 +906,9 @@ namespace SimpleVoxelSystem
         /// </summary>
         public void LoadAndApplyLayout()
         {
+            if (!ShouldUseLocalPersistence())
+                return;
+
             if (island == null) return;
             int chunkCountX = Mathf.CeilToInt((float)island.TotalX / ChunkSize);
             int chunkCountZ = Mathf.CeilToInt((float)island.TotalZ / ChunkSize);
@@ -883,8 +919,9 @@ namespace SimpleVoxelSystem
             {
                 string json = null;
                 if (PlayerPrefs.HasKey(ChunkPrefsKey(cx, cz)))
-                    json = PlayerPrefs.GetString(ChunkPrefsKey(cx, cz));
-                else
+                    json = PlayerPrefs.GetString(ChunkPrefsKey(cx, cz), string.Empty);
+
+                if (string.IsNullOrWhiteSpace(json))
                 {
 #if !UNITY_WEBGL || UNITY_EDITOR
                     string file = ChunkFilePath(cx, cz);
@@ -926,7 +963,7 @@ namespace SimpleVoxelSystem
 
             if (loaded > 0)
             {
-                // mesh rebuilt in apply
+                island.RebuildMesh();
                 if (verboseLogs) Debug.Log($"[LobbyEditor] Ð—Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð¾ {loaded} Ñ‡Ð°Ð½Ðº(Ð¾Ð²).");
             }
         }
@@ -937,6 +974,9 @@ namespace SimpleVoxelSystem
 
         public void SaveShopZones()
         {
+            if (!ShouldUseLocalPersistence())
+                return;
+
             string json = JsonUtility.ToJson(shopSaveData, true);
             try
             {
@@ -949,18 +989,22 @@ namespace SimpleVoxelSystem
 
         public void LoadAndApplyShopZones()
         {
+            if (!ShouldUseLocalPersistence())
+                return;
+
             // Ð£Ð´Ð°Ð»ÑÐµÐ¼ ÑÑ‚Ð°Ñ€Ñ‹Ðµ
             foreach (var z in spawnedZones) if (z != null) Destroy(z.gameObject);
             spawnedZones.Clear();
 
             string json = null;
             if (PlayerPrefs.HasKey(ShopSavePrefsKey))
-                json = PlayerPrefs.GetString(ShopSavePrefsKey);
-            else
+                json = PlayerPrefs.GetString(ShopSavePrefsKey, string.Empty);
+
+            if (string.IsNullOrWhiteSpace(json))
             {
 #if !UNITY_WEBGL || UNITY_EDITOR
                 if (File.Exists(ShopSavePath))
-                json = File.ReadAllText(ShopSavePath);
+                    json = File.ReadAllText(ShopSavePath);
 #endif
             }
 
@@ -1141,6 +1185,13 @@ namespace SimpleVoxelSystem
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 10f), new Vector2(148f, 38f));
             saveBtn.onClick.AddListener(() => { SaveLayoutFull(); SaveShopZones(); });
+
+            Button clearBtn = MakeBtn(editorPanel.transform, "ClearLobbyBtn",
+                "Clear Lobby",
+                new Color(0.6f, 0.2f, 0.2f, 1f),
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 56f), new Vector2(148f, 34f));
+            clearBtn.onClick.AddListener(ClearLobbyToBaseFloor);
 
             editorPanel.SetActive(false);
         }
@@ -1323,7 +1374,137 @@ namespace SimpleVoxelSystem
 
         bool ShouldUseLocalPersistence()
         {
-            return realtimeSync == null || !realtimeSync.UseAuthoritativeServerState;
+            if (!persistLocalLobbyLayout)
+            {
+                if (verboseLogs && !localPersistenceReasonLogged)
+                {
+                    localPersistenceReasonLogged = true;
+                    Debug.Log("[LobbyEditor] Local persistence OFF: 'persistLocalLobbyLayout' is disabled.");
+                }
+                return false;
+            }
+
+            bool sharedSyncActive = realtimeSync != null && realtimeSync.UseAuthoritativeServerState;
+            if (preferSharedSyncOverLocalSave && sharedSyncActive)
+            {
+                if (!localPersistenceReasonLogged)
+                {
+                    localPersistenceReasonLogged = true;
+                    Debug.Log("[LobbyEditor] Local persistence OFF: shared lobby sync is active and has priority.");
+                }
+                return false;
+            }
+
+            return true;
+        }
+
+        Color GetSelectedBlockPreviewColor()
+        {
+            for (int i = 0; i < BtnTypes.Length && i < BtnColors.Length; i++)
+            {
+                if (BtnTypes[i] == selectedBlockType)
+                    return BtnColors[i];
+            }
+
+            return previewColorPlace;
+        }
+
+        void LogPersistenceModeIfNeeded()
+        {
+            if (!logPersistenceModeOnStart)
+                return;
+
+            bool sharedSyncActive = realtimeSync != null && realtimeSync.UseAuthoritativeServerState;
+            string mode;
+            if (sharedSyncActive && preferSharedSyncOverLocalSave)
+                mode = "SharedSyncOnly";
+            else if (sharedSyncActive && persistLocalLobbyLayout)
+                mode = "Hybrid (SharedSync + Local)";
+            else if (persistLocalLobbyLayout)
+                mode = "LocalOnly";
+            else
+                mode = "NoPersistence";
+
+            Debug.Log(
+                $"[LobbyEditor] Persistence mode: {mode}. " +
+                $"local={persistLocalLobbyLayout}, clearOnPlay={clearSavedLobbyOnPlay}, " +
+                $"sharedSync={enableSharedLobbySync}, endpoint='{sharedLobbyEndpoint}', room='{sharedLobbyRoomId}'.");
+        }
+
+        void ClearRuntimeShopZonesOnly()
+        {
+            if (hoveredZone != null)
+            {
+                hoveredZone.SetDeleteHover(false);
+                hoveredZone = null;
+            }
+
+            foreach (var z in spawnedZones)
+                if (z != null) Destroy(z.gameObject);
+            spawnedZones.Clear();
+        }
+
+        void ClearStoredLobbyData()
+        {
+            if (island != null)
+            {
+                int chunkCountX = Mathf.CeilToInt((float)island.TotalX / ChunkSize);
+                int chunkCountZ = Mathf.CeilToInt((float)island.TotalZ / ChunkSize);
+                for (int cx = 0; cx < chunkCountX; cx++)
+                for (int cz = 0; cz < chunkCountZ; cz++)
+                    PlayerPrefs.DeleteKey(ChunkPrefsKey(cx, cz));
+            }
+
+            PlayerPrefs.DeleteKey(ShopSavePrefsKey);
+            PlayerPrefs.Save();
+
+#if !UNITY_WEBGL || UNITY_EDITOR
+            try
+            {
+                if (Directory.Exists(ChunkDir))
+                    Directory.Delete(ChunkDir, true);
+            }
+            catch { }
+
+            try
+            {
+                if (File.Exists(ShopSavePath))
+                    File.Delete(ShopSavePath);
+            }
+            catch { }
+#endif
+        }
+
+        void ClearLobbyToBaseFloor()
+        {
+            if (wellGenerator == null || !wellGenerator.IsInLobbyMode)
+                return;
+
+            if (island == null)
+                island = wellGenerator.GetComponent<VoxelIsland>();
+            if (island == null)
+                return;
+
+            int floorY = Mathf.Clamp(wellGenerator.LobbyFloorY, 0, island.TotalY - 1);
+
+            for (int x = 0; x < island.TotalX; x++)
+            for (int y = 0; y < island.TotalY; y++)
+            for (int z = 0; z < island.TotalZ; z++)
+                island.RemoveVoxel(x, y, z, false);
+
+            for (int x = 0; x < island.TotalX; x++)
+            for (int z = 0; z < island.TotalZ; z++)
+                island.SetVoxel(x, floorY, z, BlockType.Dirt, false);
+
+            island.RebuildMesh();
+            dirtyChunks.Clear();
+
+            ClearRuntimeShopZonesOnly();
+            shopSaveData = new ShopZoneSaveData();
+
+            // On clear we always delete previously saved local layout,
+            // so future sessions start from base floor.
+            ClearStoredLobbyData();
         }
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•

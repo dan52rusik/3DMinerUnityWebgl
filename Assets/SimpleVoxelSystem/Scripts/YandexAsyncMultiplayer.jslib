@@ -1,4 +1,4 @@
-﻿mergeInto(LibraryManager.library, {
+mergeInto(LibraryManager.library, {
     YandexMP_IsAvailable: function () {
         return (typeof ysdk !== 'undefined' && ysdk !== null && ysdk.multiplayer && ysdk.multiplayer.sessions) ? 1 : 0;
     },
@@ -23,6 +23,10 @@
                 if (ysdk && ysdk.features && ysdk.features.GameplayAPI && ysdk.features.GameplayAPI.start) {
                     ysdk.features.GameplayAPI.start();
                     window.__yandexGameplayStarted = true;
+                    if (!window.__yandexMpStartLogged) {
+                        window.__yandexMpStartLogged = true;
+                        console.info('[YandexMP] gameplay start sent once (v2)');
+                    }
                 }
             } catch (e) {
                 console.warn('[YandexMP] GameplayAPI.start failed', e);
@@ -91,16 +95,6 @@
 
         try {
             var payload = payloadJson ? JSON.parse(payloadJson) : {};
-            if (!window.__yandexGameplayStarted) {
-                try {
-                    if (ysdk && ysdk.features && ysdk.features.GameplayAPI && ysdk.features.GameplayAPI.start) {
-                        ysdk.features.GameplayAPI.start();
-                        window.__yandexGameplayStarted = true;
-                    }
-                } catch (e2) {
-                    console.warn('[YandexMP] GameplayAPI.start failed in commit', e2);
-                }
-            }
             ysdk.multiplayer.sessions.commit(payload);
         } catch (e) {
             console.warn('[YandexMP] commit parse error', e);

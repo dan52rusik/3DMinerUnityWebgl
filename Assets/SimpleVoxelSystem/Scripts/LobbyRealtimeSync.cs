@@ -603,12 +603,13 @@ namespace SimpleVoxelSystem
             foreach (KeyValuePair<string, GhostView> kv in ghosts)
             {
                 GhostView g = kv.Value;
-                if (g == null || g.root == null || now - g.lastSeenAt <= ttl)
-                    continue;
-
-                if (removeIds == null)
-                    removeIds = new List<string>();
-                removeIds.Add(kv.Key);
+                // Remove both null/destroyed entries AND timed-out ones
+                if (g == null || g.root == null || now - g.lastSeenAt > ttl)
+                {
+                    if (removeIds == null)
+                        removeIds = new List<string>();
+                    removeIds.Add(kv.Key);
+                }
             }
 
             if (removeIds == null)

@@ -233,7 +233,7 @@ namespace SimpleVoxelSystem
             playerIsland.RebuildMesh();
             islandSpawnPos = playerIsland.transform.TransformPoint(new Vector3(lw / 2f, -LobbyFloorY, ll / 2f));
             hasIslandSpawnPos = true;
-            Debug.Log($"[WellGenerator] Личный Остров СОЗДАН в {privateIslandOffset}.");
+            // Debug.Log($"[WellGenerator] Личный Остров СОЗДАН в {privateIslandOffset}.");
         }
 
         private void RestoreElevatorForActiveMine()

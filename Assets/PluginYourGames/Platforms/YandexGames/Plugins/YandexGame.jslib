@@ -22,7 +22,10 @@ mergeInto(LibraryManager.library,
 	
 	GameplayStart_js: function () {
 		if (ysdk !== null && ysdk.features !== undefined && ysdk.features.GameplayAPI !== undefined) {
-			ysdk.features.GameplayAPI.start();
+			if (!window.__ygGameplayStarted) {
+				ysdk.features.GameplayAPI.start();
+				window.__ygGameplayStarted = true;
+			}
 		}
 		else {
 			if (ysdk == null) console.error('Gameplay start rejected. The SDK is not initialized!');
@@ -33,6 +36,7 @@ mergeInto(LibraryManager.library,
 	GameplayStop_js: function () {
 		if (ysdk !== null && ysdk.features !== undefined && ysdk.features.GameplayAPI !== undefined) {
 			ysdk.features.GameplayAPI.stop();
+			window.__ygGameplayStarted = false;
 		}
 		else {
 			if (ysdk == null) console.error('Gameplay stop rejected. The SDK is not initialized!');
