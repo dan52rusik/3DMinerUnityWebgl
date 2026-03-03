@@ -594,6 +594,9 @@ MonoBehaviour:
   logPersistenceModeOnStart: 1
   persistLocalLobbyLayout: 0
   clearSavedLobbyOnPlay: 0
+  useBakedLobbyLayout: 1
+  bakedLobbyLayoutResourcePath: LobbyBakedLayout
+  bakedShopZonesResourcePath: LobbyBakedShopZones
   showChunkDebug: 1
   verboseLogs: 0
   previewColorPlace: {r: 0.2, g: 1, b: 0.5, a: 0.4}

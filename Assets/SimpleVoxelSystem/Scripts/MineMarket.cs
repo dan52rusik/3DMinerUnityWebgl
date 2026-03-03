@@ -225,7 +225,20 @@ namespace SimpleVoxelSystem
         public bool TryBuyMine(MineShopData data)
         {
             if (data == null) return false;
-            if (WellGen != null && WellGen.IsMineGenerated) { if (verboseLogs) Debug.Log("[MineMarket] Участок занят."); return false; }
+            if (WellGen != null && WellGen.IsMineGenerated)
+            {
+                // Allow buying the next mine once the previous one is exhausted.
+                if (WellGen.ActiveMine != null && WellGen.ActiveMine.IsExhausted)
+                {
+                    if (verboseLogs) Debug.Log("[MineMarket] Предыдущая шахта выработана. Удаляем и продолжаем покупку.");
+                    WellGen.DemolishMine();
+                }
+                else
+                {
+                    if (verboseLogs) Debug.Log("[MineMarket] Участок занят.");
+                    return false;
+                }
+            }
             if (GlobalEconomy.Money < data.buyPrice) { if (verboseLogs) Debug.Log("[MineMarket] Мало денег."); return false; }
 
             // Синхронизация через сервер

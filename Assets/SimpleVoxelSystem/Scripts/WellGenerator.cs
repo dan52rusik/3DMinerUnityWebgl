@@ -58,6 +58,7 @@ namespace SimpleVoxelSystem
         public bool IsMineGenerated { get; private set; }
         public MineInstance ActiveMine { get; private set; }
         public int LobbyFloorY => lobbyBuildAbove;
+        private bool mineAppliedToIsland;
 
         public event System.Action OnFlatPlotReady;
         public event Action<bool> OnWorldSwitch; // true=лобби, false=шахта
@@ -186,7 +187,11 @@ namespace SimpleVoxelSystem
                 
                 if (ActiveMine != null)
                 {
-                    ApplyMineVoxels(ActiveMine);
+                    if (!mineAppliedToIsland)
+                    {
+                        ApplyMineVoxels(ActiveMine);
+                        mineAppliedToIsland = true;
+                    }
                     RestoreElevatorForActiveMine();
                 }
             }
@@ -268,6 +273,7 @@ namespace SimpleVoxelSystem
             IsMineGenerated = true;
 
             ApplyMineVoxels(ActiveMine);
+            mineAppliedToIsland = true;
 
             int ww = mine.shopData.wellWidth;
             int wl = mine.shopData.wellLength;
@@ -336,7 +342,9 @@ namespace SimpleVoxelSystem
 
                     bool inWell = ix >= pad && ix < ww + pad && iz >= pad && iz < wl + pad;
 
-                    if (inWell && mine.IsVoxelMined(curX, curY, curZ))
+                    // Persist mined state for the whole mine area (well + padding),
+                    // so re-entering island does not restore previously mined blocks.
+                    if (mine.IsVoxelMined(curX, curY, curZ))
                     {
                         ActiveIsland.RemoveVoxel(curX, curY, curZ, false);
                         continue;
@@ -401,7 +409,13 @@ namespace SimpleVoxelSystem
 
             if (ActiveMine != null)
             {
-                ApplyMineVoxels(ActiveMine);
+                // Do not rebuild mine every world switch; keep current dug state.
+                // Apply only when mine was restored from save / island recreated.
+                if (!mineAppliedToIsland)
+                {
+                    ApplyMineVoxels(ActiveMine);
+                    mineAppliedToIsland = true;
+                }
                 RestoreElevatorForActiveMine();
             }
 
@@ -463,11 +477,13 @@ namespace SimpleVoxelSystem
         {
             ActiveMine = mine;
             IsMineGenerated = mine != null;
+            mineAppliedToIsland = false;
 
             if (ActiveMine == null || IsInLobbyMode)
                 return;
 
             ApplyMineVoxels(ActiveMine);
+            mineAppliedToIsland = true;
             RestoreElevatorForActiveMine();
         }
 
@@ -485,6 +501,7 @@ namespace SimpleVoxelSystem
 
             ActiveMine = null;
             IsMineGenerated = false;
+            mineAppliedToIsland = false;
 
             if (playerIsland != null)
             {
@@ -555,6 +572,7 @@ namespace SimpleVoxelSystem
 
             ActiveMine = null;
             IsMineGenerated = false;
+            mineAppliedToIsland = false;
 
             GenerateFlatPlot();
         }

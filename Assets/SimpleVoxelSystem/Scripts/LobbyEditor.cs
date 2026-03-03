@@ -136,6 +136,13 @@ namespace SimpleVoxelSystem
         public bool persistLocalLobbyLayout = true;
         [Tooltip("Delete previously saved local lobby chunks/zones once on play start.")]
         public bool clearSavedLobbyOnPlay = false;
+        [Header("Baked Lobby Layout")]
+        [Tooltip("Loads baked static lobby layout from Resources when local persistence is disabled.")]
+        public bool useBakedLobbyLayout = true;
+        [Tooltip("Resources path without extension. Example: LobbyBakedLayout")]
+        public string bakedLobbyLayoutResourcePath = "LobbyBakedLayout";
+        [Tooltip("Resources path for baked shop zones JSON without extension. Example: LobbyBakedShopZones")]
+        public string bakedShopZonesResourcePath = "LobbyBakedShopZones";
 
         [Header("Chunk Debug")]
         [Tooltip("Show 16x16 chunk boundaries in editor mode.")]
@@ -302,6 +309,8 @@ namespace SimpleVoxelSystem
             {
                 ClearRuntimeShopZonesOnly();
                 shopSaveData = new ShopZoneSaveData();
+                TryApplyBakedLayout();
+                TryApplyBakedShopZones();
             }
         }
 
@@ -1464,6 +1473,131 @@ namespace SimpleVoxelSystem
                 $"[LobbyEditor] Persistence mode: {mode}. " +
                 $"local={persistLocalLobbyLayout}, clearOnPlay={clearSavedLobbyOnPlay}, " +
                 $"sharedSync={enableSharedLobbySync}, endpoint='{sharedLobbyEndpoint}', room='{sharedLobbyRoomId}'.");
+        }
+
+        public LobbyLayoutSaveData CaptureCurrentLayoutForBake()
+        {
+            if (island == null && wellGenerator != null)
+                island = wellGenerator.GetComponent<VoxelIsland>();
+            if (island == null)
+                return null;
+
+            LobbyLayoutSaveData data = new LobbyLayoutSaveData();
+            for (int x = 0; x < island.TotalX; x++)
+            for (int y = 0; y < island.TotalY; y++)
+            for (int z = 0; z < island.TotalZ; z++)
+            {
+                if (!island.TryGetBlockType(x, y, z, out BlockType bt))
+                    continue;
+
+                int id = (int)bt;
+                if (id <= 0)
+                    continue;
+
+                data.entries.Add(new LobbyVoxelEntry
+                {
+                    x = x,
+                    y = y,
+                    z = z,
+                    blockTypeId = id
+                });
+            }
+
+            return data;
+        }
+
+        public ShopZoneSaveData CaptureCurrentShopZonesForBake()
+        {
+            ShopZoneSaveData copy = new ShopZoneSaveData();
+            if (shopSaveData == null || shopSaveData.zones == null)
+                return copy;
+
+            foreach (ShopZoneEntry z in shopSaveData.zones)
+            {
+                if (z == null) continue;
+                copy.zones.Add(new ShopZoneEntry
+                {
+                    worldX = z.worldX,
+                    worldY = z.worldY,
+                    worldZ = z.worldZ,
+                    sizeX = z.sizeX,
+                    sizeY = z.sizeY,
+                    sizeZ = z.sizeZ,
+                    zoneType = z.zoneType
+                });
+            }
+
+            return copy;
+        }
+
+        void TryApplyBakedLayout()
+        {
+            if (!useBakedLobbyLayout || island == null)
+                return;
+
+            string resourcePath = string.IsNullOrWhiteSpace(bakedLobbyLayoutResourcePath)
+                ? "LobbyBakedLayout"
+                : bakedLobbyLayoutResourcePath.Trim();
+
+            TextAsset asset = Resources.Load<TextAsset>(resourcePath);
+            if (asset == null || string.IsNullOrWhiteSpace(asset.text))
+                return;
+
+            LobbyLayoutSaveData data = null;
+            try { data = JsonUtility.FromJson<LobbyLayoutSaveData>(asset.text); }
+            catch { }
+            if (data == null || data.entries == null || data.entries.Count == 0)
+                return;
+
+            for (int x = 0; x < island.TotalX; x++)
+            for (int y = 0; y < island.TotalY; y++)
+            for (int z = 0; z < island.TotalZ; z++)
+                island.RemoveVoxel(x, y, z, false);
+
+            foreach (LobbyVoxelEntry e in data.entries)
+            {
+                if (e == null || !island.InBounds(e.x, e.y, e.z))
+                    continue;
+
+                int raw = e.blockTypeId;
+                if (raw <= 0) continue;
+                if (raw > (int)BlockType.Grass) raw = (int)BlockType.Dirt;
+                island.SetVoxel(e.x, e.y, e.z, (BlockType)raw, false);
+            }
+
+            island.RebuildMesh();
+            if (verboseLogs)
+                Debug.Log($"[LobbyEditor] Baked layout applied from Resources/{resourcePath}.json");
+        }
+
+        void TryApplyBakedShopZones()
+        {
+            if (!useBakedLobbyLayout)
+                return;
+
+            string resourcePath = string.IsNullOrWhiteSpace(bakedShopZonesResourcePath)
+                ? "LobbyBakedShopZones"
+                : bakedShopZonesResourcePath.Trim();
+
+            TextAsset asset = Resources.Load<TextAsset>(resourcePath);
+            if (asset == null || string.IsNullOrWhiteSpace(asset.text))
+                return;
+
+            ShopZoneSaveData data = null;
+            try { data = JsonUtility.FromJson<ShopZoneSaveData>(asset.text); }
+            catch { }
+            if (data == null || data.zones == null)
+                return;
+
+            shopSaveData = data;
+            foreach (ShopZoneEntry e in shopSaveData.zones)
+            {
+                if (e == null) continue;
+                SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ, e.zoneType);
+            }
+
+            if (verboseLogs)
+                Debug.Log($"[LobbyEditor] Baked shop zones applied: {spawnedZones.Count}");
         }
 
         void ClearRuntimeShopZonesOnly()

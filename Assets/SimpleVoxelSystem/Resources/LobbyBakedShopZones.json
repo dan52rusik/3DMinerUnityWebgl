@@ -1,0 +1,31 @@
+{
+    "zones": [
+        {
+            "worldX": 38.5,
+            "worldY": -6.5,
+            "worldZ": 7.5,
+            "sizeX": 15,
+            "sizeY": 15,
+            "sizeZ": 15,
+            "zoneType": 0
+        },
+        {
+            "worldX": 23.5,
+            "worldY": -6.5,
+            "worldZ": 7.5,
+            "sizeX": 15,
+            "sizeY": 15,
+            "sizeZ": 15,
+            "zoneType": 1
+        },
+        {
+            "worldX": 8.5,
+            "worldY": -6.5,
+            "worldZ": 7.5,
+            "sizeX": 15,
+            "sizeY": 15,
+            "sizeZ": 15,
+            "zoneType": 2
+        }
+    ]
+}
