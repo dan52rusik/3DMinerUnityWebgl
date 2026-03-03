@@ -42,6 +42,11 @@ namespace SimpleVoxelSystem
         private TouchTapButton mineButton;
         private TouchHoldButton removeButton;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern int SVS_IsMobileBrowser();
+#endif
+
         public static MobileTouchControls GetOrCreateIfNeeded()
         {
             if (Instance != null)
@@ -123,15 +128,30 @@ namespace SimpleVoxelSystem
             if (!autoEnableOnMobile)
                 return false;
 
-            if (!Application.isMobilePlatform)
-                return false;
+            // WebGL desktop can report touch support; prefer explicit browser-side check.
+#if UNITY_WEBGL
+            try
+            {
+                return SVS_IsMobileBrowser() == 1;
+            }
+            catch
+            {
+                // fall through to C# heuristics
+            }
+#endif
 
-            // On desktop browsers with touch-capable hardware Unity can still report touch support.
-            // Keep mobile controls disabled when mouse/keyboard are present.
-            if (HasDesktopPointer())
-                return false;
+            if (Application.isMobilePlatform)
+                return true;
 
-            return true;
+#if ENABLE_INPUT_SYSTEM
+            if (Touchscreen.current != null && !HasDesktopPointer())
+                return true;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.touchSupported && !HasDesktopPointer())
+                return true;
+#endif
+            return false;
 #endif
         }
 

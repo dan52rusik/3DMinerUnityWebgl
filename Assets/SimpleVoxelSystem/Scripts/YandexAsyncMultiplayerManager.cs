@@ -95,6 +95,9 @@ namespace SimpleVoxelSystem
         {
             public string kind; // "state" or "event"
             public string eventType;
+            public string playerId;
+            public string playerName;
+            public bool isGuest;
 
             public float x;
             public float y;
@@ -114,6 +117,13 @@ namespace SimpleVoxelSystem
         }
 
         [Serializable]
+        private class IdentityPayload
+        {
+            public string playerId;
+            public string playerName;
+        }
+
+        [Serializable]
         private class PushMetaPayload
         {
             public int meta1;
@@ -128,6 +138,9 @@ namespace SimpleVoxelSystem
             public Transform transform;
             public TextMesh label;
             public bool inLobby = true;
+            public string playerId;
+            public string playerName;
+            public bool isGuest = true;
 
             public int money;
             public int xp;
@@ -148,7 +161,18 @@ namespace SimpleVoxelSystem
 
         [DllImport("__Internal")]
         private static extern void YandexMP_Push(string metaJson);
+
+        [DllImport("__Internal")]
+        private static extern void LobbySync_RequestIdentity(string gameObjectName, string callbackMethod);
 #endif
+
+        private const string AsyncPlayerIdPrefKey = "svs_async_player_id";
+        private const string AsyncPlayerNamePrefKey = "svs_async_player_name";
+
+        private string localPlayerId = string.Empty;
+        private string localPlayerName = "Player";
+        private bool localIsGuest = true;
+        private bool identityRequested;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -165,6 +189,8 @@ namespace SimpleVoxelSystem
         {
             YG2.onGetSDKData += OnSdkReady;
             AsyncGameplayEvents.OnEvent += OnLocalGameplayEvent;
+            EnsureLocalIdentity();
+            RequestIdentityFromWeb();
         }
 
         private void OnDisable()
@@ -267,6 +293,27 @@ namespace SimpleVoxelSystem
             initRequested = true;
             YandexMP_Init(gameObject.name, nameof(OnMpInitResult), nameof(OnOpponentTransactions), nameof(OnOpponentFinish), configJson);
 #endif
+        }
+
+        public void OnIdentityResolved(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
+            IdentityPayload payload = null;
+            try { payload = JsonUtility.FromJson<IdentityPayload>(json); }
+            catch { }
+
+            if (payload == null)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(payload.playerId))
+                localPlayerId = payload.playerId.Trim();
+            if (!string.IsNullOrWhiteSpace(payload.playerName))
+                localPlayerName = payload.playerName.Trim();
+
+            localIsGuest = IsGuestIdentity(localPlayerId, localPlayerName);
+            SaveLocalIdentityPrefs();
         }
 
         public void OnMpInitResult(string json)
@@ -374,6 +421,9 @@ namespace SimpleVoxelSystem
             CommitPayload payload = new CommitPayload
             {
                 kind = "state",
+                playerId = localPlayerId,
+                playerName = localPlayerName,
+                isGuest = localIsGuest,
                 x = pos.x,
                 y = pos.y,
                 z = pos.z,
@@ -395,6 +445,9 @@ namespace SimpleVoxelSystem
             {
                 kind = "event",
                 eventType = e.Type.ToString(),
+                playerId = localPlayerId,
+                playerName = localPlayerName,
+                isGuest = localIsGuest,
                 gx = e.gx,
                 gy = e.gy,
                 gz = e.gz,
@@ -539,6 +592,7 @@ namespace SimpleVoxelSystem
             if (ghost == null || ghost.transform == null)
                 return;
 
+            ApplyGhostIdentityFromPayload(ghost, payload);
             ghost.inLobby = payload.inLobby;
             ghost.miningLevel = Mathf.Max(1, payload.miningLevel);
             if (string.IsNullOrWhiteSpace(ghost.lastEvent))
@@ -561,6 +615,7 @@ namespace SimpleVoxelSystem
             if (ghost == null)
                 return;
 
+            ApplyGhostIdentityFromPayload(ghost, payload);
             ghost.lastEvent = payload.eventType;
             ghost.miningLevel = Mathf.Max(1, payload.miningLevel);
 
@@ -588,15 +643,107 @@ namespace SimpleVoxelSystem
             if (ghost?.label == null)
                 return;
 
+            string header = BuildGhostHeader(ghost);
             ghost.label.text =
-                $"Lv {ghost.miningLevel}\\n" +
-                $"Mined {ghost.minedBlocks}\\n" +
-                $"$ {ghost.money}\\n" +
+                $"{header}\n" +
+                $"Lv {ghost.miningLevel}\n" +
+                $"Mined {ghost.minedBlocks}\n" +
+                $"$ {ghost.money}\n" +
                 $"{ghost.lastEvent}";
 
             Camera cam = Camera.main;
             if (cam != null)
                 ghost.label.transform.rotation = Quaternion.LookRotation(ghost.label.transform.position - cam.transform.position);
+        }
+
+        private void ApplyGhostIdentityFromPayload(GhostAvatar ghost, CommitPayload payload)
+        {
+            if (ghost == null || payload == null)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(payload.playerId))
+                ghost.playerId = payload.playerId.Trim();
+            if (!string.IsNullOrWhiteSpace(payload.playerName))
+                ghost.playerName = payload.playerName.Trim();
+
+            string identityId = !string.IsNullOrWhiteSpace(ghost.playerId) ? ghost.playerId : ghost.id;
+            string identityName = ghost.playerName;
+            ghost.isGuest = payload.isGuest || IsGuestIdentity(identityId, identityName);
+        }
+
+        private string BuildGhostHeader(GhostAvatar ghost)
+        {
+            if (ghost == null)
+                return "Игрок";
+
+            string id = !string.IsNullOrWhiteSpace(ghost.playerId) ? ghost.playerId : ghost.id;
+            string shortId = ShortId(id);
+
+            if (!ghost.isGuest && !string.IsNullOrWhiteSpace(ghost.playerName) && !string.Equals(ghost.playerName, "Player", StringComparison.OrdinalIgnoreCase))
+                return $"{ghost.playerName} [{shortId}]";
+
+            return $"Новый игрок [{shortId}]";
+        }
+
+        private static bool IsGuestIdentity(string playerId, string playerName)
+        {
+            bool idLooksGuest = !string.IsNullOrWhiteSpace(playerId) &&
+                                playerId.StartsWith("guest_", StringComparison.OrdinalIgnoreCase);
+            bool nameDefault = string.IsNullOrWhiteSpace(playerName) ||
+                               string.Equals(playerName, "Player", StringComparison.OrdinalIgnoreCase);
+            return idLooksGuest || nameDefault;
+        }
+
+        private static string ShortId(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return "unknown";
+            id = id.Trim();
+            if (id.Length <= 10)
+                return id;
+            return id.Substring(0, 4) + "..." + id.Substring(id.Length - 4);
+        }
+
+        private void EnsureLocalIdentity()
+        {
+            localPlayerId = PlayerPrefs.GetString(AsyncPlayerIdPrefKey, string.Empty);
+            localPlayerName = PlayerPrefs.GetString(AsyncPlayerNamePrefKey, "Player");
+
+            if (string.IsNullOrWhiteSpace(localPlayerId))
+            {
+                localPlayerId = "guest_" + Guid.NewGuid().ToString("N");
+                localPlayerName = "Player";
+                SaveLocalIdentityPrefs();
+            }
+
+            localIsGuest = IsGuestIdentity(localPlayerId, localPlayerName);
+        }
+
+        private void RequestIdentityFromWeb()
+        {
+            if (identityRequested)
+                return;
+
+            identityRequested = true;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            try
+            {
+                LobbySync_RequestIdentity(gameObject.name, nameof(OnIdentityResolved));
+            }
+            catch
+            {
+                // fallback identity from prefs/guest remains active
+            }
+#endif
+        }
+
+        private void SaveLocalIdentityPrefs()
+        {
+            if (!string.IsNullOrWhiteSpace(localPlayerId))
+                PlayerPrefs.SetString(AsyncPlayerIdPrefKey, localPlayerId);
+            if (!string.IsNullOrWhiteSpace(localPlayerName))
+                PlayerPrefs.SetString(AsyncPlayerNamePrefKey, localPlayerName);
+            PlayerPrefs.Save();
         }
     }
 }
