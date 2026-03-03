@@ -545,24 +545,22 @@ namespace SimpleVoxelSystem
             if (ghosts.TryGetValue(opponentId, out GhostAvatar existing) && existing != null && existing.gameObject != null)
                 return existing;
 
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            GameObject go = new GameObject();
             go.name = "AsyncGhost_" + opponentId;
-            Collider col = go.GetComponent<Collider>();
-            if (col != null) col.enabled = false;
-
-            MeshRenderer mr = go.GetComponent<MeshRenderer>();
-            if (mr != null)
-            {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null) shader = Shader.Find("Standard");
-                Material mat = new Material(shader);
-                mat.color = new Color(0.2f, 0.9f, 1f, 0.45f);
-                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                mat.SetInt("_ZWrite", 0);
-                mat.renderQueue = 3000;
-                mr.material = mat;
-            }
+            var mix = go.AddComponent<BlockyMixCharacter>();
+            mix.rebuildOnAwake = false;
+            mix.hideBaseRenderer = false;
+            mix.autoAddAnimator = false;
+            mix.overallScale = 1.0f;
+            mix.visualYOffset = 0.02f;
+            mix.shirtColor = new Color(0.12f, 0.62f, 0.90f, 1f);
+            mix.pantsColor = new Color(0.10f, 0.28f, 0.45f, 1f);
+            mix.accentColor = new Color(0.55f, 0.92f, 1f, 1f);
+            mix.bootColor = new Color(0.08f, 0.18f, 0.28f, 1f);
+            mix.gloveColor = new Color(0.18f, 0.50f, 0.68f, 1f);
+            mix.stripeColor = new Color(0.82f, 0.97f, 1f, 1f);
+            mix.Rebuild();
+            SetGhostVisualStyle(go, new Color(0.2f, 0.9f, 1f, 0.45f));
 
             GameObject labelGo = new GameObject("Label");
             labelGo.transform.SetParent(go.transform, false);
@@ -585,6 +583,31 @@ namespace SimpleVoxelSystem
 
             ghosts[opponentId] = created;
             return created;
+        }
+
+        private static void SetGhostVisualStyle(GameObject root, Color tint)
+        {
+            if (root == null)
+                return;
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+
+            MeshRenderer[] renderers = root.GetComponentsInChildren<MeshRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                MeshRenderer mr = renderers[i];
+                if (mr == null)
+                    continue;
+
+                Material mat = new Material(shader);
+                mat.color = tint;
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetInt("_ZWrite", 0);
+                mat.renderQueue = 3000;
+                mr.sharedMaterial = mat;
+            }
         }
 
         private void ApplyGhostState(GhostAvatar ghost, CommitPayload payload)
