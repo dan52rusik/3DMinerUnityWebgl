@@ -12,6 +12,11 @@ namespace SimpleVoxelSystem
         public float bodyTiltAmount = 3f;
         public float maxSpeedForAnim = 7f;
 
+        [Header("Turn")]
+        public float maxTurnSpeedForAnim = 260f; // deg/sec
+        public float turnLeanAngle = 8f;         // side lean while turning
+        public float turnTwistAngle = 12f;       // torso yaw twist while turning
+
         [Header("Mining")]
         public float mineSwingAngle = 75f;
         public float mineSwingDuration = 0.2f;
@@ -27,6 +32,9 @@ namespace SimpleVoxelSystem
         private Transform armR;
         private Transform legL;
         private Transform legR;
+        private Transform bootL;
+        private Transform bootR;
+        private Transform handL;
         private Transform handR;
         private Transform pickaxeRoot;
 
@@ -48,6 +56,7 @@ namespace SimpleVoxelSystem
 
         private float walkPhase;
         private float mineTimer;
+        private float lastYaw;
         private bool bound;
 
         private void OnEnable()
@@ -77,6 +86,9 @@ namespace SimpleVoxelSystem
             armR = FindIn(visualRoot, "Arm_R");
             legL = FindIn(visualRoot, "Leg_L");
             legR = FindIn(visualRoot, "Leg_R");
+            bootL = FindIn(visualRoot, "Boot_L");
+            bootR = FindIn(visualRoot, "Boot_R");
+            handL = FindIn(visualRoot, "Hand_L");
             handR = FindIn(visualRoot, "Hand_R");
             pickaxeRoot = FindIn(visualRoot, "HandPickaxe");
 
@@ -95,8 +107,14 @@ namespace SimpleVoxelSystem
             legRPivot = CreatePivotForPart(legR, "Rig_LegRPivot", 1f);
 
             // Keep hand and pickaxe on right arm for mine swing.
+            if (handL != null && armL != null)
+                handL.SetParent(armL, true);
             if (handR != null && armR != null)
                 handR.SetParent(armR, true);
+            if (bootL != null && legL != null)
+                bootL.SetParent(legL, true);
+            if (bootR != null && legR != null)
+                bootR.SetParent(legR, true);
             if (pickaxeRoot != null && armR != null)
                 pickaxeRoot.SetParent(armR, true);
 
@@ -109,6 +127,7 @@ namespace SimpleVoxelSystem
             torsoBasePos = torsoPivot.localPosition;
 
             lastPos = transform.position;
+            lastYaw = transform.eulerAngles.y;
             bound = true;
         }
 
@@ -131,6 +150,15 @@ namespace SimpleVoxelSystem
             float bob = Mathf.Abs(Mathf.Sin(walkPhase * 0.5f)) * bodyBobAmount * speed01;
             float tilt = walkSin * bodyTiltAmount * speed01;
 
+            float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+            float yawNow = transform.eulerAngles.y;
+            float yawDelta = Mathf.DeltaAngle(lastYaw, yawNow);
+            lastYaw = yawNow;
+            float turnSpeed = yawDelta / dt;
+            float turn01 = Mathf.Clamp(turnSpeed / Mathf.Max(1f, maxTurnSpeedForAnim), -1f, 1f);
+            float turnLean = -turn01 * turnLeanAngle;
+            float turnTwist = turn01 * turnTwistAngle;
+
             float mineWeight = 0f;
             if (mineTimer > 0f)
             {
@@ -143,10 +171,13 @@ namespace SimpleVoxelSystem
             float mineX = -mineSwingAngle * mineWeight;
 
             torsoPivot.localPosition = torsoBasePos + new Vector3(0f, bob, 0f);
-            torsoPivot.localRotation = torsoBaseRot * Quaternion.Euler(0f, 0f, tilt);
+            torsoPivot.localRotation = torsoBaseRot * Quaternion.Euler(0f, turnTwist, tilt + turnLean);
 
             if (headPivot != null)
-                headPivot.localRotation = Quaternion.Slerp(headPivot.localRotation, headBaseRot * Quaternion.Euler(-tilt * 0.35f, 0f, 0f), 1f - Mathf.Exp(-8f * Time.deltaTime));
+                headPivot.localRotation = Quaternion.Slerp(
+                    headPivot.localRotation,
+                    headBaseRot * Quaternion.Euler(-tilt * 0.35f, -turnTwist * 0.35f, -turnLean * 0.2f),
+                    1f - Mathf.Exp(-8f * Time.deltaTime));
 
             armLPivot.localRotation = armLBaseRot * Quaternion.Euler(walkArm, 0f, 0f);
 

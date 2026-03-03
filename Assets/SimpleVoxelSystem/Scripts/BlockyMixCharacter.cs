@@ -23,6 +23,7 @@ namespace SimpleVoxelSystem
         [Header("Scale")]
         [Min(0.5f)] public float overallScale = 1.1f;
         public bool fitToCharacterControllerHeight = true;
+        [Range(-0.2f, 0.3f)] public float visualYOffset = 0.06f;
 
         private Transform visualRoot;
         private Material skinMat;
@@ -130,6 +131,9 @@ namespace SimpleVoxelSystem
                     animator = gameObject.AddComponent<BlockyMixAnimator>();
                 animator.RebindNow();
             }
+
+            if (visualRoot != null)
+                visualRoot.localPosition = new Vector3(0f, visualYOffset, 0f);
         }
 
         public void ClearVisual()
