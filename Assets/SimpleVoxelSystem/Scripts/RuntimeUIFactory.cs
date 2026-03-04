@@ -320,6 +320,10 @@ namespace SimpleVoxelSystem
         {
             if (cached != null) return cached;
 
+            // Preferred: bundled Unicode font with Cyrillic support.
+            cached = Resources.Load<Font>("LiberationSans");
+            if (cached != null) return cached;
+
             // Try to load from Resources
             cached = Resources.Load<Font>("Roboto-Regular");
             if (cached != null) return cached;

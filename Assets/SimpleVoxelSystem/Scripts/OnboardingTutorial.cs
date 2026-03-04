@@ -754,13 +754,16 @@ namespace SimpleVoxelSystem
             outline.effectColor    = new Color(0.35f, 0.55f, 1f, 0.45f);
             outline.effectDistance = new Vector2(2f, 2f);
 
+            // Title: bottom-right corner of the card — never overlaps body text
             cardTitle = MakeLabel(card.transform, "Title",
-                "", 26, TextAnchor.UpperCenter,
-                new Vector2(20, -10), new Vector2(-20, -52), bold: true, color: Color.white);
+                "", 22, TextAnchor.LowerRight,
+                new Vector2(0, 8), new Vector2(-16, 8), bold: true,
+                color: new Color(0.55f, 0.72f, 1f, 0.85f));
 
+            // Body: takes the full card from top, plenty of room
             cardBody = MakeLabel(card.transform, "Body",
                 "", 20, TextAnchor.UpperLeft,
-                new Vector2(28, -62), new Vector2(-28, -26), bold: false,
+                new Vector2(28, -12), new Vector2(-28, -26), bold: false,
                 color: new Color(0.88f, 0.93f, 1f));
 
             cardTapHint = MakeLabel(card.transform, "TapHint",
@@ -797,7 +800,7 @@ namespace SimpleVoxelSystem
             arrowLabel.fontSize  = 32;
             arrowLabel.alignment = TextAnchor.MiddleCenter;
             arrowLabel.color     = new Color(1f, 0.9f, 0.15f, 1f);
-            arrowLabel.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            arrowLabel.font      = GetSafeFont();
             arrowLabel.raycastTarget = false;
             arrowGo.SetActive(false);
 
@@ -864,9 +867,39 @@ namespace SimpleVoxelSystem
             t.fontSize  = fontSize;
             t.alignment = anchor;
             t.color     = color ?? Color.white;
-            t.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.font      = GetSafeFont();
             if (bold) t.fontStyle = FontStyle.Bold;
             return t;
+        }
+
+        // Returns a font that works in Editor, standalone AND WebGL/Yandex builds.
+        // LegacyRuntime.ttf is Editor-only; Arial is always available at runtime.
+        static Font _safeFont;
+        static Font GetSafeFont()
+        {
+            if (_safeFont != null) return _safeFont;
+
+            // 0. Preferred bundled Unicode font.
+            _safeFont = Resources.Load<Font>("LiberationSans");
+            if (_safeFont != null) return _safeFont;
+
+            // 1. Try fonts in Resources (Roboto-Regular usually has better Cyrillic support)
+            _safeFont = Resources.Load<Font>("Roboto-Regular");
+            if (_safeFont != null) return _safeFont;
+
+            // 2. Try built-in Arial (works in all builds including WebGL)
+            _safeFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (_safeFont != null) return _safeFont;
+
+            // 3. OS font fallback
+            _safeFont = Font.CreateDynamicFontFromOSFont("Arial", 16);
+            if (_safeFont != null) return _safeFont;
+
+            // 4. Any font in Resources
+            _safeFont = Resources.FindObjectsOfTypeAll<Font>().Length > 0
+                ? Resources.FindObjectsOfTypeAll<Font>()[0] : null;
+
+            return _safeFont;
         }
     }
 }
