@@ -12,7 +12,7 @@ namespace SimpleVoxelSystem
     {
         private const string LocalSaveKey = "svs_progress_v1";
         private const float AutosaveIntervalSeconds = 8f;
-        private const int ResetMoneyValue = 0;
+        private const int ResetMoneyValue = 300;
         private const int ResetXpValue = 0;
         private const int ResetLevelValue = 1;
 

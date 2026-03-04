@@ -157,14 +157,14 @@ namespace SimpleVoxelSystem
 
         private void TryAutoLowerToClearedDepth()
         {
-            if (wellGenerator == null || island == null)
+            if (wellGenerator == null || island == null || wellGenerator.Mining == null)
                 return;
 
             // Не опускаемся, если недавно двигались (защита от дерготни)
-            if (Time.time - lastMoveTime < moveCooldown)
+            if (Time.unscaledTime - lastMoveTime < moveCooldown)
                 return;
 
-            int clearedDepth = wellGenerator.GetContiguousClearedDepthAtShaft(shaftGridX, shaftGridZ);
+            int clearedDepth = wellGenerator.Mining.GetContiguousClearedDepthAtShaft(shaftGridX, shaftGridZ);
             float desiredY = GetWorldYForDepth(clearedDepth);
 
             // Если мы уже на месте
