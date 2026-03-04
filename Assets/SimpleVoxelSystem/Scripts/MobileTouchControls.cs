@@ -35,6 +35,17 @@ namespace SimpleVoxelSystem
         public bool RemoveHeld { get; private set; }
         public bool IsLookHeld { get; private set; }
         public Vector2 AimScreenPosition { get; private set; }
+        /// <summary>
+        /// Last touch position on the look-pad. Unlike AimScreenPosition this does NOT
+        /// reset to screen-center when the finger lifts — it "sticks" at the last tap.
+        /// Used by mine placement so the preview stays where the player last tapped
+        /// while they reach for the PLACE button.
+        /// </summary>
+        public Vector2 StickyAimPosition { get; private set; }
+        /// <summary>True on the frame the PLACE button was tapped (mine placement).</summary>
+        public bool PlaceMinePressedThisFrame { get; private set; }
+        /// <summary>Screen position of the PLACE tap — used for placement raycast.</summary>
+        public Vector2 PlaceMineTouchScreenPos { get; private set; }
         public RectTransform MoveAreaRect => joystick != null ? joystick.GetComponent<RectTransform>() : null;
         public RectTransform MineButtonRect => mineButton != null ? mineButton.GetComponent<RectTransform>() : null;
         public RectTransform JumpButtonRect => jumpButton != null ? jumpButton.GetComponent<RectTransform>() : null;
@@ -52,6 +63,7 @@ namespace SimpleVoxelSystem
         private TouchTapButton interactButton;
         private TouchTapButton minionMenuButton;
         private TouchHoldButton removeButton;
+        private TouchTapButton placeMineButton;   // shown only during mine placement
         private Text interactButtonLabel;
 
         private const string DefaultInteractLabel = "ACT";
@@ -103,6 +115,9 @@ namespace SimpleVoxelSystem
 
             EnsureEventSystem();
             BuildUI();
+
+            // Initialize sticky position to center so it's not (0,0) before first touch
+            StickyAimPosition = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
         }
 
         void Update()
@@ -123,15 +138,35 @@ namespace SimpleVoxelSystem
             RunHeld = runButton != null && runButton.Held;
             RemoveHeld = removeButton != null && removeButton.Held;
 
+            // PLACE button: record tap + save screen position for placement raycast
+            if (placeMineButton != null && placeMineButton.PressedThisFrame)
+            {
+                PlaceMinePressedThisFrame = true;
+                // Use the touch/pointer position captured by the LookPad zone (same right half),
+                // or fall back to screen center so the raycast always has a valid origin.
+                PlaceMineTouchScreenPos = (lookPad != null && lookPad.HasPointerPosition)
+                    ? lookPad.CurrentPointerScreenPos
+                    : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+            }
+            else
+            {
+                PlaceMinePressedThisFrame = false;
+            }
+
             float zoom = 0f;
             if (zoomInButton != null && zoomInButton.Held) zoom += 1f;
             if (zoomOutButton != null && zoomOutButton.Held) zoom -= 1f;
             ZoomDelta = zoom;
 
             if (lookPad != null && lookPad.HasPointerPosition)
+            {
                 AimScreenPosition = lookPad.CurrentPointerScreenPos;
+                StickyAimPosition = AimScreenPosition; // Update sticky position
+            }
             else
+            {
                 AimScreenPosition = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+            }
         }
 
         void LateUpdate()
@@ -147,6 +182,7 @@ namespace SimpleVoxelSystem
             minionMenuButton?.ResetFrameFlags();
             runButton?.ResetFrameFlags();
             removeButton?.ResetFrameFlags();
+            placeMineButton?.ResetFrameFlags();
             lookPad?.ResetFrameFlags();
         }
 
@@ -289,8 +325,28 @@ namespace SimpleVoxelSystem
             zoomOutButton = CreateHoldButton(parent, "ZoomOutButton", "-", new Vector2(1f, 1f), new Vector2(24f, 36f), new Vector2(72f, 60f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
             minionMenuButton = CreateTapButton(parent, "MinionsButton", "MINIONS", new Vector2(0f, 1f), new Vector2(24f, 24f), new Vector2(160f, 62f), new Color(0.22f, 0.34f, 0.56f, 0.88f), 18);
 
+            // ── PLACE button — shown only during mine placement mode ──────────
+            // Centered at the bottom of the screen, large and hard to miss.
+            placeMineButton = CreateTapButton(parent, "PlaceMineButton", "✔  PLACE HERE",
+                new Vector2(0.5f, 0f),          // anchor: bottom center
+                new Vector2(0f, 28f),            // offset from anchor edge
+                new Vector2(340f, 96f),          // size
+                new Color(0.1f, 0.75f, 0.2f, 0.95f), 28);
+            placeMineButton.gameObject.SetActive(false); // hidden by default
+
             if (interactButton != null)
                 interactButtonLabel = interactButton.GetComponentInChildren<Text>();
+        }
+
+        /// <summary>
+        /// Shows or hides the PLACE button. Call from MineMarket when entering/leaving
+        /// placement mode on the island.
+        /// </summary>
+        public void SetPlacementModeVisible(bool visible)
+        {
+            if (!IsActive) return;
+            if (placeMineButton != null)
+                placeMineButton.gameObject.SetActive(visible);
         }
 
         private static RectTransform CreateRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)

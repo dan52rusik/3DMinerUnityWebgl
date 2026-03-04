@@ -31,6 +31,8 @@ namespace SimpleVoxelSystem
         public WellGenerator WellGen { get; private set; }
         private MineInstance    pendingMine;       // шахта, ожидающая размещения
         private GameObject      previewInstance;   // призрак-превью
+        private MobileTouchControls mobileControls; // кэшируется в Awake
+        private bool            wasOnIslandPlacing; // для отслеживания перехода
 
         // Событие для UI
         public event System.Action<MineInstance> OnMinePlaced;
@@ -44,6 +46,8 @@ namespace SimpleVoxelSystem
             WellGen = GetComponent<WellGenerator>();
             if (WellGen == null)
                 WellGen = GetComponentInParent<WellGenerator>();
+
+            mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
 
             CreateDefaultMinesIfEmpty();
             EnsureShopUI();
@@ -137,10 +141,16 @@ namespace SimpleVoxelSystem
 
         void Update()
         {
+            // Lazy-catch mobile controls if they were created after this Awake
+            if (mobileControls == null)
+                mobileControls = MobileTouchControls.Instance;
+
             // Если шахта не куплена — ничего не делаем
-            if (pendingMine == null) 
+            if (pendingMine == null)
             {
                 if (IsPlacementMode) { IsPlacementMode = false; ShowPreview(false); }
+                UpdatePlacementButton(false);
+                wasOnIslandPlacing = false;
                 return;
             }
 
@@ -150,10 +160,14 @@ namespace SimpleVoxelSystem
             bool onIsland = WellGen != null && !WellGen.IsInLobbyMode;
             ShowPreview(onIsland);
 
+            // Показываем / скрываем мобильную кнопку PLACE
+            UpdatePlacementButton(onIsland);
+            wasOnIslandPlacing = onIsland;
+
             if (onIsland)
             {
                 UpdatePlacementPreview();
-                
+
                 // Левый клик = подтвердить размещение
                 if (IsConfirmPressed())
                 {
@@ -166,6 +180,12 @@ namespace SimpleVoxelSystem
             {
                 CancelPlacement();
             }
+        }
+
+        // Включает / выключает кнопку PLACE на мобильном
+        private void UpdatePlacementButton(bool visible)
+        {
+            mobileControls?.SetPlacementModeVisible(visible);
         }
 
         private Vector3 lastValidPlacementPos;
@@ -213,6 +233,13 @@ namespace SimpleVoxelSystem
 
         Vector2 GetMousePosition()
         {
+            // Mobile: use the "sticky" position — where the player last tapped/touched
+            // on the right side of the screen (LookPad area).
+            // This allows the preview to stay at the tapped location while the
+            // player moves their hand to hit the PLACE confirmation button.
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.StickyAimPosition;
+
             if (Cursor.lockState == CursorLockMode.Locked)
                 return new Vector2(Screen.width / 2f, Screen.height / 2f);
 #if ENABLE_INPUT_SYSTEM
@@ -355,6 +382,11 @@ namespace SimpleVoxelSystem
 
         bool IsConfirmPressed()
         {
+            // ── Mobile: dedicated PLACE button ───────────────────────────────
+            if (mobileControls != null && mobileControls.IsActive)
+                return mobileControls.PlaceMinePressedThisFrame;
+
+            // ── Desktop: left mouse click (not over UI) ──────────────────────
             bool triggered = false;
 #if ENABLE_INPUT_SYSTEM
             triggered = UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame;
@@ -363,11 +395,9 @@ namespace SimpleVoxelSystem
 #endif
             if (triggered)
             {
-                bool overUI = (Cursor.lockState != CursorLockMode.Locked) && 
-                              (UnityEngine.EventSystems.EventSystem.current != null && 
+                bool overUI = (Cursor.lockState != CursorLockMode.Locked) &&
+                              (UnityEngine.EventSystems.EventSystem.current != null &&
                                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject());
-                
-                // Debug.Log($"[MineMarket] LMB Click. UI Blocking: {overUI}. MouseLocked: {Cursor.lockState == CursorLockMode.Locked}");
                 return !overUI;
             }
             return false;
