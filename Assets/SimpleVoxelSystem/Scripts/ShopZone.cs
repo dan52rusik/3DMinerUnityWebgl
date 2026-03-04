@@ -46,9 +46,9 @@ namespace SimpleVoxelSystem
         private static ShopZone   currentZone;
 
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Unity
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         void Start()
         {
@@ -138,6 +138,11 @@ namespace SimpleVoxelSystem
         {
             // Ð Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð¸Ð³Ñ€Ð¾Ðº Ð²Ð½ÑƒÑ‚Ñ€Ð¸ Ð·Ð¾Ð½Ñ‹ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°
             if (!playerInside) return;
+
+            // Refresh prompt visibility every frame while inside
+            if (currentZone == this)
+                ShowPrompt(true);
+
             if (!IsKeyPressed()) return;
 
             if (zoneType == ShopZoneType.Mine && mineShopUI != null)
@@ -146,10 +151,6 @@ namespace SimpleVoxelSystem
                 pickaxeShopUI.Toggle();
             else if (zoneType == ShopZoneType.Sell && playerPickaxe != null)
                 playerPickaxe.SellResources();
-
-            // Refresh prompt visibility only for the active zone
-            if (currentZone == this)
-                ShowPrompt(true);
         }
 
         void OnTriggerEnter(Collider other)
@@ -263,8 +264,8 @@ namespace SimpleVoxelSystem
                 bool anyShopOpen = false;
                 if (currentZone != null)
                 {
-                    if (currentZone.mineShopUI != null && currentZone.mineShopUI.gameObject.activeInHierarchy) anyShopOpen = true;
-                    if (currentZone.pickaxeShopUI != null && currentZone.pickaxeShopUI.gameObject.activeInHierarchy) anyShopOpen = true;
+                    if (currentZone.mineShopUI != null && currentZone.mineShopUI.IsVisible) anyShopOpen = true;
+                    if (currentZone.pickaxeShopUI != null && currentZone.pickaxeShopUI.IsVisible) anyShopOpen = true;
                 }
 
                 if (v && currentZone != null && !anyShopOpen)

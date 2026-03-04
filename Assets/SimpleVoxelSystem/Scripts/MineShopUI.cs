@@ -26,6 +26,9 @@ namespace SimpleVoxelSystem
         private GameObject _overlay;       // Ñ‚Ñ‘Ð¼Ð½Ñ‹Ð¹ Ñ„Ð¾Ð½ Ð¿Ð¾Ð´ Ð¿Ð°Ð½ÐµÐ»ÑŒÑŽ
         private GameObject hud;
         private Text       moneyText;
+
+        public bool IsVisible => shopPanel != null && shopPanel.activeSelf;
+
         private Text       statusLabel;
         private Button     sellMineBtn;
         private Button     cancelBtn;
