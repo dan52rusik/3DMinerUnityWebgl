@@ -12,8 +12,10 @@ namespace SimpleVoxelSystem
         public Canvas         Canvas;
         public RectTransform  CanvasRect;
 
-        // Dimmer
-        public Image          Dimmer;
+        // Spotlight dimmer — 4 panels that surround the highlight hole
+        // [0]=Top  [1]=Bottom  [2]=Left  [3]=Right
+        public Image[]         DimPanels;
+        public RectTransform[] DimRects;
 
         // Info card
         public GameObject     Card;
@@ -60,20 +62,36 @@ namespace SimpleVoxelSystem
 
             refs.CanvasRect = refs.Canvas.GetComponent<RectTransform>();
 
-            // ── Full-screen dimmer ────────────────────────────────────────────
-            var dimGo = MakePanel("Dimmer", cGo.transform,
-                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
-                new Color(0, 0, 0, 0), stretch: true);
-            refs.Dimmer = dimGo.GetComponent<Image>();
-            refs.Dimmer.raycastTarget = false;
+            // ── Spotlight dimmer — 4 surrounding panels ───────────────────────
+            // Together they create a transparent "hole" over the highlighted UI
+            // element so its text/icon remains perfectly readable.
+            refs.DimPanels = new Image[4];
+            refs.DimRects  = new RectTransform[4];
+            string[] dimNames = { "Dim_Top", "Dim_Bottom", "Dim_Left", "Dim_Right" };
+            for (int i = 0; i < 4; i++)
+            {
+                var dGo = new GameObject(dimNames[i]);
+                dGo.transform.SetParent(cGo.transform, false);
+                var dRt = dGo.AddComponent<RectTransform>();
+                // Start as full-screen top half — will be repositioned on first frame
+                dRt.anchorMin = Vector2.zero;
+                dRt.anchorMax = Vector2.one;
+                dRt.offsetMin = Vector2.zero;
+                dRt.offsetMax = Vector2.zero;
+                var dImg = dGo.AddComponent<Image>();
+                dImg.color = new Color(0, 0, 0, 0);
+                dImg.raycastTarget = false;
+                refs.DimPanels[i] = dImg;
+                refs.DimRects[i]  = dRt;
+            }
 
-            // ── Info card (top-centre) ────────────────────────────────────────
+            // ── Info card (screen-centre) ─────────────────────────────────────
             refs.Card = MakePanel("TutCard", cGo.transform,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -18f), new Vector2(880f, 210f),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, 0f), new Vector2(880f, 210f),
                 new Color(0.04f, 0.06f, 0.12f, 0.95f));
             var cardRt = refs.Card.GetComponent<RectTransform>();
-            cardRt.pivot = new Vector2(0.5f, 1f);          // anchor by top edge
+            cardRt.pivot = new Vector2(0.5f, 0.5f);         // centre pivot → card is centred
             refs.Card.GetComponent<Image>().raycastTarget = false;
 
             var outline = refs.Card.AddComponent<Outline>();
@@ -104,7 +122,7 @@ namespace SimpleVoxelSystem
             refs.HlBox = MakePanel("Highlight", cGo.transform,
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(120, 60),
-                new Color(1f, 0.85f, 0.1f, 0.08f));
+                new Color(0f, 0f, 0f, 0f));   // fully transparent — only Outline border visible
             refs.HlRect = refs.HlBox.GetComponent<RectTransform>();
             refs.HlBox.GetComponent<Image>().raycastTarget = false;
 

@@ -80,7 +80,8 @@ namespace SimpleVoxelSystem
         // Convenience aliases — keeps the rest of the code readable
         private Canvas        canvas      => ui.Canvas;
         private RectTransform canvasRect  => ui.CanvasRect;
-        private Image         dimmer      => ui.Dimmer;
+        private Image[]       dimPanels   => ui.DimPanels;
+        private RectTransform[] dimRects  => ui.DimRects;
         private GameObject    card        => ui.Card;
         private Text          cardTitle   => ui.CardTitle;
         private Text          cardBody    => ui.CardBody;
@@ -498,11 +499,11 @@ namespace SimpleVoxelSystem
 
         void AnimateDimmer()
         {
-            if (dimmer == null) return;
+            if (dimPanels == null) return;
             dimCurrent = Mathf.MoveTowards(dimCurrent, dimTarget, Time.unscaledDeltaTime * 3f);
-            Color c = dimmer.color;
-            c.a = dimCurrent;
-            dimmer.color = c;
+            Color c = new Color(0f, 0f, 0f, dimCurrent);
+            foreach (var img in dimPanels)
+                if (img != null) img.color = c;
         }
 
         void SetHighlight(RectTransform target, bool arrow = false)
@@ -515,7 +516,12 @@ namespace SimpleVoxelSystem
 
         void TrackHighlight()
         {
-            if (hlTarget == null || hlRect == null || canvasRect == null) return;
+            if (hlTarget == null || hlRect == null || canvasRect == null)
+            {
+                // No highlight target — full-screen dim (hole = zero size at canvas centre)
+                UpdateDimHole(Vector2.zero, Vector2.zero);
+                return;
+            }
 
             Vector3[] corners = new Vector3[4];
             hlTarget.GetWorldCorners(corners);
@@ -541,6 +547,10 @@ namespace SimpleVoxelSystem
                 hlRect.anchoredPosition = local;
                 hlRect.sizeDelta        = screenSize;
 
+                // Cut spotlight hole around the button so its labels stay readable.
+                // Add a small padding so the border outline overlaps the edge slightly.
+                UpdateDimHole(local, screenSize + new Vector2(6f, 6f));
+
                 if (arrowLabel != null && hlArrow)
                 {
                     arrowLabel.gameObject.SetActive(true);
@@ -550,6 +560,43 @@ namespace SimpleVoxelSystem
                         local + new Vector2(0f, screenSize.y * 0.5f + 22f);
                 }
             }
+        }
+
+        /// <summary>
+        /// Repositions the 4 dim panels so they surround <paramref name="holeCenter"/>
+        /// leaving a transparent window of <paramref name="holeSize"/> at that position.
+        /// When holeSize == zero the panels together cover the full canvas.
+        /// </summary>
+        void UpdateDimHole(Vector2 holeCenter, Vector2 holeSize)
+        {
+            if (dimRects == null || canvasRect == null) return;
+
+            float cW = canvasRect.rect.width;
+            float cH = canvasRect.rect.height;
+            if (cW <= 0f || cH <= 0f) return;
+
+            // Convert canvas-local coords (origin=centre) to normalised 0..1
+            float nl = Mathf.Clamp01((holeCenter.x - holeSize.x * 0.5f + cW * 0.5f) / cW);
+            float nr = Mathf.Clamp01((holeCenter.x + holeSize.x * 0.5f + cW * 0.5f) / cW);
+            float nb = Mathf.Clamp01((holeCenter.y - holeSize.y * 0.5f + cH * 0.5f) / cH);
+            float nt = Mathf.Clamp01((holeCenter.y + holeSize.y * 0.5f + cH * 0.5f) / cH);
+
+            // [0] Top  — from holeTop to screen top
+            SetDimRect(dimRects[0], new Vector2(0f, nt), new Vector2(1f, 1f));
+            // [1] Bottom — from screen bottom to holeBottom
+            SetDimRect(dimRects[1], new Vector2(0f, 0f), new Vector2(1f, nb));
+            // [2] Left  — vertical band at hole height, left of hole
+            SetDimRect(dimRects[2], new Vector2(0f, nb), new Vector2(nl, nt));
+            // [3] Right — vertical band at hole height, right of hole
+            SetDimRect(dimRects[3], new Vector2(nr, nb), new Vector2(1f, nt));
+        }
+
+        static void SetDimRect(RectTransform rt, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
         }
 
         // ═════════════════════════════════════════════════════════════════════

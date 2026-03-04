@@ -106,24 +106,28 @@ namespace SimpleVoxelSystem
             RefreshHUD();
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ð¡Ð¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð²ÑÐµÐ³Ð¾ UI
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ═══════════════════════════════════════════════════════════════════════
+        // Создание всего UI
+        // ═══════════════════════════════════════════════════════════════════════
 
         void BuildUI()
         {
-            // â”€â”€ Canvas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            rootCanvas = FindFirstObjectByType<Canvas>();
-            if (rootCanvas == null)
-            {
-                GameObject cGo = new GameObject("MineShopCanvas");
-                rootCanvas = cGo.AddComponent<Canvas>();
-                rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                cGo.AddComponent<GraphicRaycaster>();
-            }
+            // ── Canvas ───────────────────────────────────────────────────────
+            // IMPORTANT: always create a dedicated canvas — never grab the tutorial
+            // or any other existing canvas, as buttons parented there would render
+            // inside the tutorial overlay and their text would be hidden behind it.
+            GameObject cGo = new GameObject("MineShopCanvas");
+            DontDestroyOnLoad(cGo);
+            rootCanvas = cGo.AddComponent<Canvas>();
+            rootCanvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+            rootCanvas.sortingOrder = 100;   // below tutorial (7000), above scene
+            var cs = cGo.AddComponent<CanvasScaler>();
+            cs.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            cs.referenceResolution = new Vector2(1920f, 1080f);
+            cs.matchWidthOrHeight  = 0.5f;
+            cGo.AddComponent<GraphicRaycaster>();
 
-            // â”€â”€ EventSystem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── EventSystem ──────────────────────────────────────────────────
             if (EventSystem.current == null)
             {
                 GameObject es = new GameObject("EventSystem");
