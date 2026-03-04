@@ -12,9 +12,9 @@ namespace SimpleVoxelSystem
     {
         private const string LocalSaveKey = "svs_progress_v1";
         private const float AutosaveIntervalSeconds = 8f;
-        private const int ResetMoneyValue = 300;
-        private const int ResetXpValue = 0;
-        private const int ResetLevelValue = 1;
+        private const int ResetMoneyValue = EconomyTuning.StartMoney;
+        private const int ResetXpValue = EconomyTuning.StartMiningXP;
+        private const int ResetLevelValue = EconomyTuning.StartMiningLevel;
 
         [Serializable]
         private class ProgressSaveData
@@ -104,6 +104,12 @@ namespace SimpleVoxelSystem
         private float nextAutosaveTime;
         private float sdkWaitStartTime;
 
+        // Tracks the money value on the frame BEFORE any load completes.
+        // If GlobalEconomy.Money differs from StartMoney when ApplyLoadedState
+        // fires, it means a purchase happened during the load window and we
+        // must carry the delta forward instead of blindly overwriting.
+        private bool economyTouchedBeforeLoad;
+
         private int cachedMoney;
         private int cachedXP;
         private int cachedLevel;
@@ -144,10 +150,24 @@ namespace SimpleVoxelSystem
             mineMarket.OnPlacementCancelled -= OnPlacementCancelled;
         }
 
+        /// <summary>
+        /// Call this before any in-session money change (purchase, reward, etc.)
+        /// so that a late-arriving save-load cannot overwrite the change.
+        /// </summary>
+        public void NotifyEconomyTouched()
+        {
+            economyTouchedBeforeLoad = true;
+        }
+
         private IEnumerator Start()
         {
             yield return BindSceneRefs();
             sdkWaitStartTime = Time.unscaledTime;
+            // Snapshot economy at the moment we're about to request a load.
+            // Any deviation from StartMoney means the player already spent/earned
+            // money in the current session (e.g. bought a mine while SDK was still
+            // initialising). We'll apply that delta on top of the saved value.
+            economyTouchedBeforeLoad = (GlobalEconomy.Money != EconomyTuning.StartMoney);
             RequestLoadIfPossible();
         }
 
@@ -283,9 +303,29 @@ namespace SimpleVoxelSystem
                 return;
             }
 
-            GlobalEconomy.Money = save.money;
-            GlobalEconomy.MiningXP = save.miningXP;
             GlobalEconomy.MiningLevel = Mathf.Max(1, save.miningLevel);
+
+            // ── Money / XP: guard against the load racing with an in-session purchase ──
+            // Scenario: player buys a mine → MineMarket deducts money from GlobalEconomy
+            // → a moment later the cloud/local load fires and overwrites with the old value.
+            // Fix: if money was already changed before this load completed, carry the delta
+            // (spent / earned since session start) on top of the saved value.
+            if (!economyTouchedBeforeLoad)
+            {
+                // Normal path – no purchases happened before the save loaded.
+                GlobalEconomy.Money = save.money;
+                GlobalEconomy.MiningXP = save.miningXP;
+            }
+            else
+            {
+                // Delta path – purchases raced ahead of the load.
+                int deltaFromStart = GlobalEconomy.Money - EconomyTuning.StartMoney;
+                GlobalEconomy.Money = save.money + deltaFromStart;
+                // XP can only increase in a session; take the larger value.
+                GlobalEconomy.MiningXP = Mathf.Max(GlobalEconomy.MiningXP, save.miningXP);
+                Debug.Log($"[PlayerProgressPersistence] Load raced with session purchases. " +
+                          $"Saved money={save.money}, delta={deltaFromStart}, result={GlobalEconomy.Money}");
+            }
 
             PlayerPickaxe pp = FindFirstObjectByType<PlayerPickaxe>();
             if (pp != null)
@@ -410,8 +450,8 @@ namespace SimpleVoxelSystem
             int curStr = pp != null ? pp.playerStrength : 0;
             int curCap = pp != null ? pp.maxBackpackCapacity : 10;
             UpgradeManager um = FindFirstObjectByType<UpgradeManager>();
-            int curStrC = um != null ? um.playerStrengthCost : 100;
-            int curCapC = um != null ? um.backpackCapacityCost : 150;
+            int curStrC = um != null ? um.playerStrengthCost : EconomyTuning.PlayerStrengthUpgradeStartCost;
+            int curCapC = um != null ? um.backpackCapacityCost : EconomyTuning.BackpackUpgradeStartCost;
 
             bool hasCustomSpawn = wellGenerator != null && wellGenerator.HasCustomIslandSpawnPoint;
             Vector3 customSpawn = hasCustomSpawn ? wellGenerator.GetCustomIslandSpawnPoint() : Vector3.zero;

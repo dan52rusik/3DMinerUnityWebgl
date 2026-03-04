@@ -85,10 +85,10 @@ namespace SimpleVoxelSystem
             sellBtn = RuntimeUIFactory.MakeBtn(panel.transform, "SellBtn", "SELL INVENTORY", pos: new Vector2(0, -30));
             sellBtn.onClick.AddListener(OnSell);
 
-            upgradeStrBtn = RuntimeUIFactory.MakeBtn(panel.transform, "UpgStr", "UPG STR ($200)", pos: new Vector2(-70, -80), size: new Vector2(130, 30));
+            upgradeStrBtn = RuntimeUIFactory.MakeBtn(panel.transform, "UpgStr", $"UPG STR (${EconomyTuning.MinionStrengthUpgradeCost})", pos: new Vector2(-70, -80), size: new Vector2(130, 30));
             upgradeStrBtn.onClick.AddListener(OnUpgradeStrength);
 
-            upgradeCapBtn = RuntimeUIFactory.MakeBtn(panel.transform, "UpgCap", "UPG CAP ($200)", pos: new Vector2(70, -80), size: new Vector2(130, 30));
+            upgradeCapBtn = RuntimeUIFactory.MakeBtn(panel.transform, "UpgCap", $"UPG CAP (${EconomyTuning.MinionCapacityUpgradeCost})", pos: new Vector2(70, -80), size: new Vector2(130, 30));
             upgradeCapBtn.onClick.AddListener(OnUpgradeCapacity);
 
             Button closeBtn = RuntimeUIFactory.MakeBtn(panel.transform, "Close", "X",
@@ -257,19 +257,19 @@ namespace SimpleVoxelSystem
 
         private void OnUpgradeStrength()
         {
-            if (GlobalEconomy.Money >= 200)
+            if (GlobalEconomy.Money >= EconomyTuning.MinionStrengthUpgradeCost)
             {
-                GlobalEconomy.Money -= 200;
+                GlobalEconomy.Money -= EconomyTuning.MinionStrengthUpgradeCost;
                 activeMinion.strength++;
             }
         }
 
         private void OnUpgradeCapacity()
         {
-            if (GlobalEconomy.Money >= 200)
+            if (GlobalEconomy.Money >= EconomyTuning.MinionCapacityUpgradeCost)
             {
-                GlobalEconomy.Money -= 200;
-                activeMinion.capacity += 5;
+                GlobalEconomy.Money -= EconomyTuning.MinionCapacityUpgradeCost;
+                activeMinion.capacity += EconomyTuning.MinionCapacityPerUpgrade;
             }
         }
     }

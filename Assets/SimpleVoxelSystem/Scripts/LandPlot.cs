@@ -9,7 +9,7 @@ namespace SimpleVoxelSystem
     public class LandPlot : MonoBehaviour
     {
         [Header("Цена")]
-        public int purchasePrice = 500;
+        public int purchasePrice = EconomyTuning.LandPlotPurchasePrice;
         public bool isPurchased  = false;
 
         [Header("Сцена")]
@@ -23,6 +23,12 @@ namespace SimpleVoxelSystem
         public int length  = 5;
 
         // ─────────────────────────────────────────────────────────────────────
+
+        private void Awake()
+        {
+            if (purchasePrice <= 0)
+                purchasePrice = EconomyTuning.LandPlotPurchasePrice;
+        }
 
         public void Purchase()
         {

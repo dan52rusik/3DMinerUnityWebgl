@@ -27,7 +27,7 @@ namespace SimpleVoxelSystem.Editor
 
             // 2 — ScriptableObject'ы шахт
             MineShopData bronze  = EnsureMineAsset("Mine_Bronze",  "Бронзовая шахта",
-                buyPrice: 300, depthMin: 3, depthMax: 5,
+                buyPrice: EconomyTuning.BronzeMinePrice, depthMin: EconomyTuning.BronzeMineDepthMin, depthMax: EconomyTuning.BronzeMineDepthMax,
                 labelColor: new Color(0.80f, 0.50f, 0.20f),
                 layers: new BlockLayer[]
                 {
@@ -36,7 +36,7 @@ namespace SimpleVoxelSystem.Editor
                 });
 
             MineShopData silver  = EnsureMineAsset("Mine_Silver", "Серебряная шахта",
-                buyPrice: 800, depthMin: 5, depthMax: 9,
+                buyPrice: EconomyTuning.SilverMinePrice, depthMin: EconomyTuning.SilverMineDepthMin, depthMax: EconomyTuning.SilverMineDepthMax,
                 labelColor: new Color(0.70f, 0.70f, 0.75f),
                 layers: new BlockLayer[]
                 {
@@ -46,7 +46,7 @@ namespace SimpleVoxelSystem.Editor
                 });
 
             MineShopData gold    = EnsureMineAsset("Mine_Gold", "Золотая шахта",
-                buyPrice: 2000, depthMin: 10, depthMax: 15,
+                buyPrice: EconomyTuning.GoldMinePrice, depthMin: EconomyTuning.GoldMineDepthMin, depthMax: EconomyTuning.GoldMineDepthMax,
                 labelColor: new Color(1.00f, 0.84f, 0.10f),
                 layers: new BlockLayer[]
                 {
@@ -99,7 +99,7 @@ namespace SimpleVoxelSystem.Editor
 
             // 6 — Стартовые деньги (только если 0)
             if (GlobalEconomy.Money == 0)
-                GlobalEconomy.Money = 500;
+                GlobalEconomy.Money = EconomyTuning.StartMoney;
 
             Debug.Log("[MineSystemSetup] ✅ Готово! MineMarket настроен, 3 шахты созданы в " + MinesFolder);
             EditorUtility.DisplayDialog("Mine System Setup",
@@ -107,7 +107,7 @@ namespace SimpleVoxelSystem.Editor
                 "• 3 класса шахт созданы в Assets/SimpleVoxelSystem/Mines/\n" +
                 "• MineMarket добавлен на WellGenerator\n" +
                 "• MineShopUI добавлен — весь UI строится автоматически\n" +
-                "• Стартовые деньги: 500₽\n\n" +
+                $"• Стартовые деньги: {EconomyTuning.StartMoney}₽\n\n" +
                 "▶ Просто нажмите Play!", "OK");
         }
 
@@ -138,14 +138,14 @@ namespace SimpleVoxelSystem.Editor
             MineShopData data = ScriptableObject.CreateInstance<MineShopData>();
             data.displayName    = displayName;
             data.buyPrice       = buyPrice;
-            data.sellBackRatio  = 0.5f;
+            data.sellBackRatio  = EconomyTuning.BronzeMineSellBackRatio;
             data.depthMin       = depthMin;
             data.depthMax       = depthMax;
             data.labelColor     = labelColor;
             data.layers         = layers;
-            data.wellWidth      = 5;
-            data.wellLength     = 5;
-            data.padding        = 3;
+            data.wellWidth      = EconomyTuning.DefaultMineWellWidth;
+            data.wellLength     = EconomyTuning.DefaultMineWellLength;
+            data.padding        = EconomyTuning.DefaultMinePadding;
 
             AssetDatabase.CreateAsset(data, path);
             Debug.Log($"[MineSystemSetup] Создан '{path}'");

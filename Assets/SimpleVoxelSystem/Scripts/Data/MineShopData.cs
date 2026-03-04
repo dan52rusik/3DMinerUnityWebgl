@@ -20,18 +20,18 @@ namespace SimpleVoxelSystem
         public Color  labelColor   = new Color(0.8f, 0.5f, 0.2f);
 
         [Header("Цена")]
-        public int buyPrice  = 500;   // цена покупки
+        public int buyPrice  = EconomyTuning.BronzeMinePrice;   // цена покупки
         [Range(0f, 1f)]
-        public float sellBackRatio = 0.5f; // за сколько можно продать истощённую шахту
+        public float sellBackRatio = EconomyTuning.BronzeMineSellBackRatio; // за сколько можно продать истощённую шахту
 
         [Header("Размер шахты")]
-        public int wellWidth  = 5;
-        public int wellLength = 5;
+        public int wellWidth  = EconomyTuning.DefaultMineWellWidth;
+        public int wellLength = EconomyTuning.DefaultMineWellLength;
         [Range(1, 30)]
-        public int depthMin = 3;
+        public int depthMin = EconomyTuning.BronzeMineDepthMin;
         [Range(1, 30)]
-        public int depthMax = 6;
-        public int padding  = 3;
+        public int depthMax = EconomyTuning.BronzeMineDepthMax;
+        public int padding  = EconomyTuning.DefaultMinePadding;
 
         [Header("Состав блоков (веса по слою)")]
         public BlockLayer[] layers = new BlockLayer[]

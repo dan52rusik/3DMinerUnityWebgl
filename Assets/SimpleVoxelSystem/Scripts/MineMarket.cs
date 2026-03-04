@@ -87,10 +87,10 @@ namespace SimpleVoxelSystem
             bronze.displayName  = "Бронзовая шахта";
             bronze.description  = "Небольшая, преимущественно земля и камень.";
             bronze.labelColor   = new Color(0.80f, 0.50f, 0.20f);
-            bronze.buyPrice     = 300;
-            bronze.sellBackRatio= 0.5f;
-            bronze.depthMin     = 3;  bronze.depthMax = 5;
-            bronze.wellWidth    = 5;  bronze.wellLength = 5; bronze.padding = 3;
+            bronze.buyPrice     = EconomyTuning.BronzeMinePrice;
+            bronze.sellBackRatio= EconomyTuning.BronzeMineSellBackRatio;
+            bronze.depthMin     = EconomyTuning.BronzeMineDepthMin;  bronze.depthMax = EconomyTuning.BronzeMineDepthMax;
+            bronze.wellWidth    = EconomyTuning.DefaultMineWellWidth;  bronze.wellLength = EconomyTuning.DefaultMineWellLength; bronze.padding = EconomyTuning.DefaultMinePadding;
             bronze.layers       = new BlockLayer[]
             {
                 new BlockLayer { maxDepth=2,  dirtWeight=90, stoneWeight=10, ironWeight=0,  goldWeight=0 },
@@ -103,10 +103,10 @@ namespace SimpleVoxelSystem
             silver.displayName  = "Серебряная шахта";
             silver.description  = "Средняя. Железо и немного золота в глубине.";
             silver.labelColor   = new Color(0.70f, 0.70f, 0.80f);
-            silver.buyPrice     = 800;
-            silver.sellBackRatio= 0.5f;
-            silver.depthMin     = 5;  silver.depthMax = 9;
-            silver.wellWidth    = 5;  silver.wellLength = 5; silver.padding = 3;
+            silver.buyPrice     = EconomyTuning.SilverMinePrice;
+            silver.sellBackRatio= EconomyTuning.SilverMineSellBackRatio;
+            silver.depthMin     = EconomyTuning.SilverMineDepthMin;  silver.depthMax = EconomyTuning.SilverMineDepthMax;
+            silver.wellWidth    = EconomyTuning.DefaultMineWellWidth;  silver.wellLength = EconomyTuning.DefaultMineWellLength; silver.padding = EconomyTuning.DefaultMinePadding;
             silver.layers       = new BlockLayer[]
             {
                 new BlockLayer { maxDepth=2,  dirtWeight=70, stoneWeight=30, ironWeight=0,  goldWeight=0 },
@@ -120,10 +120,10 @@ namespace SimpleVoxelSystem
             gold.displayName  = "Золотая шахта";
             gold.description  = "Глубокая. Много железа и золота.";
             gold.labelColor   = new Color(1.00f, 0.84f, 0.10f);
-            gold.buyPrice     = 2000;
-            gold.sellBackRatio= 0.5f;
-            gold.depthMin     = 10; gold.depthMax = 15;
-            gold.wellWidth    = 5;  gold.wellLength = 5; gold.padding = 3;
+            gold.buyPrice     = EconomyTuning.GoldMinePrice;
+            gold.sellBackRatio= EconomyTuning.GoldMineSellBackRatio;
+            gold.depthMin     = EconomyTuning.GoldMineDepthMin; gold.depthMax = EconomyTuning.GoldMineDepthMax;
+            gold.wellWidth    = EconomyTuning.DefaultMineWellWidth;  gold.wellLength = EconomyTuning.DefaultMineWellLength; gold.padding = EconomyTuning.DefaultMinePadding;
             gold.layers       = new BlockLayer[]
             {
                 new BlockLayer { maxDepth=2,  dirtWeight=50, stoneWeight=50, ironWeight=0,  goldWeight=0  },
@@ -226,6 +226,12 @@ namespace SimpleVoxelSystem
         {
             if (data == null) return false;
             if (GlobalEconomy.Money < data.buyPrice) { if (verboseLogs) Debug.Log("[MineMarket] Мало денег."); return false; }
+
+            // Notify persistence BEFORE deducting so it can snapshot the pre-purchase
+            // state and won't overwrite with a stale load arriving moments later.
+            var persistence = UnityEngine.Object.FindFirstObjectByType<PlayerProgressPersistence>();
+            if (persistence != null)
+                persistence.NotifyEconomyTouched();
 
             // Синхронизация через сервер
             var networkAvatar = GetLocalNetworkAvatar();

@@ -37,7 +37,7 @@ namespace SimpleVoxelSystem
             
             container = RuntimeUIFactory.MakeScrollContainer(shopPanel.transform, new Vector2(10, 10), new Vector2(-10, -50));
             
-            CreateShopItem("Standard Minion", "A small helper to mine for you.", 1000);
+            CreateShopItem("Standard Minion", "A small helper to mine for you.", EconomyTuning.MinionPurchasePrice);
 
             shopPanel.SetActive(false);
             overlay.SetActive(false);

@@ -16,9 +16,9 @@ namespace SimpleVoxelSystem.Net
     public class NetPlayerAvatar : NetworkBehaviour
     {
         [Header("Economy (Server Authoritative)")]
-        public NetworkVariable<int> money = new NetworkVariable<int>(300, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        public NetworkVariable<int> miningXP = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        public NetworkVariable<int> miningLevel = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public NetworkVariable<int> money = new NetworkVariable<int>(EconomyTuning.StartMoney, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public NetworkVariable<int> miningXP = new NetworkVariable<int>(EconomyTuning.StartMiningXP, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public NetworkVariable<int> miningLevel = new NetworkVariable<int>(EconomyTuning.StartMiningLevel, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public NetworkVariable<FixedString32Bytes> playerName =
             new NetworkVariable<FixedString32Bytes>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -144,7 +144,7 @@ namespace SimpleVoxelSystem.Net
         public void AddRewardsServerRpc(int moneyToAdd, int xpToAdd)
         {
             money.Value += moneyToAdd;
-            int nextLevelThreshold = miningLevel.Value * 50;
+            int nextLevelThreshold = miningLevel.Value * EconomyTuning.MiningXpPerLevelMultiplier;
             int newXP = miningXP.Value + xpToAdd;
             
             if (newXP >= nextLevelThreshold)

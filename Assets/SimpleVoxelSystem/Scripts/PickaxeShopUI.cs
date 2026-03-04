@@ -61,10 +61,10 @@ namespace SimpleVoxelSystem
 
             availablePickaxes = new List<PickaxeData>
             {
-                CreateData("Stone Pickaxe", "Faster than default.", 500, 2, 1, new Color(0.5f, 0.5f, 0.5f)),
-                CreateData("Iron Pickaxe", "Solid upgrade for mining.", 2000, 5, 3, new Color(0.8f, 0.8f, 0.8f)),
-                CreateData("Gold Pickaxe", "Very fast but expensive.", 5000, 10, 6, new Color(1f, 0.9f, 0f)),
-                CreateData("Diamond Pickaxe", "Top tier pickaxe.", 15000, 25, 10, new Color(0.3f, 0.9f, 1f))
+                CreateData("Stone Pickaxe", "Faster than default.", EconomyTuning.StonePickaxePrice, EconomyTuning.StonePickaxePower, EconomyTuning.StonePickaxeRequiredLevel, new Color(0.5f, 0.5f, 0.5f)),
+                CreateData("Iron Pickaxe", "Solid upgrade for mining.", EconomyTuning.IronPickaxePrice, EconomyTuning.IronPickaxePower, EconomyTuning.IronPickaxeRequiredLevel, new Color(0.8f, 0.8f, 0.8f)),
+                CreateData("Gold Pickaxe", "Very fast but expensive.", EconomyTuning.GoldPickaxePrice, EconomyTuning.GoldPickaxePower, EconomyTuning.GoldPickaxeRequiredLevel, new Color(1f, 0.9f, 0f)),
+                CreateData("Diamond Pickaxe", "Top tier pickaxe.", EconomyTuning.DiamondPickaxePrice, EconomyTuning.DiamondPickaxePower, EconomyTuning.DiamondPickaxeRequiredLevel, new Color(0.3f, 0.9f, 1f))
             };
         }
 

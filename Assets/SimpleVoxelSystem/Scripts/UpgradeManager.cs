@@ -7,8 +7,8 @@ namespace SimpleVoxelSystem
         public PlayerPickaxe playerPickaxe;
 
         [Header("Upgrade Costs")]
-        public int playerStrengthCost = 100;
-        public int backpackCapacityCost = 150;
+        public int playerStrengthCost = EconomyTuning.PlayerStrengthUpgradeStartCost;
+        public int backpackCapacityCost = EconomyTuning.BackpackUpgradeStartCost;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -26,6 +26,11 @@ namespace SimpleVoxelSystem
             if (playerPickaxe == null)
                 playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();
 
+            if (playerStrengthCost <= 0)
+                playerStrengthCost = EconomyTuning.PlayerStrengthUpgradeStartCost;
+            if (backpackCapacityCost <= 0)
+                backpackCapacityCost = EconomyTuning.BackpackUpgradeStartCost;
+
             if (GetComponent<UpgradeHUD>() == null)
                 gameObject.AddComponent<UpgradeHUD>();
         }
@@ -38,7 +43,7 @@ namespace SimpleVoxelSystem
                 playerPickaxe.playerStrength++;
                 
                 // Увеличиваем стоимость следующего апгрейда
-                playerStrengthCost = Mathf.RoundToInt(playerStrengthCost * 1.5f);
+                playerStrengthCost = Mathf.RoundToInt(playerStrengthCost * EconomyTuning.PlayerUpgradeCostMultiplier);
                 
                 Debug.Log($"Сила персонажа улучшена! Бонус: +{playerPickaxe.playerStrength}. Остаток денег: {GlobalEconomy.Money}");
             }
@@ -53,10 +58,10 @@ namespace SimpleVoxelSystem
             if (GlobalEconomy.Money >= backpackCapacityCost)
             {
                 GlobalEconomy.Money -= backpackCapacityCost;
-                playerPickaxe.maxBackpackCapacity += 5; // Увеличиваем на 5 мест
+                playerPickaxe.maxBackpackCapacity += EconomyTuning.BackpackCapacityPerUpgrade;
                 
                 // Увеличиваем стоимость
-                backpackCapacityCost = Mathf.RoundToInt(backpackCapacityCost * 1.5f);
+                backpackCapacityCost = Mathf.RoundToInt(backpackCapacityCost * EconomyTuning.PlayerUpgradeCostMultiplier);
                 
                 Debug.Log($"Рюкзак улучшен! Вместимость: {playerPickaxe.maxBackpackCapacity}. Остаток денег: {GlobalEconomy.Money}");
             }
