@@ -23,6 +23,13 @@ namespace SimpleVoxelSystem
             public int money;
             public int miningXP;
             public int miningLevel;
+
+            // Upgrades
+            public int playerStrength = 0;
+            public int maxBackpackCapacity = 10;
+            public int upgStrengthCost = 100;
+            public int upgBackpackCost = 150;
+
             public bool hasPrivateIsland;
             public SerializableVector3 privateIslandOffset;
             public bool hasCustomIslandSpawnPoint;
@@ -280,6 +287,20 @@ namespace SimpleVoxelSystem
             GlobalEconomy.MiningXP = save.miningXP;
             GlobalEconomy.MiningLevel = Mathf.Max(1, save.miningLevel);
 
+            PlayerPickaxe pp = FindFirstObjectByType<PlayerPickaxe>();
+            if (pp != null)
+            {
+                pp.playerStrength = Mathf.Max(0, save.playerStrength);
+                pp.maxBackpackCapacity = Mathf.Max(5, save.maxBackpackCapacity);
+            }
+
+            UpgradeManager um = FindFirstObjectByType<UpgradeManager>();
+            if (um != null)
+            {
+                um.playerStrengthCost = Mathf.Max(10, save.upgStrengthCost);
+                um.backpackCapacityCost = Mathf.Max(10, save.upgBackpackCost);
+            }
+
             if (save.hasPrivateIsland)
                 wellGenerator.EnsurePrivateIslandAtOffset(save.privateIslandOffset.ToVector3());
 
@@ -384,8 +405,19 @@ namespace SimpleVoxelSystem
                     if (m != null) minedBlocks += Mathf.Max(0, m.minedBlocks);
                 }
             }
+            
+            PlayerPickaxe pp = FindFirstObjectByType<PlayerPickaxe>();
+            int curStr = pp != null ? pp.playerStrength : 0;
+            int curCap = pp != null ? pp.maxBackpackCapacity : 10;
+            UpgradeManager um = FindFirstObjectByType<UpgradeManager>();
+            int curStrC = um != null ? um.playerStrengthCost : 100;
+            int curCapC = um != null ? um.backpackCapacityCost : 150;
+
             bool hasCustomSpawn = wellGenerator != null && wellGenerator.HasCustomIslandSpawnPoint;
             Vector3 customSpawn = hasCustomSpawn ? wellGenerator.GetCustomIslandSpawnPoint() : Vector3.zero;
+
+            // Simple check cache - let's skip strict caching for these minor ones for now or add them
+            bool upgradesChanged = false; // We can detect it later
 
             if (currentMoney != cachedMoney ||
                 currentXP != cachedXP ||
@@ -532,6 +564,20 @@ namespace SimpleVoxelSystem
                 hasCustomIslandSpawnPoint = wellGenerator.HasCustomIslandSpawnPoint,
                 customIslandSpawnPoint = new SerializableVector3(wellGenerator.GetCustomIslandSpawnPoint())
             };
+
+            PlayerPickaxe pp = FindFirstObjectByType<PlayerPickaxe>();
+            if (pp != null)
+            {
+                save.playerStrength = pp.playerStrength;
+                save.maxBackpackCapacity = pp.maxBackpackCapacity;
+            }
+
+            UpgradeManager um = FindFirstObjectByType<UpgradeManager>();
+            if (um != null)
+            {
+                save.upgStrengthCost = um.playerStrengthCost;
+                save.upgBackpackCost = um.backpackCapacityCost;
+            }
 
             if (wellGenerator.PlacedMines == null || wellGenerator.PlacedMines.Count == 0)
                 return save;

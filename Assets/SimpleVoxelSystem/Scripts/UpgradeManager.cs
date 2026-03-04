@@ -7,24 +7,44 @@ namespace SimpleVoxelSystem
         public PlayerPickaxe playerPickaxe;
 
         [Header("Upgrade Costs")]
-        public int pickaxePowerCost = 100;
+        public int playerStrengthCost = 100;
         public int backpackCapacityCost = 150;
 
-        public void UpgradePickaxePower()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void Bootstrap()
         {
-            if (GlobalEconomy.Money >= pickaxePowerCost)
+            if (FindFirstObjectByType<UpgradeManager>() != null)
+                return;
+
+            GameObject go = new GameObject("UpgradeManager");
+            DontDestroyOnLoad(go);
+            go.AddComponent<UpgradeManager>();
+        }
+
+        private void Awake()
+        {
+            if (playerPickaxe == null)
+                playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();
+
+            if (GetComponent<UpgradeHUD>() == null)
+                gameObject.AddComponent<UpgradeHUD>();
+        }
+
+        public void UpgradePlayerStrength()
+        {
+            if (GlobalEconomy.Money >= playerStrengthCost)
             {
-                GlobalEconomy.Money -= pickaxePowerCost;
-                playerPickaxe.pickaxePower++;
+                GlobalEconomy.Money -= playerStrengthCost;
+                playerPickaxe.playerStrength++;
                 
                 // Увеличиваем стоимость следующего апгрейда
-                pickaxePowerCost = Mathf.RoundToInt(pickaxePowerCost * 1.5f);
+                playerStrengthCost = Mathf.RoundToInt(playerStrengthCost * 1.5f);
                 
-                Debug.Log($"Кирка улучшена! Сила: {playerPickaxe.pickaxePower}. Остаток денег: {GlobalEconomy.Money}");
+                Debug.Log($"Сила персонажа улучшена! Бонус: +{playerPickaxe.playerStrength}. Остаток денег: {GlobalEconomy.Money}");
             }
             else
             {
-                Debug.Log($"Не хватает денег для улучшения кирки. Нужно {pickaxePowerCost}");
+                Debug.Log($"Не хватает денег для улучшения силы. Нужно {playerStrengthCost}");
             }
         }
 

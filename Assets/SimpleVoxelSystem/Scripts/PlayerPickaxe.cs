@@ -18,7 +18,9 @@ namespace SimpleVoxelSystem
         public static void NotifyMineAttempt() => OnMineAttempt?.Invoke();
 
         [Header("Mining Setup")]
-        public int pickaxePower = 1;
+        public int pickaxePower = 1; 
+        [Tooltip("Permanent player bonus to mining damage")]
+        public int playerStrength = 0; 
         public float miningRange = 100f;
         public Camera miningCamera;
         public LayerMask miningLayers = Physics.DefaultRaycastLayers;
@@ -226,8 +228,9 @@ namespace SimpleVoxelSystem
             Vector3Int key = new Vector3Int(gx, gy, gz);
             int currentHealth = GetOrCreateBlockHealth(key, data);
             
-            int power = (currentPickaxe != null) ? currentPickaxe.miningPower : pickaxePower;
-            int damage = Mathf.Max(1, power);
+            int basePower = (currentPickaxe != null) ? currentPickaxe.miningPower : pickaxePower;
+            int totalPower = basePower + playerStrength;
+            int damage = Mathf.Max(1, totalPower);
             currentHealth -= damage;
 
             if (currentHealth > 0)

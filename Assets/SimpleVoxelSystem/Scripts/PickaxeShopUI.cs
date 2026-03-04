@@ -16,12 +16,15 @@ namespace SimpleVoxelSystem
         private GameObject overlay;
         private Text levelText;
         private Transform buttonContainer;
+        private UpgradeManager upgradeManager;
 
         private readonly List<GameObject> builtItems = new List<GameObject>();
         private readonly HashSet<int> ownedPickaxeIndices = new HashSet<int>();
 
         private const string OwnedPrefsKey = "svs_pickaxe_owned_indices_v1";
         private const string EquippedPrefsKey = "svs_pickaxe_equipped_index_v1";
+
+        public bool IsVisible => shopPanel != null && shopPanel.activeSelf;
 
         private static readonly Color ColPanel = new Color(0.1f, 0.1f, 0.12f, 0.95f);
         private static readonly Color ColText = new Color(0.95f, 0.95f, 0.95f, 1f);
@@ -95,6 +98,9 @@ namespace SimpleVoxelSystem
             levelText.rectTransform.anchoredPosition = new Vector2(0f, -45f);
 
             buttonContainer = RuntimeUIFactory.MakeScrollContainer(shopPanel.transform, new Vector2(10f, 10f), new Vector2(-10f, -80f));
+            
+            upgradeManager = FindFirstObjectByType<UpgradeManager>();
+            
             BuildButtons();
 
             overlay.SetActive(false);

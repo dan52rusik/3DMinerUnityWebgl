@@ -257,54 +257,21 @@ namespace SimpleVoxelSystem
 
         private TouchTapButton CreateTapButton(Transform parent, string name, string text, Vector2 anchor, Vector2 anchoredFromEdge, Color color)
         {
-            RectTransform rt = CreateRect(name, parent, anchor, anchor, Vector2.zero, Vector2.zero);
-            rt.pivot = anchor;
-            rt.anchoredPosition = new Vector2(anchor.x == 1f ? -anchoredFromEdge.x : anchoredFromEdge.x, anchor.y == 1f ? -anchoredFromEdge.y : anchoredFromEdge.y);
-            rt.sizeDelta = new Vector2(100f, 84f);
-
-            var img = rt.gameObject.AddComponent<Image>();
-            img.color = color;
-
-            var label = CreateLabel(rt, text, 24);
-            label.alignment = TextAnchor.MiddleCenter;
-
-            return rt.gameObject.AddComponent<TouchTapButton>();
+            Vector2 pos = new Vector2(anchor.x == 1f ? -anchoredFromEdge.x : anchoredFromEdge.x, anchor.y == 1f ? -anchoredFromEdge.y : anchoredFromEdge.y);
+            GameObject go = RuntimeUIFactory.MakePanel(name, parent, anchor, anchor, pos, new Vector2(100f, 84f), color);
+            RuntimeUIFactory.MakeLabel(go.transform, "Label", text, 24, TextAnchor.MiddleCenter, color: Color.white);
+            return go.AddComponent<TouchTapButton>();
         }
 
         private TouchHoldButton CreateHoldButton(Transform parent, string name, string text, Vector2 anchor, Vector2 anchoredFromEdge, Color color)
         {
-            RectTransform rt = CreateRect(name, parent, anchor, anchor, Vector2.zero, Vector2.zero);
-            rt.pivot = anchor;
-            rt.anchoredPosition = new Vector2(anchor.x == 1f ? -anchoredFromEdge.x : anchoredFromEdge.x, anchor.y == 1f ? -anchoredFromEdge.y : anchoredFromEdge.y);
-            rt.sizeDelta = new Vector2(100f, 84f);
-
-            var img = rt.gameObject.AddComponent<Image>();
-            img.color = color;
-
-            var label = CreateLabel(rt, text, 24);
-            label.alignment = TextAnchor.MiddleCenter;
-
-            return rt.gameObject.AddComponent<TouchHoldButton>();
+            Vector2 pos = new Vector2(anchor.x == 1f ? -anchoredFromEdge.x : anchoredFromEdge.x, anchor.y == 1f ? -anchoredFromEdge.y : anchoredFromEdge.y);
+            GameObject go = RuntimeUIFactory.MakePanel(name, parent, anchor, anchor, pos, new Vector2(100f, 84f), color);
+            RuntimeUIFactory.MakeLabel(go.transform, "Label", text, 24, TextAnchor.MiddleCenter, color: Color.white);
+            return go.AddComponent<TouchHoldButton>();
         }
 
-        private static Text CreateLabel(Transform parent, string text, int size)
-        {
-            var labelGo = new GameObject("Label");
-            labelGo.transform.SetParent(parent, false);
-            var rt = labelGo.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-
-            var t = labelGo.AddComponent<Text>();
-            t.font = RuntimeUiFont.Get();
-            t.fontSize = size;
-            t.supportRichText = false;
-            t.color = Color.white;
-            t.text = text;
-            return t;
-        }
+        // (Helper methods removed, now using RuntimeUIFactory)
 
         private class TouchTapButton : MonoBehaviour, IPointerDownHandler
         {

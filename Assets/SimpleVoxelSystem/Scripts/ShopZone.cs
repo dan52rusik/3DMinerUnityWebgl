@@ -146,6 +146,10 @@ namespace SimpleVoxelSystem
                 pickaxeShopUI.Toggle();
             else if (zoneType == ShopZoneType.Sell && playerPickaxe != null)
                 playerPickaxe.SellResources();
+
+            // Refresh prompt visibility only for the active zone
+            if (currentZone == this)
+                ShowPrompt(true);
         }
 
         void OnTriggerEnter(Collider other)
@@ -172,8 +176,8 @@ namespace SimpleVoxelSystem
 
             if (currentZone == this)
             {
-                currentZone = null;
                 ShowPrompt(false);
+                currentZone = null;
             }
             else if (!AnyZoneHasPlayerInside())
             {
@@ -256,56 +260,44 @@ namespace SimpleVoxelSystem
         { 
             if (promptPanel != null) 
             {
-                if (v && currentZone != null)
+                bool anyShopOpen = false;
+                if (currentZone != null)
+                {
+                    if (currentZone.mineShopUI != null && currentZone.mineShopUI.gameObject.activeInHierarchy) anyShopOpen = true;
+                    if (currentZone.pickaxeShopUI != null && currentZone.pickaxeShopUI.gameObject.activeInHierarchy) anyShopOpen = true;
+                }
+
+                if (v && currentZone != null && !anyShopOpen)
                 {
                     string keyStr = currentZone.GetOpenKeyDisplay().ToString();
                     string shopName = "магазин шахт";
                     if (currentZone.zoneType == ShopZoneType.Pickaxe) shopName = "магазин кирок";
                     else if (currentZone.zoneType == ShopZoneType.Sell) shopName = "точку продажи";
                     promptText.text = $"Press <color=#FFD700><b>[{keyStr}]</b></color> to open {shopName}";
+                    promptPanel.SetActive(true);
                 }
-                promptPanel.SetActive(v); 
+                else
+                {
+                    promptPanel.SetActive(false);
+                }
             } 
         }
 
         void EnsurePromptUI()
         {
-            if (promptPanel != null) return;
+            if (promptPanel != null && promptPanel.gameObject != null) return;
             var canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
-            promptPanel = new GameObject("ShopZonePrompt");
-            promptPanel.transform.SetParent(canvas.transform, false);
-            var rt = promptPanel.AddComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.5f, 0f);
-            rt.anchorMax = new Vector2(0.5f, 0f);
-            rt.pivot     = new Vector2(0.5f, 0f);
-            rt.anchoredPosition = new Vector2(0f, 60f);
-            rt.sizeDelta = new Vector2(370f, 48f);
-
-            var img = promptPanel.AddComponent<Image>();
-            img.color = new Color(0.05f, 0.05f, 0.12f, 0.90f);
-
-            var tGo = new GameObject("Label");
-            tGo.transform.SetParent(promptPanel.transform, false);
-            var trt = tGo.AddComponent<RectTransform>();
-            trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-            trt.sizeDelta = Vector2.zero;
-
-            promptText = tGo.AddComponent<Text>();
-            promptText.font      = RuntimeUiFont.Get();
-            promptText.fontSize  = 16;
-            promptText.alignment = TextAnchor.MiddleCenter;
-            promptText.color     = Color.white;
-            promptText.supportRichText = true;
-            promptText.text = "Press <color=#FFD700><b>[B]</b></color> to open mine shop";
+            promptPanel = RuntimeUIFactory.MakePanel("ShopZonePrompt", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -150f), new Vector2(370f, 48f), new Color(0.05f, 0.05f, 0.12f, 0.90f));
+            promptText = RuntimeUIFactory.MakeLabel(promptPanel.transform, "Label", "Press [B] to open", 16, TextAnchor.MiddleCenter);
 
             promptPanel.SetActive(false);
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Gizmo (Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Editor)
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ────────────────────────────────────────────────────────────────────
+        // Gizmo (только в Editor)
+        // ────────────────────────────────────────────────────────────────────
 
         void OnDrawGizmos()
         {
@@ -320,15 +312,14 @@ namespace SimpleVoxelSystem
 
 #if UNITY_EDITOR
             UnityEditor.Handles.color = Color.white;
-            string keyStr = "B";
-            string shopName = "Шахты";
-            if (zoneType == ShopZoneType.Pickaxe) { keyStr = "P"; shopName = "Кирки"; }
-            else if (zoneType == ShopZoneType.Sell) { keyStr = "R"; shopName = "Продажа"; }
+            string kStr = "B";
+            string sName = "Шахты";
+            if (zoneType == ShopZoneType.Pickaxe) { kStr = "P"; sName = "Кирки"; }
+            else if (zoneType == ShopZoneType.Sell) { kStr = "R"; sName = "Продажа"; }
             UnityEditor.Handles.Label(
                 transform.position + Vector3.up * (sizeY + 0.4f),
-                $"🛒 {shopName}  {sizeX}×{sizeY}×{sizeZ}  [{keyStr}]");
+                $"🛒 {sName}  {sizeX}×{sizeY}×{sizeZ}  [{kStr}]");
 #endif
         }
     }
 }
-
