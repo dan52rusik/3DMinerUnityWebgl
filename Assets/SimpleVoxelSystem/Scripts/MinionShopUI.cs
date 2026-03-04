@@ -72,38 +72,42 @@ namespace SimpleVoxelSystem
 
         private void SpawnMinion()
         {
-            // Spawn on the island, not in the lobby
             WellGenerator wellGen = FindFirstObjectByType<WellGenerator>();
-            Vector3 pos = Vector3.zero;
-            
+            Vector3 spawnPos = Vector3.zero;
+
             if (wellGen != null)
             {
-                // Spawn at the center of the private island
-                pos = wellGen.privateIslandOffset + new Vector3(wellGen.wellWidth / 2f, 2f, wellGen.wellLength / 2f);
+                // Minion should always be spawned on private island.
+                if (wellGen.IsInLobbyMode)
+                    wellGen.SwitchToMine();
+
+                VoxelIsland island = wellGen.ActiveIsland;
+                if (island != null)
+                {
+                    float cx = island.TotalX * 0.5f;
+                    float cz = island.TotalZ * 0.5f;
+                    spawnPos = island.transform.TransformPoint(new Vector3(cx, -wellGen.LobbyFloorY, cz));
+                    spawnPos.y += 1.0f;
+                }
             }
-            else
+
+            if (spawnPos == Vector3.zero)
             {
                 PlayerPickaxe player = FindFirstObjectByType<PlayerPickaxe>();
-                pos = player != null ? player.transform.position + Vector3.right * 2 : Vector3.zero;
+                spawnPos = player != null ? player.transform.position + Vector3.right * 2f : Vector3.zero;
             }
 
-            Debug.Log($"Spawning minion at island position: {pos}");
+            Debug.Log($"Spawning minion on island at: {spawnPos}");
 
             GameObject minion = new GameObject("Minion");
-            minion.transform.position = pos;
-            
-            // Basic visuals - a cube for now, but user asked for "half size of me"
-            // In a better implementation we would copy the player prefab
-            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            visual.transform.SetParent(minion.transform, false);
-            visual.transform.localScale = Vector3.one * 0.5f;
+            minion.transform.position = spawnPos;
 
-            minion.AddComponent<MinionAI>();
+            minion.AddComponent<MinionAI>(); // Visuals are built by MinionAI (BlockyMixCharacter).
             
             // Logic for management UI triggers
             BoxCollider bc = minion.AddComponent<BoxCollider>();
-            bc.center = new Vector3(0, 0.5f, 0);
-            bc.size = new Vector3(1, 1, 1);
+            bc.center = new Vector3(0f, 0.9f, 0f);
+            bc.size = new Vector3(0.9f, 1.8f, 0.9f);
         }
 
         public void Toggle()
