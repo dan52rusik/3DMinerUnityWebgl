@@ -144,6 +144,11 @@ namespace SimpleVoxelSystem
             // Ð Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð¸Ð³Ñ€Ð¾Ðº Ð²Ð½ÑƒÑ‚Ñ€Ð¸ Ð·Ð¾Ð½Ñ‹ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°
             if (!playerInside) return;
             if (currentZone != this) return;
+            if (OnboardingTutorial.IsShopInteractionBlocked(zoneType))
+            {
+                ShowPrompt(false);
+                return;
+            }
 
             // Refresh prompt visibility every frame while inside
             ShowPrompt(true);

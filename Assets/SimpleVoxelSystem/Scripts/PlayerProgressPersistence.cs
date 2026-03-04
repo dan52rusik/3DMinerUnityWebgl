@@ -526,6 +526,8 @@ namespace SimpleVoxelSystem
 
         public void ResetProgressToNewPlayer()
         {
+            ResetTutorialProgressFlags();
+
             if (wellGenerator == null)
                 wellGenerator = FindFirstObjectByType<WellGenerator>();
             if (mineMarket == null)
@@ -552,6 +554,8 @@ namespace SimpleVoxelSystem
 
         public static void ResetStoredProgressToNewPlayer()
         {
+            ResetTutorialProgressFlags();
+
             string json = BuildDefaultResetJson();
             PlayerPrefs.SetString(LocalSaveKey, json);
             PlayerPrefs.Save();
@@ -590,6 +594,11 @@ namespace SimpleVoxelSystem
             };
 
             return JsonUtility.ToJson(reset);
+        }
+
+        private static void ResetTutorialProgressFlags()
+        {
+            OnboardingTutorial.ResetTutorialStatic();
         }
 
         private ProgressSaveData BuildSaveData()

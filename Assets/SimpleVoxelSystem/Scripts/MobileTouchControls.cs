@@ -35,6 +35,12 @@ namespace SimpleVoxelSystem
         public bool RemoveHeld { get; private set; }
         public bool IsLookHeld { get; private set; }
         public Vector2 AimScreenPosition { get; private set; }
+        public RectTransform MoveAreaRect => joystick != null ? joystick.GetComponent<RectTransform>() : null;
+        public RectTransform MineButtonRect => mineButton != null ? mineButton.GetComponent<RectTransform>() : null;
+        public RectTransform JumpButtonRect => jumpButton != null ? jumpButton.GetComponent<RectTransform>() : null;
+        public RectTransform InteractButtonRect => interactButton != null ? interactButton.GetComponent<RectTransform>() : null;
+        public RectTransform RunButtonRect => runButton != null ? runButton.GetComponent<RectTransform>() : null;
+        public RectTransform MinionMenuButtonRect => minionMenuButton != null ? minionMenuButton.GetComponent<RectTransform>() : null;
 
         private TouchJoystick joystick;
         private TouchLookPad lookPad;

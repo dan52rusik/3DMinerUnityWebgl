@@ -71,6 +71,9 @@ namespace SimpleVoxelSystem
             if (!enableManualRaycastMining)
                 return;
 
+            if (OnboardingTutorial.IsGameplayInputBlocked)
+                return;
+
             if (!IsMinePressedDown())
                 return;
 
@@ -87,6 +90,9 @@ namespace SimpleVoxelSystem
 
         public bool TryMineGridTarget(int gx, int gy, int gz, VoxelIsland islandOverride = null)
         {
+            if (OnboardingTutorial.IsGameplayInputBlocked)
+                return false;
+
             if (currentBackpackLoad >= maxBackpackCapacity)
             {
                 LogBackpackFull();

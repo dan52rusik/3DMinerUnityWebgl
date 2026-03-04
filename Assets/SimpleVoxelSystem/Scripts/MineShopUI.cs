@@ -31,6 +31,8 @@ namespace SimpleVoxelSystem
         private Text       cancelBtnText;
 
         public bool IsVisible => shopPanel != null && shopPanel.activeSelf;
+        public Button CreateIslandButton => createIslandBtn;
+        public Button SwitchWorldButton => switchWorldBtn;
 
         private Text       statusLabel;
         private Button     sellMineBtn;

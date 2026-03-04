@@ -122,6 +122,9 @@ namespace SimpleVoxelSystem
             if (controller == null || !controller.enabled || !controller.gameObject.activeInHierarchy)
                 return;
 
+            if (OnboardingTutorial.IsGameplayInputBlocked && autoMoveActive)
+                CancelAutoMove();
+
             Vector2 moveInput = ReadMoveInput();
             bool hasManualMove = moveInput.sqrMagnitude > 0.0001f;
             bool isRunning = IsRunPressed();
@@ -347,6 +350,9 @@ namespace SimpleVoxelSystem
 
         Vector2 ReadMoveInput()
         {
+            if (OnboardingTutorial.IsGameplayInputBlocked)
+                return Vector2.zero;
+
             if (mobileControls != null && mobileControls.IsActive)
                 return Vector2.ClampMagnitude(mobileControls.MoveVector, 1f);
 
@@ -384,6 +390,9 @@ namespace SimpleVoxelSystem
 
         bool IsRunPressed()
         {
+            if (OnboardingTutorial.IsGameplayInputBlocked)
+                return false;
+
             if (mobileControls != null && mobileControls.IsActive)
                 return mobileControls.RunHeld;
 
@@ -398,6 +407,9 @@ namespace SimpleVoxelSystem
 
         bool WasJumpPressed()
         {
+            if (OnboardingTutorial.IsGameplayInputBlocked)
+                return false;
+
             if (mobileControls != null && mobileControls.IsActive)
                 return mobileControls.JumpPressedThisFrame;
 

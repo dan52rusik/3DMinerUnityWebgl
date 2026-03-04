@@ -312,6 +312,8 @@ namespace SimpleVoxelSystem
 
         public void ResetPlayerWorldForNewProgress()
         {
+            OnboardingTutorial.ResetTutorialStatic();
+
             if (!IsInLobbyMode) SwitchToLobby();
             miningManager.ClearMines();
 
