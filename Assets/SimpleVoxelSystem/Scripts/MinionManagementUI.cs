@@ -1,0 +1,182 @@
+using UnityEngine;
+using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
+namespace SimpleVoxelSystem
+{
+    public class MinionManagementUI : MonoBehaviour
+    {
+        private static MinionManagementUI instance;
+        private MinionAI activeMinion;
+
+        private GameObject panel;
+        private GameObject overviewPanel;
+        private Transform overviewContainer;
+        private Text infoLabel;
+        private Button sellBtn;
+        private Button upgradeStrBtn;
+        private Button upgradeCapBtn;
+
+        private bool isOverviewMode = false;
+
+        public static void Show(MinionAI minion)
+        {
+            EnsureInstance();
+            instance.activeMinion = minion;
+            instance.isOverviewMode = false;
+            instance.Open();
+        }
+
+        public static void ToggleOverview()
+        {
+            EnsureInstance();
+            if (instance.overviewPanel != null && instance.overviewPanel.activeSelf)
+            {
+                instance.overviewPanel.SetActive(false);
+            }
+            else
+            {
+                instance.isOverviewMode = true;
+                instance.Open();
+            }
+        }
+
+        private static void EnsureInstance()
+        {
+            if (instance == null)
+            {
+                GameObject go = new GameObject("MinionManagementUI");
+                instance = go.AddComponent<MinionManagementUI>();
+            }
+        }
+
+        private void Awake()
+        {
+            instance = this;
+            BuildUI();
+        }
+
+        private void BuildUI()
+        {
+            Canvas canvas = FindFirstObjectByType<Canvas>();
+            if (canvas == null) return;
+
+            panel = RuntimeUIFactory.MakePanel("MinionManagePanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 250));
+            
+            RuntimeUIFactory.MakeLabel(panel.transform, "Title", "MINION DETAILS", 16, TextAnchor.UpperCenter, new Vector2(0, -10));
+            
+            infoLabel = RuntimeUIFactory.MakeLabel(panel.transform, "Info", "Stats...", 13, TextAnchor.MiddleCenter, new Vector2(0, 20));
+            
+            sellBtn = RuntimeUIFactory.MakeBtn(panel.transform, "SellBtn", "SELL INVENTORY", pos: new Vector2(0, -30));
+            sellBtn.onClick.AddListener(OnSell);
+
+            upgradeStrBtn = RuntimeUIFactory.MakeBtn(panel.transform, "UpgStr", "UPG STR ($200)", pos: new Vector2(-70, -80), size: new Vector2(130, 30));
+            upgradeStrBtn.onClick.AddListener(OnUpgradeStrength);
+
+            upgradeCapBtn = RuntimeUIFactory.MakeBtn(panel.transform, "UpgCap", "UPG CAP ($200)", pos: new Vector2(70, -80), size: new Vector2(130, 30));
+            upgradeCapBtn.onClick.AddListener(OnUpgradeCapacity);
+
+            Button closeBtn = RuntimeUIFactory.MakeBtn(panel.transform, "Close", "X", pos: new Vector2(135, 110), size: new Vector2(30, 30));
+            closeBtn.onClick.AddListener(() => panel.SetActive(false));
+
+            panel.SetActive(false);
+
+            // --- BUILD OVERVIEW PANEL ---
+            overviewPanel = RuntimeUIFactory.MakePanel("MinionOverviewPanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(400, 450));
+            RuntimeUIFactory.MakeLabel(overviewPanel.transform, "Title", "MINION OVERVIEW", 20, TextAnchor.UpperCenter, new Vector2(0, -15));
+            
+            overviewContainer = RuntimeUIFactory.MakeScrollContainer(overviewPanel.transform, new Vector2(10, 10), new Vector2(-10, -60));
+            
+            Button closeOverviewBtn = RuntimeUIFactory.MakeBtn(overviewPanel.transform, "CloseOverview", "CLOSE", pos: new Vector2(0, -200), size: new Vector2(100, 40));
+            closeOverviewBtn.onClick.AddListener(() => overviewPanel.SetActive(false));
+            
+            overviewPanel.SetActive(false);
+        }
+
+        private void Update()
+        {
+            // Toggle overview with M while on private island
+            WellGenerator wg = FindFirstObjectByType<WellGenerator>();
+            bool onIsland = wg != null && !wg.IsInLobbyMode;
+
+            bool mPressed = false;
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current != null) mPressed = Keyboard.current.mKey.wasPressedThisFrame;
+#else
+            mPressed = Input.GetKeyDown(KeyCode.M);
+#endif
+
+            if (onIsland && mPressed)
+            {
+                ToggleOverview();
+            }
+
+            if (panel.activeSelf && activeMinion != null)
+            {
+                infoLabel.text = $"Strength: {activeMinion.strength}\nCapacity: {activeMinion.currentLoad}/{activeMinion.capacity}";
+            }
+        }
+
+        private void Open()
+        {
+            if (isOverviewMode)
+            {
+                panel.SetActive(false);
+                overviewPanel.SetActive(true);
+                RefreshOverviewList();
+            }
+            else
+            {
+                overviewPanel.SetActive(false);
+                panel.SetActive(true);
+            }
+        }
+
+        private void RefreshOverviewList()
+        {
+            // Clear container
+            foreach (Transform child in overviewContainer) Destroy(child.gameObject);
+
+            MinionAI[] minions = FindObjectsByType<MinionAI>(FindObjectsSortMode.None);
+            foreach (var minion in minions)
+            {
+                GameObject entry = new GameObject("MinionEntry");
+                entry.transform.SetParent(overviewContainer, false);
+                var rt = entry.AddComponent<RectTransform>();
+                rt.sizeDelta = new Vector2(0, 50);
+                entry.AddComponent<LayoutElement>().minHeight = 50;
+                
+                string txt = $"Minion: Str {minion.strength} | Load {minion.currentLoad}/{minion.capacity}";
+                RuntimeUIFactory.MakeLabel(entry.transform, "Label", txt, 12, TextAnchor.MiddleLeft, new Vector2(10, 0));
+                
+                Button manageBtn = RuntimeUIFactory.MakeBtn(entry.transform, "Manage", "OPEN", pos: new Vector2(140, 0), size: new Vector2(60, 30));
+                manageBtn.onClick.AddListener(() => Show(minion));
+            }
+        }
+
+        private void OnSell()
+        {
+            activeMinion.EmptyInventory();
+        }
+
+        private void OnUpgradeStrength()
+        {
+            if (GlobalEconomy.Money >= 200)
+            {
+                GlobalEconomy.Money -= 200;
+                activeMinion.strength++;
+            }
+        }
+
+        private void OnUpgradeCapacity()
+        {
+            if (GlobalEconomy.Money >= 200)
+            {
+                GlobalEconomy.Money -= 200;
+                activeMinion.capacity += 5;
+            }
+        }
+    }
+}

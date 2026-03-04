@@ -1,6 +1,15 @@
 {
     "zones": [
         {
+            "worldX": 9.5,
+            "worldY": -6.5,
+            "worldZ": 24.5,
+            "sizeX": 15,
+            "sizeY": 15,
+            "sizeZ": 15,
+            "zoneType": 3
+        },
+        {
             "worldX": 38.5,
             "worldY": -6.5,
             "worldZ": 7.5,

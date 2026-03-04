@@ -38,5 +38,5 @@ namespace SimpleVoxelSystem
         public List<ShopZoneEntry> zones = new List<ShopZoneEntry>();
     }
 
-    public enum EditorToolMode { Block, Shop, PickaxeShop, SellPoint }
+    public enum EditorToolMode { Block, Shop, PickaxeShop, SellPoint, MinionShop }
 }

@@ -119,6 +119,14 @@ namespace SimpleVoxelSystem
                     cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                     cGo.AddComponent<GraphicRaycaster>();
                 }
+
+                // Ensure EventSystem exists for clicking buttons
+                if (FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+                {
+                    var esGo = new GameObject("EventSystem");
+                    esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                    esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                }
                 uiManager = new LobbyEditorUIManager(this, rootCanvas.transform);
                 uiManager.BuildUI(ToggleEditMode, (bt) => selectedBlockType = bt, SetToolMode, SaveLayoutFull, ClearLobbyToBaseFloor);
             }
@@ -312,7 +320,11 @@ namespace SimpleVoxelSystem
                 if (IsRightJustPressed() && hoveredZone != null) DeleteShopZone(hoveredZone);
                 else if ((IsLeftJustPressed() || mobileLookDoubleTap) && pendingShopWorldPos.HasValue)
                 {
-                    ShopZoneType zType = ToolMode == EditorToolMode.PickaxeShop ? ShopZoneType.Pickaxe : (ToolMode == EditorToolMode.SellPoint ? ShopZoneType.Sell : ShopZoneType.Mine);
+                    ShopZoneType zType = ShopZoneType.Mine;
+                    if (ToolMode == EditorToolMode.PickaxeShop) zType = ShopZoneType.Pickaxe;
+                    else if (ToolMode == EditorToolMode.SellPoint) zType = ShopZoneType.Sell;
+                    else if (ToolMode == EditorToolMode.MinionShop) zType = ShopZoneType.Minion;
+
                     uiManager.OpenSizeDialog(pendingShopWorldPos.Value, zType, SpawnShopZoneByUI);
                 }
             }

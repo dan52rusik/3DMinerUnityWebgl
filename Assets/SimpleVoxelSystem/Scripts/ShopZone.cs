@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 
 namespace SimpleVoxelSystem
 {
-    public enum ShopZoneType { Mine, Pickaxe, Sell }
+    public enum ShopZoneType { Mine, Pickaxe, Sell, Minion }
 
     /// <summary>
     /// ÐÐµÐ²Ð¸Ð´Ð¸Ð¼Ñ‹Ð¹ Ñ‚Ñ€Ð¸Ð³Ð³ÐµÑ€-ÐºÑƒÐ± Ð·Ð¾Ð½Ñ‹ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°.
@@ -32,6 +32,7 @@ namespace SimpleVoxelSystem
         private bool          playerInside;
         private MineShopUI    mineShopUI;
         private PickaxeShopUI pickaxeShopUI;
+        private MinionShopUI  minionShopUI;
         private PlayerPickaxe playerPickaxe;
         private GameObject    editorVisual;   // полупрозрачный куб в режиме редактора
         private GameObject    gameplayMarker; // visible marker for sell point in normal gameplay
@@ -54,6 +55,7 @@ namespace SimpleVoxelSystem
         {
             mineShopUI    = FindFirstObjectByType<MineShopUI>();
             pickaxeShopUI = FindFirstObjectByType<PickaxeShopUI>();
+            minionShopUI  = FindFirstObjectByType<MinionShopUI>();
             playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();
             EnsurePromptUI();
 
@@ -149,6 +151,11 @@ namespace SimpleVoxelSystem
                 mineShopUI.TogglePanel();
             else if (zoneType == ShopZoneType.Pickaxe && pickaxeShopUI != null)
                 pickaxeShopUI.Toggle();
+            else if (zoneType == ShopZoneType.Minion)
+            {
+                if (minionShopUI == null) minionShopUI = FindFirstObjectByType<MinionShopUI>();
+                if (minionShopUI != null) minionShopUI.Toggle();
+            }
             else if (zoneType == ShopZoneType.Sell && playerPickaxe != null)
                 playerPickaxe.SellResources();
         }
@@ -199,6 +206,8 @@ namespace SimpleVoxelSystem
                 mineShopUI.SetPanelVisible(false);
             if (pickaxeShopUI != null)
                 pickaxeShopUI.SetPanelVisible(false);
+            if (minionShopUI != null)
+                minionShopUI.SetPanelVisible(false);
         }
 
         static bool AnyZoneHasPlayerInside()
@@ -235,6 +244,7 @@ namespace SimpleVoxelSystem
         private char GetOpenKeyDisplay()
         {
             if (zoneType == ShopZoneType.Pickaxe) return 'P';
+            if (zoneType == ShopZoneType.Minion) return 'M';
             if (zoneType == ShopZoneType.Sell) return 'R';
             return 'B';
         }
@@ -245,11 +255,13 @@ namespace SimpleVoxelSystem
             var kb = Keyboard.current;
             if (kb == null) return false;
             if (zoneType == ShopZoneType.Pickaxe) return kb.pKey.wasPressedThisFrame;
+            if (zoneType == ShopZoneType.Minion) return kb.mKey.wasPressedThisFrame;
             if (zoneType == ShopZoneType.Sell) return kb.rKey.wasPressedThisFrame;
             return kb.bKey.wasPressedThisFrame;
 #elif ENABLE_LEGACY_INPUT_MANAGER
             KeyCode k = KeyCode.B;
             if (zoneType == ShopZoneType.Pickaxe) k = KeyCode.P;
+            else if (zoneType == ShopZoneType.Minion) k = KeyCode.M;
             else if (zoneType == ShopZoneType.Sell) k = KeyCode.R;
             return Input.GetKeyDown(k);
 #else
@@ -266,6 +278,7 @@ namespace SimpleVoxelSystem
                 {
                     if (currentZone.mineShopUI != null && currentZone.mineShopUI.IsVisible) anyShopOpen = true;
                     if (currentZone.pickaxeShopUI != null && currentZone.pickaxeShopUI.IsVisible) anyShopOpen = true;
+                    if (currentZone.minionShopUI != null && currentZone.minionShopUI.IsVisible) anyShopOpen = true;
                 }
 
                 if (v && currentZone != null && !anyShopOpen)
@@ -273,6 +286,7 @@ namespace SimpleVoxelSystem
                     string keyStr = currentZone.GetOpenKeyDisplay().ToString();
                     string shopName = "магазин шахт";
                     if (currentZone.zoneType == ShopZoneType.Pickaxe) shopName = "магазин кирок";
+                    else if (currentZone.zoneType == ShopZoneType.Minion) shopName = "магазин миньонов";
                     else if (currentZone.zoneType == ShopZoneType.Sell) shopName = "точку продажи";
                     promptText.text = $"Press <color=#FFD700><b>[{keyStr}]</b></color> to open {shopName}";
                     promptPanel.SetActive(true);
@@ -316,6 +330,7 @@ namespace SimpleVoxelSystem
             string kStr = "B";
             string sName = "Шахты";
             if (zoneType == ShopZoneType.Pickaxe) { kStr = "P"; sName = "Кирки"; }
+            else if (zoneType == ShopZoneType.Minion) { kStr = "M"; sName = "Миньоны"; }
             else if (zoneType == ShopZoneType.Sell) { kStr = "R"; sName = "Продажа"; }
             UnityEditor.Handles.Label(
                 transform.position + Vector3.up * (sizeY + 0.4f),
