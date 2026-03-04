@@ -127,43 +127,43 @@ namespace SimpleVoxelSystem
 #endif
             }
 
-            // â”€â”€ HUD: Ð´ÐµÐ½ÑŒÐ³Ð¸ Ð² Ð»ÐµÐ²Ð¾Ð¼ Ð²ÐµÑ€Ñ…Ð½ÐµÐ¼ ÑƒÐ³Ð»Ñƒ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            hud = MakePanel("HUD", rootCanvas.transform,
+            // HUD: деньги в левом верхнем углу ────────────────────
+            hud = RuntimeUIFactory.MakePanel("HUD", rootCanvas.transform,
                 anchor: new Vector2(0f, 1f), pivot: new Vector2(0f, 1f),
                 pos: new Vector2(10f, -10f), size: new Vector2(280f, 48f),
                 color: ColHUD);
 
-            moneyText = MakeLabelOffset(hud.transform, "MoneyText",
+            moneyText = RuntimeUIFactory.MakeLabel(hud.transform, "MoneyText",
                 "$ 0  |  Lv. 1", 16, TextAnchor.MiddleLeft,
                 new Vector2(10, 0), new Vector2(-10, 0));
 
-            statusLabel = MakeLabelOffset(hud.transform, "StatusLabel",
+            statusLabel = RuntimeUIFactory.MakeLabel(hud.transform, "StatusLabel",
                 "", 14, TextAnchor.MiddleCenter,
                 new Vector2(10, -50), new Vector2(-10, -30));
-            statusLabel.color = new Color(1f, 1f, 0.7f, 1f); // ÐœÑÐ³ÐºÐ¸Ð¹ Ð±ÐµÐ¶ÐµÐ²Ñ‹Ð¹
+            statusLabel.color = new Color(1f, 1f, 0.7f, 1f); // Мягкий бежевый
 
-            // â”€â”€ ÐšÐ½Ð¾Ð¿ÐºÐ° ÐžÑ‚Ð¼ÐµÐ½Ð° (Ñ€ÐµÐ¶Ð¸Ð¼ Ñ€Ð°Ð·Ð¼ÐµÑ‰ÐµÐ½Ð¸Ñ) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            cancelBtn = MakeButton(rootCanvas.transform, "CancelBtn",
+            // Кнопка Отмена (режим размещения) ─────────────────────
+            cancelBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "CancelBtn",
                 "Cancel", ColBtnCancel,
                 anchor: new Vector2(1f, 0f), pivot: new Vector2(1f, 0f),
                 pos: new Vector2(-10f, 10f), size: new Vector2(120f, 40f));
             cancelBtn.onClick.AddListener(() => mineMarket.CancelPlacementPublic());
             cancelBtn.gameObject.SetActive(false);
 
-            // â”€â”€ ÐšÐ½Ð¾Ð¿ÐºÐ° ÐŸÑ€Ð¾Ð´Ð°Ñ‚ÑŒ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            sellMineBtn = MakeButton(rootCanvas.transform, "SellMineBtn",
+            // Кнопка Продать ─────────────────────────────────────────────
+            sellMineBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "SellMineBtn",
                 "Sell Mine", ColBtnSell,
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-10f, -10f), size: new Vector2(155f, 40f));
             sellMineBtn.onClick.AddListener(() => mineMarket.SellCurrentMine());
             sellMineBtn.gameObject.SetActive(false);
 
-            // â”€â”€ ÐšÐ½Ð¾Ð¿ÐºÐ° ÐŸÐµÑ€ÐµÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ñ ÐœÐ¸Ñ€Ð¾Ð² â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            switchWorldBtn = MakeButton(rootCanvas.transform, "SwitchWorldBtn",
+            // Кнопка Переключения Миров ──────────────────────────────────
+            switchWorldBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "SwitchWorldBtn",
                 "To Lobby", new Color(0.2f, 0.7f, 0.2f, 1f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-170f, -10f), size: new Vector2(140f, 40f));
-            switchWorldBtn.onClick.AddListener(() => 
+            switchWorldBtn.onClick.AddListener(() =>
             {
                 if (mineMarket.WellGen.IsInLobbyMode)
                     mineMarket.WellGen.SwitchToMine();
@@ -172,19 +172,19 @@ namespace SimpleVoxelSystem
             });
             switchWorldBtn.gameObject.SetActive(false);
 
-            // â”€â”€ ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¡Ð¾Ð·Ð´Ð°Ñ‚ÑŒ ÐžÑÑ‚Ñ€Ð¾Ð² (Ñ‚ÐµÐ¿ÐµÑ€ÑŒ ÑÐ²ÐµÑ€Ñ…Ñƒ, Ð² Ð²Ð¸Ð´Ðµ Ð¸ÐºÐ¾Ð½ÐºÐ¸/Ð¼Ð°Ð»ÐµÐ½ÑŒÐºÐ¾Ð¹ Ð¿Ð°Ð½ÐµÐ»Ð¸) â”€â”€
-            createIslandBtn = MakeButton(rootCanvas.transform, "CreateIslandBtn",
+            // Кнопка Создать Остров (теперь сверху, в виде иконки/маленькой панели) ──
+            createIslandBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "CreateIslandBtn",
                 "Create Island", new Color(0.15f, 0.45f, 0.85f, 0.9f),
                 anchor: new Vector2(0.5f, 1f), pivot: new Vector2(0.5f, 1f),
                 pos: new Vector2(0, -10f), size: new Vector2(240f, 40f));
-            createIslandBtn.onClick.AddListener(() => 
+            createIslandBtn.onClick.AddListener(() =>
             {
-                // ÐŸÐµÑ€ÐµÐºÐ»ÑŽÑ‡Ð°ÐµÐ¼ÑÑ Ð² Ñ€ÐµÐ¶Ð¸Ð¼ Ð¾ÑÑ‚Ñ€Ð¾Ð²Ð° (ÑÑ‚Ð¾ ÑÐ°Ð¼Ð¾ Ð²Ñ‹Ð·Ð¾Ð²ÐµÑ‚ Ð³ÐµÐ½ÐµÑ€Ð°Ñ†Ð¸ÑŽ, ÐµÑÐ»Ð¸ ÐµÐ³Ð¾ Ð½ÐµÑ‚)
+                // Переключаемся в режим острова (это само вызовет генерацию, если его нет)
                 mineMarket.WellGen.SwitchToMine();
             });
             createIslandBtn.gameObject.SetActive(true);
 
-            setSpawnBtn = MakeButton(rootCanvas.transform, "SetSpawnBtn",
+            setSpawnBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "SetSpawnBtn",
                 "Set Spawn", new Color(0.15f, 0.65f, 0.85f, 0.95f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-320f, -10f), size: new Vector2(140f, 40f));
@@ -197,35 +197,35 @@ namespace SimpleVoxelSystem
             });
             setSpawnBtn.gameObject.SetActive(false);
 
-            // â”€â”€ Ð¢Ñ‘Ð¼Ð½Ñ‹Ð¹ Ð¾Ð²ÐµÑ€Ð»ÐµÐ¹-Ñ„Ð¾Ð½ (Ð¿Ð¾Ð´ Ð¿Ð°Ð½ÐµÐ»ÑŒÑŽ) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            GameObject overlay = MakePanel("ShopOverlay", rootCanvas.transform,
+            // Тёмный оверлей-фон (под панелью) ─────────────────────
+            GameObject overlay = RuntimeUIFactory.MakePanel("ShopOverlay", rootCanvas.transform,
                 anchor: new Vector2(0.5f, 0.5f), pivot: new Vector2(0.5f, 0.5f),
                 pos: Vector2.zero, size: new Vector2(10000f, 10000f),
                 color: new Color(0f, 0f, 0f, 0.55f));
             overlay.transform.SetSiblingIndex(0);
             overlay.SetActive(false);
 
-            // â”€â”€ Ð¦ÐµÐ½Ñ‚Ñ€Ð°Ð»ÑŒÐ½Ð°Ñ Ð¿Ð°Ð½ÐµÐ»ÑŒ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            shopPanel = MakePanel("ShopPanel", rootCanvas.transform,
+            // Центральная панель магазина ───────────────────────
+            shopPanel = RuntimeUIFactory.MakePanel("ShopPanel", rootCanvas.transform,
                 anchor: new Vector2(0.5f, 0.5f), pivot: new Vector2(0.5f, 0.5f),
                 pos: Vector2.zero, size: new Vector2(380f, 460f),
                 color: ColPanel);
 
-            // Ð—Ð°Ð³Ð¾Ð»Ð¾Ð²Ð¾Ðº
-            MakeLabelOffset(shopPanel.transform, "ShopTitle",
+            // Заголовок
+            RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopTitle",
                 "MINE SHOP", 20, TextAnchor.UpperCenter,
                 new Vector2(0, -12), new Vector2(0, 0), bold: true);
 
-            // ÐŸÐ¾Ð´Ð·Ð°Ð³Ð¾Ð»Ð¾Ð²Ð¾ÐºÑ Ð´ÐµÐ½ÑŒÐ³Ð°Ð¼Ð¸
-            MakeLabelOffset(shopPanel.transform, "ShopMoney",
+            // Подзаголовок с деньгами
+            RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopMoney",
                 "Balance: $0  |  [B] close", 12, TextAnchor.UpperCenter,
                 new Vector2(0, -42), new Vector2(0, -22), bold: false);
 
-            // Ð“Ð¾Ñ€Ð¸Ð·Ð¾Ð½Ñ‚Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ€Ð°Ð·Ð´ÐµÐ»Ð¸Ñ‚ÐµÐ»ÑŒ
-            MakeSeparator(shopPanel.transform, new Vector2(8, -62), new Vector2(-8, -60));
+            // Горизонтальный разделитель
+            RuntimeUIFactory.MakeSeparator(shopPanel.transform, -62f, 8f);
 
-            // ÐšÐ¾Ð½Ñ‚ÐµÐ¹Ð½ÐµÑ€ Ñ Ð²ÐµÑ€Ñ‚Ð¸ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¼ layout
-            buttonContainer = MakeScrollContainer(shopPanel.transform);
+            // Контейнер с вертикальным layout
+            buttonContainer = RuntimeUIFactory.MakeScrollContainer(shopPanel.transform);
 
             // Ð‘ÐµÑ€Ñ‘Ð¼ Ð¾Ñ‹Ð² Ð½Ð° Ð¾Ð²ÐµÑ€Ð»ÐµÐ¹ (Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð¾Ð½ Ð²ÐºÐ»/Ð²Ñ‹ÐºÐ» Ð²Ð¼ÐµÑÑ‚Ðµ Ñ Ð¿Ð°Ð½ÐµÐ»ÑŒÑŽ)
             shopPanel.SetActive(false);
@@ -234,9 +234,9 @@ namespace SimpleVoxelSystem
             _overlay = overlay;
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // ÐšÐ½Ð¾Ð¿ÐºÐ¸ ÑˆÐ°Ñ…Ñ‚
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         void BuildShopButtons()
         {
@@ -295,27 +295,26 @@ namespace SimpleVoxelSystem
             srt.offsetMax = new Vector2(7f, 0f);
             stripe.AddComponent<Image>().color = data.labelColor;
 
-            // ÐÐ°Ð·Ð²Ð°Ð½Ð¸Ðµ
-            MakeLabelOffset(go.transform, "Name",
+            // Название
+            RuntimeUIFactory.MakeLabel(go.transform, "Name",
                 $"<b>{data.displayName}</b>", 15, TextAnchor.UpperLeft,
                 new Vector2(14, -6), new Vector2(-12, -6));
 
-            // Ð“Ð»ÑƒÐ±Ð¸Ð½Ð°
-            MakeLabelOffset(go.transform, "Depth",
+            // Глубина
+            RuntimeUIFactory.MakeLabel(go.transform, "Depth",
                 $"🕳 Глубина: {data.depthMin}-{data.depthMax} сл.", 12, TextAnchor.UpperLeft,
-                new Vector2(14, -28), new Vector2(-12, -28)).color = new Color(0.75f, 0.85f, 1f, 1f);
+                new Vector2(14, -28), new Vector2(-12, -28), color: new Color(0.75f, 0.85f, 1f, 1f));
 
-            // Ð¡Ð¾ÑÑ‚Ð°Ð² (Ð²ÐµÑ€Ñ…Ð½Ð¸Ð¹ ÑÐ»Ð¾Ð¹)
+            // Состав (верхний слой)
             string comp = BuildCompositionLine(data);
-            MakeLabelOffset(go.transform, "Comp",
+            RuntimeUIFactory.MakeLabel(go.transform, "Comp",
                 comp, 11, TextAnchor.UpperLeft,
-                new Vector2(14, -46), new Vector2(-12, -46)).color = new Color(0.8f, 0.8f, 0.8f, 1f);
+                new Vector2(14, -46), new Vector2(-12, -46), color: new Color(0.8f, 0.8f, 0.8f, 1f));
 
-            // Ð¦ÐµÐ½Ð° ÑÐ¿Ñ€Ð°Ð²Ð°
-            Text priceT = MakeLabelOffset(go.transform, "Price",
+            // Цена справа
+            Text priceT = RuntimeUIFactory.MakeLabel(go.transform, "Price",
                 $"$ {data.buyPrice}", 15, TextAnchor.MiddleRight,
-                new Vector2(0, 0), new Vector2(-12, 0), bold: true);
-            priceT.color = new Color(1f, 0.88f, 0.25f, 1f);
+                new Vector2(0, 0), new Vector2(-12, 0), bold: true, color: new Color(1f, 0.88f, 0.25f, 1f));
 
             MineShopData cap = data;
             btn.onClick.AddListener(() =>
@@ -362,9 +361,9 @@ namespace SimpleVoxelSystem
             return string.Join("  ", parts);
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Callbacks
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         void OnMinePlaced(MineInstance mine)
         {
@@ -381,9 +380,9 @@ namespace SimpleVoxelSystem
             SetStatus("Placement canceled. Money returned.");
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // ÐžÐ±Ð½Ð¾Ð²Ð»ÐµÐ½Ð¸Ðµ HUD
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         void RefreshHUD()
         {
@@ -394,11 +393,11 @@ namespace SimpleVoxelSystem
             bool inLobby     = mineMarket.WellGen != null && mineMarket.WellGen.IsInLobbyMode;
             bool hasPending  = mineMarket.IsPlacementMode && !inLobby; // ÐÐ° Ð¾ÑÑ‚Ñ€Ð¾Ð²Ðµ Ñ ÑˆÐ°Ñ…Ñ‚Ð¾Ð¹ Ð² Ñ€ÑƒÐºÐ°Ñ…
 
-            if (moneyText != null) 
+            if (moneyText != null)
                 moneyText.text = $"$ {GlobalEconomy.Money}  |  Lv. {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ° ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Ð»Ð¾Ð±Ð±Ð¸ Ð¸ Ð¿Ð¾ÐºÐ° Ð¾ÑÑ‚Ñ€Ð¾Ð²Ð° Ð½ÐµÑ‚
-            if (createIslandBtn != null) 
+            if (createIslandBtn != null)
                 createIslandBtn.gameObject.SetActive(inLobby && !islandBuilt);
 
             if (setSpawnBtn != null)
@@ -420,23 +419,23 @@ namespace SimpleVoxelSystem
             }
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¿Ñ€Ð¾Ð´Ð°Ð¶Ð¸: Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ ÐºÑƒÐ¿Ð¸Ð»Ð¸, Ð½Ð¾ ÐµÑ‰Ðµ Ð½Ðµ Ð¿Ð¾ÑÑ‚Ð°Ð²Ð¸Ð»Ð¸ (Ð² Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Ñ€Ð°Ð·Ð¼ÐµÑ‰ÐµÐ½Ð¸Ñ)
-            if (sellMineBtn != null) 
+            if (sellMineBtn != null)
             {
                 // ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ Ñ…Ð¾Ñ‡ÐµÑ‚ Ð¿Ñ€Ð¾Ð´Ð°Ð²Ð°Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ ÐºÑƒÐ¿Ð¸Ð»Ð¸, Ð½Ð¾ ÐµÑ‰Ðµ Ð½Ðµ Ð¿Ð¾ÑÑ‚Ð°Ð²Ð¸Ð»Ð¸.
                 // Ð’ Ð½Ð°ÑˆÐµÐ¹ Ð»Ð¾Ð³Ð¸ÐºÐµ ÑÑ‚Ð¾ Ð·Ð½Ð°Ñ‡Ð¸Ñ‚ pendingMine != null.
                 // ÐœÑ‹ ÑƒÐ±Ð¸Ñ€Ð°ÐµÐ¼ ÐºÐ½Ð¾Ð¿ÐºÑƒ ÐŸÑ€Ð¾Ð´Ð°Ñ‚ÑŒ Ð´Ð»Ñ ÑƒÐ¶Ðµ ÑƒÑÑ‚Ð°Ð½Ð¾Ð²Ð»ÐµÐ½Ð½Ñ‹Ñ… ÑˆÐ°Ñ…Ñ‚.
-                sellMineBtn.gameObject.SetActive(false); 
+                sellMineBtn.gameObject.SetActive(false);
             }
-            
+
             bool isPlacing = mineMarket.IsPlacementMode;
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ° Ð¾Ñ‚Ð¼ÐµÐ½Ñ‹ Ñ€Ð°Ð·Ð¼ÐµÑ‰ÐµÐ½Ð¸Ñ: Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐºÐ¾Ð³Ð´Ð° ÐºÑƒÐ¿Ð¸Ð»Ð¸, Ð½Ð¾ ÐµÑ‰Ðµ Ð½Ðµ Ð¿Ð¾ÑÑ‚Ð°Ð²Ð¸Ð»Ð¸
-            if (cancelBtn != null) 
+            if (cancelBtn != null)
             {
-                // ÐŸÐ¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÐ¼ ÐºÐ½Ð¾Ð¿ÐºÑƒ Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚Ð°, ÐµÑÐ»Ð¸ ÑˆÐ°Ñ…Ñ‚Ð° ÐºÑƒÐ¿Ð»ÐµÐ½Ð° (Ð² Ñ€ÑƒÐºÐ°Ñ…), 
+                // ÐŸÐ¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÐ¼ ÐºÐ½Ð¾Ð¿ÐºÑƒ Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚Ð°, ÐµÑÐ»Ð¸ ÑˆÐ°Ñ…Ñ‚Ð° ÐºÑƒÐ¿Ð»ÐµÐ½Ð° (Ð² Ñ€ÑƒÐºÐ°Ñ…),
                 // Ð½ÐµÐ·Ð°Ð²Ð¸ÑÐ¸Ð¼Ð¾ Ð¾Ñ‚ Ñ‚Ð¾Ð³Ð¾, Ð² Ð»Ð¾Ð±Ð±Ð¸ Ð¼Ñ‹ Ð¸Ð»Ð¸ Ð½Ð° Ð¾ÑÑ‚Ñ€Ð¾Ð²Ðµ.
                 cancelBtn.gameObject.SetActive(isPlacing);
-                
+
                 var txt = cancelBtn.GetComponentInChildren<Text>();
                 if (txt != null) txt.text = "Refund";
             }
@@ -446,7 +445,7 @@ namespace SimpleVoxelSystem
             {
                 if (isPlacing)
                 {
-                    statusLabel.text = inLobby 
+                    statusLabel.text = inLobby
                         ? "<color=yellow>Mine purchased.</color> Go to Island to place it."
                         : "<color=yellow>Placement mode.</color> Choose a position with LMB.";
                 }
@@ -456,7 +455,7 @@ namespace SimpleVoxelSystem
                 }
             }
 
-            // HUD Ð²Ð¸Ð´ÐµÐ½ Ð’Ð¡Ð•Ð“Ð”Ð (Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð²Ð¸Ð´ÐµÑ‚ÑŒ Ð´ÐµÐ½ÑŒÐ³Ð¸ Ð¸ ÑÑ‚Ð°Ñ‚ÑƒÑ Ð² Ð»Ð¾Ð±Ð±Ð¸)
+            // HUD Ð²Ð¸Ð´ÐµÐ½ Ð’Ð¡Ð•Ð“Ð”Ðђ (Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð²Ð¸Ð´ÐµÑ‚ÑŒ Ð´ÐµÐ½ÑŒÐ³Ð¸ Ð¸ ÑÑ‚Ð°Ñ‚ÑƒÑ Ð² Ð»Ð¾Ð±Ð±Ð¸)
             if (hud != null) hud.SetActive(true);
         }
 
@@ -490,146 +489,8 @@ namespace SimpleVoxelSystem
             if (statusLabel != null) statusLabel.text = msg;
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // â•â•â••â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Ð’ÑÐ¿Ð¾Ð¼Ð¾Ð³Ð°Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ðµ Ñ„Ð°Ð±Ñ€Ð¸ÐºÐ¸ UI-ÑÐ»ÐµÐ¼ÐµÐ½Ñ‚Ð¾Ð²
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-        static Font _font;
-        static Font GetFont()
-        {
-            if (_font != null) return _font;
-            _font = RuntimeUiFont.Get();
-            return _font;
-        }
-
-        // ÐŸÐ°Ð½ÐµÐ»ÑŒ
-        static GameObject MakePanel(string name, Transform parent,
-            Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color color)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = anchor;
-            rt.anchorMax = anchor;
-            rt.pivot     = pivot;
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = size;
-            Image img = go.AddComponent<Image>();
-            img.color = color;
-            return go;
-        }
-
-        // ÐšÐ½Ð¾Ð¿ÐºÐ° (Ñ anchor/pivot)
-        static Button MakeButton(Transform parent, string name, string label, Color color,
-            Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = anchor; rt.anchorMax = anchor;
-            rt.pivot = pivot;
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = size;
-            Image img = go.AddComponent<Image>();
-            img.color = color;
-            Button btn = go.AddComponent<Button>();
-            btn.targetGraphic = img;
-
-            Text txt = MakeLabelOffset(go.transform, "Label", label, 13, TextAnchor.MiddleCenter,
-                Vector2.zero, Vector2.zero);
-            RectTransform trt = txt.GetComponent<RectTransform>();
-            trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-            trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-
-            return btn;
-        }
-
-        // ÐšÐ½Ð¾Ð¿ÐºÐ° (Ð±ÐµÐ· anchor â€” Ð¿Ð¾ ÑƒÐ¼Ð¾Ð»Ñ‡Ð°Ð½Ð¸ÑŽ left/top)
-        static Button MakeButton(Transform parent, string name, string label, Color color,
-            Vector2 pos, Vector2 size)
-            => MakeButton(parent, name, label, color,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), pos, size);
-
-        // Ð¢ÐµÐºÑÑ‚Ð¾Ð²Ñ‹Ð¹ Ð»ÐµÐ¹Ð±Ð» Ñ anchoredPosition
-        static Text MakeLabel(Transform parent, string name, string text, int fontSize,
-            TextAnchor align, Vector2 anchorMin, Vector2 anchorMax, bool bold = false)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = anchorMin;
-            rt.anchorMax = anchorMax;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-            Text txt = go.AddComponent<Text>();
-            txt.font      = GetFont();
-            txt.fontSize  = fontSize;
-            txt.alignment = align;
-            txt.color     = ColText;
-            txt.text      = bold ? $"<b>{text}</b>" : text;
-            txt.supportRichText = true;
-            return txt;
-        }
-
-        // Ð¢ÐµÐºÑÑ‚Ð¾Ð²Ñ‹Ð¹ Ð»ÐµÐ¹Ð±Ð»: stretch (anchorMin=0,0 / anchorMax=1,1) + offsetMin/offsetMax
-        static Text MakeLabelOffset(Transform parent, string name, string text, int fontSize,
-            TextAnchor align, Vector2 offsetMin, Vector2 offsetMax, bool bold = false)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = offsetMin;
-            rt.offsetMax = offsetMax;
-            Text txt = go.AddComponent<Text>();
-            txt.font      = GetFont();
-            txt.fontSize  = fontSize;
-            txt.alignment = align;
-            txt.color     = ColText;
-            txt.text      = bold ? $"<b>{text}</b>" : text;
-            txt.supportRichText = true;
-            return txt;
-        }
-
-        // Ð“Ð¾Ñ€Ð¸Ð·Ð¾Ð½Ñ‚Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ€Ð°Ð·Ð´ÐµÐ»Ð¸Ñ‚ÐµÐ»ÑŒ
-        static void MakeSeparator(Transform parent, Vector2 offsetMin, Vector2 offsetMax)
-        {
-            var go = new GameObject("Separator");
-            go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = new Vector2(1f, 1f);
-            rt.pivot     = new Vector2(0.5f, 1f);
-            rt.offsetMin = new Vector2(offsetMin.x, 0f);
-            rt.offsetMax = new Vector2(offsetMax.x, 0f);
-            rt.anchoredPosition = new Vector2(0f, offsetMin.y);
-            rt.sizeDelta = new Vector2(rt.sizeDelta.x, 1f);
-            go.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.12f);
-        }
-
-        // Ð’ÐµÑ€Ñ‚Ð¸ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ scroll-ÐºÐ¾Ð½Ñ‚ÐµÐ¹Ð½ÐµÑ€ Ð´Ð»Ñ ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐµÐº
-        static Transform MakeScrollContainer(Transform parent)
-        {
-            GameObject go = new GameObject("ButtonContainer");
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0f, 0f);
-            rt.anchorMax = new Vector2(1f, 1f);
-            rt.offsetMin = new Vector2(10f, 10f);
-            rt.offsetMax = new Vector2(-10f, -70f);
-
-            VerticalLayoutGroup vlg = go.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing            = 8f;
-            vlg.childForceExpandWidth  = true;
-            vlg.childForceExpandHeight = false;
-            vlg.childControlWidth      = true;
-            vlg.childControlHeight     = false;
-            vlg.padding = new RectOffset(0, 0, 4, 4);
-
-            ContentSizeFitter csf = go.AddComponent<ContentSizeFitter>();
-            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            return go.transform;
-        }
+        // (Helper methods removed, now using RuntimeUIFactory)
     }
 }

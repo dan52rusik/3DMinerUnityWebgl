@@ -87,14 +87,14 @@ namespace SimpleVoxelSystem
                 cGo.AddComponent<GraphicRaycaster>();
             }
 
-            overlay = MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000f, 10000f), new Color(0f, 0f, 0f, 0.6f));
-            shopPanel = MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(420f, 520f), ColPanel);
+            overlay = RuntimeUIFactory.MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000f, 10000f), new Color(0f, 0f, 0f, 0.6f));
+            shopPanel = RuntimeUIFactory.MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(420f, 520f), ColPanel);
 
-            MakeLabel(shopPanel.transform, "Title", "PICKAXE SHOP", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
-            levelText = MakeLabel(shopPanel.transform, "LevelInfo", "Mining level: 1 (0 XP)", 14, TextAnchor.UpperCenter);
+            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "PICKAXE SHOP", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
+            levelText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "LevelInfo", "Mining level: 1 (0 XP)", 14, TextAnchor.UpperCenter);
             levelText.rectTransform.anchoredPosition = new Vector2(0f, -45f);
 
-            buttonContainer = MakeScrollContainer(shopPanel.transform);
+            buttonContainer = RuntimeUIFactory.MakeScrollContainer(shopPanel.transform, new Vector2(10f, 10f), new Vector2(-10f, -80f));
             BuildButtons();
 
             overlay.SetActive(false);
@@ -140,7 +140,7 @@ namespace SimpleVoxelSystem
                     $"Power: {Mathf.Max(1, data.miningPower)}    Req Lv: {Mathf.Max(1, data.requiredMiningLevel)}    " +
                     $"Price: ${data.buyPrice}    [{BuildStateLabel(index)}]";
 
-                Text tInfo = MakeLabelFill(item.transform, "Info", summary, 13, TextAnchor.UpperLeft, ColText);
+                Text tInfo = RuntimeUIFactory.MakeLabel(item.transform, "Info", summary, 13, TextAnchor.UpperLeft, new Vector2(10f, 6f), new Vector2(-10f, -6f), color: ColText);
                 tInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
                 tInfo.verticalOverflow = VerticalWrapMode.Truncate;
 
@@ -294,105 +294,6 @@ namespace SimpleVoxelSystem
             PlayerPrefs.Save();
         }
 
-        private Text MakeLabel(Transform parent, string name, string text, int size, TextAnchor align)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-
-            Text t = go.AddComponent<Text>();
-            t.font = RuntimeUiFont.Get();
-            t.text = text;
-            t.fontSize = size;
-            t.alignment = align;
-            t.color = ColText;
-            t.supportRichText = true;
-            return t;
-        }
-
-        private Text MakeLabelRect(Transform parent, string name, string text, int size, TextAnchor align,
-            Vector2 offsetTopLeft, Vector2 offsetBottomRight, Color color)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(1f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.offsetMin = new Vector2(offsetTopLeft.x, offsetBottomRight.y);
-            rt.offsetMax = new Vector2(offsetBottomRight.x, offsetTopLeft.y);
-
-            Text t = go.AddComponent<Text>();
-            t.font = RuntimeUiFont.Get();
-            t.text = text;
-            t.fontSize = size;
-            t.alignment = align;
-            t.color = color;
-            t.supportRichText = true;
-            return t;
-        }
-
-        private GameObject MakePanel(string name, Transform parent, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color color)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = anchor;
-            rt.anchorMax = anchor;
-            rt.pivot = pivot;
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = size;
-            go.AddComponent<Image>().color = color;
-            return go;
-        }
-
-        private Text MakeLabelFill(Transform parent, string name, string text, int size, TextAnchor align, Color color)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = new Vector2(10f, 6f);
-            rt.offsetMax = new Vector2(-10f, -6f);
-
-            Text t = go.AddComponent<Text>();
-            t.font = RuntimeUiFont.Get();
-            t.text = text;
-            t.fontSize = size;
-            t.alignment = align;
-            t.color = color;
-            t.supportRichText = true;
-            return t;
-        }
-
-        private Transform MakeScrollContainer(Transform parent)
-        {
-            GameObject go = new GameObject("Container");
-            go.transform.SetParent(parent, false);
-
-            RectTransform rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = new Vector2(10f, 10f);
-            rt.offsetMax = new Vector2(-10f, -80f);
-
-            VerticalLayoutGroup vlg = go.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 6f;
-            vlg.childAlignment = TextAnchor.UpperCenter;
-            vlg.childControlWidth = true;
-            vlg.childControlHeight = true;
-            vlg.childForceExpandWidth = true;
-            vlg.childForceExpandHeight = false;
-
-            ContentSizeFitter fitter = go.AddComponent<ContentSizeFitter>();
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            return go.transform;
-        }
+        // (Helper methods removed, now using RuntimeUIFactory)
     }
 }
