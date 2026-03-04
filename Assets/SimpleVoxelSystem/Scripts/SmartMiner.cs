@@ -102,6 +102,9 @@ namespace SimpleVoxelSystem
             if (Time.time < lastMineTime + mineCooldown)
                 return;
 
+            if (IsBackpackFull())
+                return;
+
             if (MineTargetBlock(currentTargetGridPos, currentTargetIsland))
             {
                 PlayerPickaxe.NotifyMineAttempt();
@@ -120,6 +123,15 @@ namespace SimpleVoxelSystem
 
             if (Time.time < lastMineTime + mineCooldown)
                 return;
+
+            if (IsBackpackFull())
+            {
+                queuedAutoMine = false;
+                queuedTargetIsland = null;
+                if (playerController != null)
+                    playerController.CancelAutoMove();
+                return;
+            }
 
             if (MineTargetBlock(queuedTargetGridPos, queuedTargetIsland))
             {
@@ -217,6 +229,13 @@ namespace SimpleVoxelSystem
             }
 
             return pickaxe.TryMineGridTarget(target.x, target.y, target.z, targetIsland);
+        }
+
+        bool IsBackpackFull()
+        {
+            if (pickaxe == null)
+                return false;
+            return pickaxe.currentBackpackLoad >= pickaxe.maxBackpackCapacity;
         }
 
         GameObject CreateHighlightInstance()
