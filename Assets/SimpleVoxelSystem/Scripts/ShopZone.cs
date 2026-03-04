@@ -34,6 +34,8 @@ namespace SimpleVoxelSystem
         private PickaxeShopUI pickaxeShopUI;
         private MinionShopUI  minionShopUI;
         private PlayerPickaxe playerPickaxe;
+        private MobileTouchControls mobileControls;
+        private bool mobileControlsLookupDone;
         private GameObject    editorVisual;   // полупрозрачный куб в режиме редактора
         private GameObject    gameplayMarker; // visible marker for sell point in normal gameplay
         private Material      visualMat;
@@ -57,6 +59,7 @@ namespace SimpleVoxelSystem
             pickaxeShopUI = FindFirstObjectByType<PickaxeShopUI>();
             minionShopUI  = FindFirstObjectByType<MinionShopUI>();
             playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();
+            TryResolveMobileControls();
             EnsurePromptUI();
 
             // BoxCollider
@@ -140,10 +143,14 @@ namespace SimpleVoxelSystem
         {
             // Ð Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ Ð¸Ð³Ñ€Ð¾Ðº Ð²Ð½ÑƒÑ‚Ñ€Ð¸ Ð·Ð¾Ð½Ñ‹ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°
             if (!playerInside) return;
+            if (currentZone != this) return;
 
             // Refresh prompt visibility every frame while inside
-            if (currentZone == this)
-                ShowPrompt(true);
+            ShowPrompt(true);
+
+            TryResolveMobileControls();
+            if (mobileControls != null && mobileControls.IsActive)
+                mobileControls.RequestInteractHint(GetMobileActionLabel(), 80, true);
 
             if (!IsKeyPressed()) return;
 
@@ -221,6 +228,8 @@ namespace SimpleVoxelSystem
             return false;
         }
 
+        public static bool IsAnyLocalPlayerInsideZone => currentZone != null && currentZone.playerInside;
+
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Helpers
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -249,8 +258,19 @@ namespace SimpleVoxelSystem
             return 'B';
         }
 
+        private string GetMobileActionLabel()
+        {
+            if (zoneType == ShopZoneType.Pickaxe) return "PICK";
+            if (zoneType == ShopZoneType.Minion) return "MINION";
+            if (zoneType == ShopZoneType.Sell) return "SELL";
+            return "MINE";
+        }
+
         bool IsKeyPressed()
         {
+            if (currentZone == this && mobileControls != null && mobileControls.IsActive && mobileControls.InteractPressedThisFrame)
+                return true;
+
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return false;
@@ -269,10 +289,20 @@ namespace SimpleVoxelSystem
 #endif
         }
 
+        private void TryResolveMobileControls()
+        {
+            if (mobileControls != null || mobileControlsLookupDone)
+                return;
+
+            mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
+            mobileControlsLookupDone = true;
+        }
+
         static void ShowPrompt(bool v) 
         { 
             if (promptPanel != null) 
             {
+                bool mobileActive = MobileTouchControls.Instance != null && MobileTouchControls.Instance.IsActive;
                 bool anyShopOpen = false;
                 if (currentZone != null)
                 {
@@ -288,7 +318,9 @@ namespace SimpleVoxelSystem
                     if (currentZone.zoneType == ShopZoneType.Pickaxe) shopName = "магазин кирок";
                     else if (currentZone.zoneType == ShopZoneType.Minion) shopName = "магазин миньонов";
                     else if (currentZone.zoneType == ShopZoneType.Sell) shopName = "точку продажи";
-                    promptText.text = $"Press <color=#FFD700><b>[{keyStr}]</b></color> to open {shopName}";
+                    promptText.text = mobileActive
+                        ? $"Tap <color=#FFD700><b>[ACT]</b></color> to open {shopName}"
+                        : $"Press <color=#FFD700><b>[{keyStr}]</b></color> to open {shopName}";
                     promptPanel.SetActive(true);
                 }
                 else

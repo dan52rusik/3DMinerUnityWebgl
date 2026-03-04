@@ -20,6 +20,12 @@ namespace SimpleVoxelSystem
         private Button upgradeCapBtn;
 
         private bool isOverviewMode = false;
+        private MobileTouchControls mobileControls;
+        private bool mobileControlsLookupDone;
+        private MinionAI nearestMobileMinion;
+        private float nextNearestRefreshAt;
+        private const float MobileInteractRange = 3.0f;
+        private const float NearestRefreshInterval = 0.2f;
 
         public static void Show(MinionAI minion)
         {
@@ -97,9 +103,10 @@ namespace SimpleVoxelSystem
 
         private void Update()
         {
-            // Toggle overview with M while on private island
             WellGenerator wg = FindFirstObjectByType<WellGenerator>();
             bool onIsland = wg != null && !wg.IsInLobbyMode;
+
+            TryResolveMobileControls();
 
             bool mPressed = false;
 #if ENABLE_INPUT_SYSTEM
@@ -109,11 +116,29 @@ namespace SimpleVoxelSystem
 #endif
 
             if (onIsland && mPressed)
-            {
                 ToggleOverview();
+
+            bool mobileActive = mobileControls != null && mobileControls.IsActive;
+            if (mobileActive && onIsland)
+            {
+                if (Time.unscaledTime >= nextNearestRefreshAt)
+                {
+                    nextNearestRefreshAt = Time.unscaledTime + NearestRefreshInterval;
+                    nearestMobileMinion = FindNearestMinionForMobile();
+                }
+
+                if (mobileControls.MenuPressedThisFrame)
+                    ToggleOverview();
+
+                if (!ShopZone.IsAnyLocalPlayerInsideZone && nearestMobileMinion != null)
+                {
+                    mobileControls.RequestInteractHint("MINION", 50, true);
+                    if (mobileControls.InteractPressedThisFrame)
+                        Show(nearestMobileMinion);
+                }
             }
 
-            if (panel.activeSelf && activeMinion != null)
+            if (panel != null && panel.activeSelf && activeMinion != null)
             {
                 infoLabel.text = $"Strength: {activeMinion.strength}\nCapacity: {activeMinion.currentLoad}/{activeMinion.capacity}";
             }
@@ -154,6 +179,58 @@ namespace SimpleVoxelSystem
                 Button manageBtn = RuntimeUIFactory.MakeBtn(entry.transform, "Manage", "OPEN", pos: new Vector2(140, 0), size: new Vector2(60, 30));
                 manageBtn.onClick.AddListener(() => Show(minion));
             }
+        }
+
+        private MinionAI FindNearestMinionForMobile()
+        {
+            Transform player = ResolveLocalPlayer();
+            if (player == null)
+                return null;
+
+            if (FindFirstObjectByType<MinionAI>() == null)
+                return null;
+
+            MinionAI[] minions = FindObjectsByType<MinionAI>(FindObjectsSortMode.None);
+            if (minions.Length == 0)
+                return null;
+
+            float bestSqr = MobileInteractRange * MobileInteractRange;
+            MinionAI best = null;
+
+            for (int i = 0; i < minions.Length; i++)
+            {
+                MinionAI m = minions[i];
+                if (m == null || !m.isActiveAndEnabled)
+                    continue;
+
+                float sqr = (m.transform.position - player.position).sqrMagnitude;
+                if (sqr < bestSqr)
+                {
+                    bestSqr = sqr;
+                    best = m;
+                }
+            }
+
+            return best;
+        }
+
+        private void TryResolveMobileControls()
+        {
+            if (mobileControls != null || mobileControlsLookupDone)
+                return;
+
+            mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
+            mobileControlsLookupDone = true;
+        }
+
+        private Transform ResolveLocalPlayer()
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+                return player.transform;
+
+            PlayerPickaxe pp = FindFirstObjectByType<PlayerPickaxe>();
+            return pp != null ? pp.transform : null;
         }
 
         private void OnSell()

@@ -27,6 +27,8 @@ namespace SimpleVoxelSystem
         public bool JumpPressedThisFrame { get; private set; }
         public bool MinePressedThisFrame { get; private set; }
         public bool LookTapPressedThisFrame { get; private set; }
+        public bool InteractPressedThisFrame { get; private set; }
+        public bool MenuPressedThisFrame { get; private set; }
         public bool RemovePressedThisFrame { get; private set; }
         public bool RunHeld { get; private set; }
         public bool RemoveHeld { get; private set; }
@@ -40,7 +42,16 @@ namespace SimpleVoxelSystem
         private TouchHoldButton zoomOutButton;
         private TouchTapButton jumpButton;
         private TouchTapButton mineButton;
+        private TouchTapButton interactButton;
+        private TouchTapButton menuButton;
         private TouchHoldButton removeButton;
+        private Text interactButtonLabel;
+
+        private const string DefaultInteractLabel = "ACT";
+        private bool interactHintRequested;
+        private string interactHintText = DefaultInteractLabel;
+        private int interactHintPriority = int.MinValue;
+        private bool interactHintVisibleRequested = true;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         [System.Runtime.InteropServices.DllImport("__Internal")]
@@ -59,7 +70,13 @@ namespace SimpleVoxelSystem
             GameObject go = new GameObject("MobileTouchControls");
             DontDestroyOnLoad(go);
             var controls = go.AddComponent<MobileTouchControls>();
-            return controls.IsActive ? controls : null;
+            if (!controls.IsActive)
+            {
+                Destroy(go);
+                return null;
+            }
+
+            return controls;
         }
 
         void Awake()
@@ -93,6 +110,8 @@ namespace SimpleVoxelSystem
             JumpPressedThisFrame = jumpButton != null && jumpButton.PressedThisFrame;
             MinePressedThisFrame = mineButton != null && mineButton.PressedThisFrame;
             LookTapPressedThisFrame = lookPad != null && lookPad.TappedThisFrame;
+            InteractPressedThisFrame = interactButton != null && interactButton.PressedThisFrame;
+            MenuPressedThisFrame = menuButton != null && menuButton.PressedThisFrame;
             RemovePressedThisFrame = removeButton != null && removeButton.PressedThisFrame;
             RunHeld = runButton != null && runButton.Held;
             RemoveHeld = removeButton != null && removeButton.Held;
@@ -113,11 +132,30 @@ namespace SimpleVoxelSystem
             if (!IsActive)
                 return;
 
+            ApplyInteractHintState();
+
             jumpButton?.ResetFrameFlags();
             mineButton?.ResetFrameFlags();
+            interactButton?.ResetFrameFlags();
+            menuButton?.ResetFrameFlags();
             runButton?.ResetFrameFlags();
             removeButton?.ResetFrameFlags();
             lookPad?.ResetFrameFlags();
+        }
+
+        public void RequestInteractHint(string label, int priority = 0, bool visible = true)
+        {
+            if (!IsActive)
+                return;
+
+            if (!interactHintRequested || priority >= interactHintPriority)
+            {
+                interactHintText = string.IsNullOrWhiteSpace(label) ? DefaultInteractLabel : label.ToUpperInvariant();
+                interactHintPriority = priority;
+                interactHintVisibleRequested = visible;
+            }
+
+            interactHintRequested = true;
         }
 
         private bool ShouldEnable()
@@ -235,12 +273,17 @@ namespace SimpleVoxelSystem
 
         private void BuildButtons(Transform parent)
         {
-            jumpButton = CreateTapButton(parent, "JumpButton", "JUMP", new Vector2(1f, 0f), new Vector2(28f, 206f), new Color(0.2f, 0.6f, 0.95f, 0.8f));
-            mineButton = CreateTapButton(parent, "MineButton", "MINE", new Vector2(1f, 0f), new Vector2(28f, 106f), new Color(0.95f, 0.45f, 0.2f, 0.85f));
-            removeButton = CreateHoldButton(parent, "RemoveButton", "DEL", new Vector2(1f, 0f), new Vector2(148f, 206f), new Color(0.95f, 0.2f, 0.2f, 0.82f));
-            runButton = CreateHoldButton(parent, "RunButton", "RUN", new Vector2(1f, 0f), new Vector2(148f, 106f), new Color(0.2f, 0.8f, 0.4f, 0.8f));
-            zoomInButton = CreateHoldButton(parent, "ZoomInButton", "+", new Vector2(1f, 1f), new Vector2(28f, 120f), new Color(0.75f, 0.75f, 0.9f, 0.8f));
-            zoomOutButton = CreateHoldButton(parent, "ZoomOutButton", "-", new Vector2(1f, 1f), new Vector2(28f, 60f), new Color(0.75f, 0.75f, 0.9f, 0.8f));
+            mineButton = CreateTapButton(parent, "MineButton", "MINE", new Vector2(1f, 0f), new Vector2(24f, 26f), new Vector2(128f, 112f), new Color(0.95f, 0.45f, 0.2f, 0.88f), 26);
+            jumpButton = CreateTapButton(parent, "JumpButton", "JUMP", new Vector2(1f, 0f), new Vector2(24f, 148f), new Vector2(108f, 92f), new Color(0.2f, 0.62f, 0.95f, 0.86f), 22);
+            interactButton = CreateTapButton(parent, "InteractButton", DefaultInteractLabel, new Vector2(1f, 0f), new Vector2(146f, 148f), new Vector2(118f, 92f), new Color(0.98f, 0.78f, 0.18f, 0.9f), 24);
+            runButton = CreateHoldButton(parent, "RunButton", "RUN", new Vector2(1f, 0f), new Vector2(146f, 26f), new Vector2(108f, 92f), new Color(0.2f, 0.82f, 0.42f, 0.82f), 22);
+            removeButton = CreateHoldButton(parent, "RemoveButton", "DEL", new Vector2(1f, 1f), new Vector2(24f, 182f), new Vector2(92f, 72f), new Color(0.95f, 0.2f, 0.2f, 0.82f), 20);
+            zoomInButton = CreateHoldButton(parent, "ZoomInButton", "+", new Vector2(1f, 1f), new Vector2(24f, 102f), new Vector2(72f, 60f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
+            zoomOutButton = CreateHoldButton(parent, "ZoomOutButton", "-", new Vector2(1f, 1f), new Vector2(24f, 36f), new Vector2(72f, 60f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
+            menuButton = CreateTapButton(parent, "MenuButton", "MENU", new Vector2(0f, 1f), new Vector2(24f, 24f), new Vector2(112f, 62f), new Color(0.2f, 0.3f, 0.45f, 0.86f), 18);
+
+            if (interactButton != null)
+                interactButtonLabel = interactButton.GetComponentInChildren<Text>();
         }
 
         private static RectTransform CreateRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
@@ -255,20 +298,34 @@ namespace SimpleVoxelSystem
             return rt;
         }
 
-        private TouchTapButton CreateTapButton(Transform parent, string name, string text, Vector2 anchor, Vector2 anchoredFromEdge, Color color)
+        private TouchTapButton CreateTapButton(Transform parent, string name, string text, Vector2 anchor, Vector2 anchoredFromEdge, Vector2 size, Color color, int fontSize)
         {
             Vector2 pos = new Vector2(anchor.x == 1f ? -anchoredFromEdge.x : anchoredFromEdge.x, anchor.y == 1f ? -anchoredFromEdge.y : anchoredFromEdge.y);
-            GameObject go = RuntimeUIFactory.MakePanel(name, parent, anchor, anchor, pos, new Vector2(100f, 84f), color);
-            RuntimeUIFactory.MakeLabel(go.transform, "Label", text, 24, TextAnchor.MiddleCenter, color: Color.white);
+            GameObject go = RuntimeUIFactory.MakePanel(name, parent, anchor, anchor, pos, size, color);
+            RuntimeUIFactory.MakeLabel(go.transform, "Label", text, fontSize, TextAnchor.MiddleCenter, color: Color.white);
             return go.AddComponent<TouchTapButton>();
         }
 
-        private TouchHoldButton CreateHoldButton(Transform parent, string name, string text, Vector2 anchor, Vector2 anchoredFromEdge, Color color)
+        private TouchHoldButton CreateHoldButton(Transform parent, string name, string text, Vector2 anchor, Vector2 anchoredFromEdge, Vector2 size, Color color, int fontSize)
         {
             Vector2 pos = new Vector2(anchor.x == 1f ? -anchoredFromEdge.x : anchoredFromEdge.x, anchor.y == 1f ? -anchoredFromEdge.y : anchoredFromEdge.y);
-            GameObject go = RuntimeUIFactory.MakePanel(name, parent, anchor, anchor, pos, new Vector2(100f, 84f), color);
-            RuntimeUIFactory.MakeLabel(go.transform, "Label", text, 24, TextAnchor.MiddleCenter, color: Color.white);
+            GameObject go = RuntimeUIFactory.MakePanel(name, parent, anchor, anchor, pos, size, color);
+            RuntimeUIFactory.MakeLabel(go.transform, "Label", text, fontSize, TextAnchor.MiddleCenter, color: Color.white);
             return go.AddComponent<TouchHoldButton>();
+        }
+
+        private void ApplyInteractHintState()
+        {
+            if (interactButton != null)
+                interactButton.gameObject.SetActive(interactHintRequested ? interactHintVisibleRequested : true);
+
+            if (interactButtonLabel != null)
+                interactButtonLabel.text = interactHintRequested ? interactHintText : DefaultInteractLabel;
+
+            interactHintRequested = false;
+            interactHintText = DefaultInteractLabel;
+            interactHintPriority = int.MinValue;
+            interactHintVisibleRequested = true;
         }
 
         // (Helper methods removed, now using RuntimeUIFactory)
