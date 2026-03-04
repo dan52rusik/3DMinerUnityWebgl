@@ -421,14 +421,19 @@ namespace SimpleVoxelSystem
         {
             if (blockDataConfig == null) blockDataConfig = new List<BlockData>();
             
-            ForceUpdateOrAdd(BlockType.Grass, new Color(0.2f, 0.8f, 0.2f), 1, 2, 0);
-            ForceUpdateOrAdd(BlockType.Dirt,  new Color(0.5f, 0.3f, 0.1f), 1, 2, 0);
-            ForceUpdateOrAdd(BlockType.Stone, new Color(0.5f, 0.5f, 0.5f), 2, 10, 5);
-            ForceUpdateOrAdd(BlockType.Iron,  new Color(0.8f, 0.6f, 0.4f), 5, 50, 10);
-            ForceUpdateOrAdd(BlockType.Gold,  new Color(1.0f, 0.9f, 0.0f), 10, 100, 15);
+            // hp / xp / requiredLevel / reward
+            // Dirt:  trivial filler, worth almost nothing
+            // Stone: backbone of early game
+            // Iron:  mid-game, requires Lv.4
+            // Gold:  late-game, requires Lv.8
+            ForceUpdateOrAdd(BlockType.Grass, new Color(0.2f, 0.8f, 0.2f), hp: 1, xp:  1, level: 0, reward:  1);
+            ForceUpdateOrAdd(BlockType.Dirt,  new Color(0.5f, 0.3f, 0.1f), hp: 1, xp:  1, level: 0, reward:  1);
+            ForceUpdateOrAdd(BlockType.Stone, new Color(0.5f, 0.5f, 0.5f), hp: 2, xp:  5, level: 1, reward:  8);
+            ForceUpdateOrAdd(BlockType.Iron,  new Color(0.8f, 0.6f, 0.4f), hp: 4, xp: 20, level: 4, reward: 35);
+            ForceUpdateOrAdd(BlockType.Gold,  new Color(1.0f, 0.9f, 0.0f), hp: 8, xp: 40, level: 8, reward: 80);
         }
 
-        private void ForceUpdateOrAdd(BlockType type, Color color, int hp, int xp, int level)
+        private void ForceUpdateOrAdd(BlockType type, Color color, int hp, int xp, int level, int reward)
         {
             BlockData existing = null;
             if (blockDataConfig != null)
@@ -448,7 +453,7 @@ namespace SimpleVoxelSystem
                 existing.xpReward = xp;
                 existing.requiredMiningLevel = level;
                 existing.maxHealth = hp;
-                existing.reward = xp * 2;
+                existing.reward = reward;
             }
             else
             {
@@ -459,7 +464,7 @@ namespace SimpleVoxelSystem
                     maxHealth = hp, 
                     xpReward = xp, 
                     requiredMiningLevel = level,
-                    reward = xp * 2
+                    reward = reward
                 });
             }
         }
