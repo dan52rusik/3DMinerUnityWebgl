@@ -74,30 +74,32 @@ namespace SimpleVoxelSystem
         private Transform           playerTf;
         private ShopZone            mineZone;
 
-        // ─── UI Elements ──────────────────────────────────────────────────────
-        private Canvas          canvas;
-        private RectTransform   canvasRect;
+        // ─── UI refs (built by TutorialUIBuilder) ─────────────────────────────
+        private TutorialUIRefs ui;
 
-        private Image           dimmer;
-        private float           dimTarget;
-        private float           dimCurrent;
+        // Convenience aliases — keeps the rest of the code readable
+        private Canvas        canvas      => ui.Canvas;
+        private RectTransform canvasRect  => ui.CanvasRect;
+        private Image         dimmer      => ui.Dimmer;
+        private GameObject    card        => ui.Card;
+        private Text          cardTitle   => ui.CardTitle;
+        private Text          cardBody    => ui.CardBody;
+        private Text          cardTapHint => ui.CardTapHint;
+        private GameObject    hlBox       => ui.HlBox;
+        private RectTransform hlRect      => ui.HlRect;
+        private Text          arrowLabel  => ui.ArrowLabel;
+        private LineRenderer  beam        => ui.Beam;
 
-        private GameObject      card;           // dark card at top
-        private Text            cardTitle;
-        private Text            cardBody;
-        private Text            cardTapHint;
+        private float dimTarget;
+        private float dimCurrent;
 
-        private GameObject      hlBox;          // golden highlight rectangle
-        private RectTransform   hlRect;
-        private RectTransform   hlTarget;       // world-space rect to track
-        private bool            hlArrow;
+        private RectTransform hlTarget;
+        private bool          hlArrow;
 
-        private Text            arrowLabel;     // "↓" label drawn near highlight
-
-        private LineRenderer    beam;           // world-space beam to shop zone
-        private bool            beamActive;
-        private ShopZoneType    beamZoneType = ShopZoneType.Mine;
-        private float           nextZoneScan;
+        // ─── Beam ─────────────────────────────────────────────────────────────
+        private bool          beamActive;
+        private ShopZoneType  beamZoneType = ShopZoneType.Mine;
+        private float         nextZoneScan;
 
         // ─── State ────────────────────────────────────────────────────────────
         private Step   step = Step.Idle;
@@ -125,7 +127,7 @@ namespace SimpleVoxelSystem
 
         void Start()
         {
-            BuildUI();
+            ui = TutorialUIBuilder.Build(transform);
             DetermineFlow();
         }
 
@@ -360,11 +362,10 @@ namespace SimpleVoxelSystem
                 // ─────────────────────────────────────────────────────────────
                 case Step.PcControls:
                     // Минимум 3 секунды показа — не закрывается случайно при загрузке
-                    bool acknowledged = elapsed > 3f && Application.isFocused && IsPcContinuePressed();
+                    bool acknowledged = elapsed > 3f && Application.isFocused && TutorialInputReader.IsContinuePressed();
                     if (acknowledged)
                     {
                         Debug.Log("[OnboardingTutorial] PC tutorial acknowledged by keyboard.");
-                        // Не сохраняем Done — идём дальше на шаги с островом и шахтой
                         GoStep(Step.MobCreateIsland);
                     }
                     break;
@@ -383,7 +384,7 @@ namespace SimpleVoxelSystem
 
                 // ─────────────────────────────────────────────────────────────
                 case Step.MobButtons:
-                    if (elapsed > 0.5f && WasTapped())
+                    if (elapsed > 0.5f && TutorialInputReader.WasTapped())
                         GoStep(Step.MobCreateIsland);
                     break;
 
@@ -449,13 +450,13 @@ namespace SimpleVoxelSystem
 
                 // ─────────────────────────────────────────────────────────────
                 case Step.UpgradePickaxe:
-                    if (elapsed > 8f || (elapsed > 2f && WasTapped()))
+                    if (elapsed > 8f || (elapsed > 2f && TutorialInputReader.WasTapped()))
                         GoStep(Step.MinionHint);
                     break;
 
                 // ─────────────────────────────────────────────────────────────
                 case Step.MinionHint:
-                    if (elapsed > 2f && WasTapped())
+                    if (elapsed > 2f && TutorialInputReader.WasTapped())
                     {
                         PlayerPrefs.SetInt(KeyMobileDone, 1);
                         PlayerPrefs.SetInt(KeyPcShown, 1);
@@ -581,7 +582,6 @@ namespace SimpleVoxelSystem
             Collider col = mineZone.GetComponent<Collider>();
             if (col != null) to = col.bounds.center + Vector3.up * 0.5f;
 
-            // Animate beam colour
             float t = 0.5f + 0.5f * Mathf.Sin(Time.time * 3f);
             beam.startColor = Color.Lerp(new Color(1f, 0.9f, 0.1f, 0.9f), new Color(1f, 0.5f, 0.05f, 0.9f), t);
             beam.endColor   = beam.startColor;
@@ -641,265 +641,6 @@ namespace SimpleVoxelSystem
         {
             if (mineShopUI == null || mineShopUI.SwitchWorldButton == null) return null;
             return mineShopUI.SwitchWorldButton.GetComponent<RectTransform>();
-        }
-
-        // ═════════════════════════════════════════════════════════════════════
-        // Input helpers
-        // ═════════════════════════════════════════════════════════════════════
-
-        bool IsPcMovePressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            var kb = Keyboard.current;
-            if (kb == null) return false;
-            return kb.wKey.isPressed || kb.aKey.isPressed || kb.sKey.isPressed || kb.dKey.isPressed;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f
-                || Mathf.Abs(Input.GetAxisRaw("Vertical"))   > 0.01f;
-#else
-            return false;
-#endif
-        }
-
-        bool IsPcContinuePressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            bool keyDown = false;
-            if (Keyboard.current != null)
-            {
-                Keyboard kb = Keyboard.current;
-                keyDown = kb.wKey.wasPressedThisFrame
-                    || kb.aKey.wasPressedThisFrame
-                    || kb.sKey.wasPressedThisFrame
-                    || kb.dKey.wasPressedThisFrame
-                    || kb.spaceKey.wasPressedThisFrame;
-            }
-            return keyDown;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            bool keyDown = Input.GetKeyDown(KeyCode.W)
-                || Input.GetKeyDown(KeyCode.A)
-                || Input.GetKeyDown(KeyCode.S)
-                || Input.GetKeyDown(KeyCode.D)
-                || Input.GetKeyDown(KeyCode.Space);
-            return keyDown;
-#else
-            return false;
-#endif
-        }
-
-        bool IsPcMinePressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            var m = Mouse.current;
-            return m != null && m.leftButton.wasPressedThisFrame;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButtonDown(0);
-#else
-            return false;
-#endif
-        }
-
-        bool WasTapped()
-        {
-#if ENABLE_INPUT_SYSTEM
-            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame) return true;
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) return true;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began) return true;
-            if (Input.GetMouseButtonDown(0)) return true;
-#endif
-            return false;
-        }
-
-        // ═════════════════════════════════════════════════════════════════════
-        // UI construction (pure code, no prefabs required)
-        // ═════════════════════════════════════════════════════════════════════
-
-        void BuildUI()
-        {
-            // ── Canvas ────────────────────────────────────────────────────────
-            GameObject cGo = new GameObject("OnboardingCanvas");
-            cGo.transform.SetParent(transform, false);
-
-            canvas = cGo.AddComponent<Canvas>();
-            canvas.renderMode  = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 7000;
-            cGo.AddComponent<GraphicRaycaster>();
-
-            var scaler = cGo.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode        = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight  = 0.5f;
-
-            canvasRect = canvas.GetComponent<RectTransform>();
-
-            // ── Full-screen dimmer ────────────────────────────────────────────
-            var dimGo = MakePanel("Dimmer", cGo.transform,
-                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
-                new Color(0, 0, 0, 0), stretch: true);
-            dimmer = dimGo.GetComponent<Image>();
-            dimmer.raycastTarget = false;
-
-            // ── Info card (top-centre) ────────────────────────────────────────
-            card = MakePanel("TutCard", cGo.transform,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -18f), new Vector2(880f, 210f),
-                new Color(0.04f, 0.06f, 0.12f, 0.95f));
-            // Set pivot to top-center so anchoredPosition positions the TOP edge, not the center
-            card.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 1f);
-            card.GetComponent<Image>().raycastTarget = false;
-
-            // Rounded feel via Outline
-            var outline = card.AddComponent<Outline>();
-            outline.effectColor    = new Color(0.35f, 0.55f, 1f, 0.45f);
-            outline.effectDistance = new Vector2(2f, 2f);
-
-            // Title: bottom-right corner of the card — never overlaps body text
-            cardTitle = MakeLabel(card.transform, "Title",
-                "", 22, TextAnchor.LowerRight,
-                new Vector2(0, 8), new Vector2(-16, 8), bold: true,
-                color: new Color(0.55f, 0.72f, 1f, 0.85f));
-
-            // Body: takes the full card from top, plenty of room
-            cardBody = MakeLabel(card.transform, "Body",
-                "", 20, TextAnchor.UpperLeft,
-                new Vector2(28, -12), new Vector2(-28, -26), bold: false,
-                color: new Color(0.88f, 0.93f, 1f));
-
-            cardTapHint = MakeLabel(card.transform, "TapHint",
-                "", 17, TextAnchor.LowerRight,
-                new Vector2(28, 8), new Vector2(-28, 8), bold: false,
-                color: new Color(1f, 0.88f, 0.35f));
-            cardTapHint.gameObject.SetActive(false);
-
-            if (cardTitle   != null) cardTitle.raycastTarget   = false;
-            if (cardBody    != null) cardBody.raycastTarget     = false;
-            if (cardTapHint != null) cardTapHint.raycastTarget  = false;
-
-            // ── Highlight box ─────────────────────────────────────────────────
-            hlBox = MakePanel("Highlight", cGo.transform,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(120, 60),
-                new Color(1f, 0.85f, 0.1f, 0.08f));
-            hlRect = hlBox.GetComponent<RectTransform>();
-            hlBox.GetComponent<Image>().raycastTarget = false;
-
-            var hlOutline = hlBox.AddComponent<Outline>();
-            hlOutline.effectColor    = new Color(1f, 0.88f, 0.05f, 1f);
-            hlOutline.effectDistance = new Vector2(3f, 3f);
-            hlBox.SetActive(false);
-
-            // ── Arrow label ───────────────────────────────────────────────────
-            var arrowGo = new GameObject("Arrow");
-            arrowGo.transform.SetParent(cGo.transform, false);
-            var arrowRt = arrowGo.AddComponent<RectTransform>();
-            arrowRt.sizeDelta = new Vector2(80, 36);
-            arrowRt.anchorMin = arrowRt.anchorMax = new Vector2(0.5f, 0.5f);
-            arrowLabel = arrowGo.AddComponent<Text>();
-            arrowLabel.text      = "▼";
-            arrowLabel.fontSize  = 32;
-            arrowLabel.alignment = TextAnchor.MiddleCenter;
-            arrowLabel.color     = new Color(1f, 0.9f, 0.15f, 1f);
-            arrowLabel.font      = GetSafeFont();
-            arrowLabel.raycastTarget = false;
-            arrowGo.SetActive(false);
-
-            // ── World-space beam ──────────────────────────────────────────────
-            var beamGo = new GameObject("TutBeam");
-            beamGo.transform.SetParent(transform, false);
-            beam = beamGo.AddComponent<LineRenderer>();
-            beam.positionCount  = 2;
-            beam.startWidth     = 0.07f;
-            beam.endWidth       = 0.07f;
-            beam.useWorldSpace  = true;
-            beam.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            beam.receiveShadows = false;
-            Shader sh = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
-            var beamMat = new Material(sh);
-            beamMat.color = new Color(1f, 0.88f, 0.1f, 0.92f);
-            beam.material = beamMat;
-            beam.enabled  = false;
-
-            canvas.enabled = false; // hidden until first step
-        }
-
-        // ── Tiny helpers ──────────────────────────────────────────────────────
-
-        static GameObject MakePanel(string name, Transform parent,
-            Vector2 anchorMin, Vector2 anchorMax,
-            Vector2 anchoredPos, Vector2 size,
-            Color color, bool stretch = false)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = anchorMin;
-            rt.anchorMax = anchorMax;
-            if (stretch)
-            {
-                rt.offsetMin = Vector2.zero;
-                rt.offsetMax = Vector2.zero;
-            }
-            else
-            {
-                rt.anchoredPosition = anchoredPos;
-                rt.sizeDelta        = size;
-            }
-            var img = go.AddComponent<Image>();
-            img.color = color;
-            return go;
-        }
-
-        static Text MakeLabel(Transform parent, string name,
-            string text, int fontSize, TextAnchor anchor,
-            Vector2 offsetMin, Vector2 offsetMax,
-            bool bold = false, Color? color = null)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin  = Vector2.zero;
-            rt.anchorMax  = Vector2.one;
-            rt.offsetMin  = offsetMin;
-            rt.offsetMax  = offsetMax;
-            var t = go.AddComponent<Text>();
-            t.text      = text;
-            t.fontSize  = fontSize;
-            t.alignment = anchor;
-            t.color     = color ?? Color.white;
-            t.font      = GetSafeFont();
-            if (bold) t.fontStyle = FontStyle.Bold;
-            return t;
-        }
-
-        // Returns a font that works in Editor, standalone AND WebGL/Yandex builds.
-        // LegacyRuntime.ttf is Editor-only; Arial is always available at runtime.
-        static Font _safeFont;
-        static Font GetSafeFont()
-        {
-            if (_safeFont != null) return _safeFont;
-
-            // 0. Preferred bundled Unicode font.
-            _safeFont = Resources.Load<Font>("LiberationSans");
-            if (_safeFont != null) return _safeFont;
-
-            // 1. Try fonts in Resources (Roboto-Regular usually has better Cyrillic support)
-            _safeFont = Resources.Load<Font>("Roboto-Regular");
-            if (_safeFont != null) return _safeFont;
-
-            // 2. Try built-in Arial (works in all builds including WebGL)
-            _safeFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (_safeFont != null) return _safeFont;
-
-            // 3. OS font fallback
-            _safeFont = Font.CreateDynamicFontFromOSFont("Arial", 16);
-            if (_safeFont != null) return _safeFont;
-
-            // 4. Any font in Resources
-            _safeFont = Resources.FindObjectsOfTypeAll<Font>().Length > 0
-                ? Resources.FindObjectsOfTypeAll<Font>()[0] : null;
-
-            return _safeFont;
         }
     }
 }

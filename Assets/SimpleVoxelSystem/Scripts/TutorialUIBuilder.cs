@@ -1,0 +1,199 @@
+// TutorialUIBuilder.cs — constructs all tutorial UI elements in code (no prefabs needed).
+// Called once from OnboardingTutorial.Start via BuildUI().
+
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace SimpleVoxelSystem
+{
+    // ─── Value type that bundles every UI reference built by the builder ────────
+    internal struct TutorialUIRefs
+    {
+        public Canvas         Canvas;
+        public RectTransform  CanvasRect;
+
+        // Dimmer
+        public Image          Dimmer;
+
+        // Info card
+        public GameObject     Card;
+        public Text           CardTitle;
+        public Text           CardBody;
+        public Text           CardTapHint;
+
+        // Highlight box
+        public GameObject     HlBox;
+        public RectTransform  HlRect;
+
+        // Animated arrow
+        public Text           ArrowLabel;
+
+        // World-space beam
+        public LineRenderer   Beam;
+    }
+
+    // ─── Builder ────────────────────────────────────────────────────────────────
+    internal static class TutorialUIBuilder
+    {
+        /// <summary>
+        /// Creates the entire tutorial overlay hierarchy and returns references to
+        /// every interactive element. <paramref name="owner"/> is the tutorial
+        /// MonoBehaviour's transform (used as parent for world-space objects).
+        /// </summary>
+        public static TutorialUIRefs Build(Transform owner)
+        {
+            var refs = new TutorialUIRefs();
+
+            // ── Canvas ────────────────────────────────────────────────────────
+            var cGo = new GameObject("OnboardingCanvas");
+            cGo.transform.SetParent(owner, false);
+
+            refs.Canvas = cGo.AddComponent<Canvas>();
+            refs.Canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+            refs.Canvas.sortingOrder = 7000;
+            cGo.AddComponent<GraphicRaycaster>();
+
+            var scaler = cGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight  = 0.5f;
+
+            refs.CanvasRect = refs.Canvas.GetComponent<RectTransform>();
+
+            // ── Full-screen dimmer ────────────────────────────────────────────
+            var dimGo = MakePanel("Dimmer", cGo.transform,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
+                new Color(0, 0, 0, 0), stretch: true);
+            refs.Dimmer = dimGo.GetComponent<Image>();
+            refs.Dimmer.raycastTarget = false;
+
+            // ── Info card (top-centre) ────────────────────────────────────────
+            refs.Card = MakePanel("TutCard", cGo.transform,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -18f), new Vector2(880f, 210f),
+                new Color(0.04f, 0.06f, 0.12f, 0.95f));
+            var cardRt = refs.Card.GetComponent<RectTransform>();
+            cardRt.pivot = new Vector2(0.5f, 1f);          // anchor by top edge
+            refs.Card.GetComponent<Image>().raycastTarget = false;
+
+            var outline = refs.Card.AddComponent<Outline>();
+            outline.effectColor    = new Color(0.35f, 0.55f, 1f, 0.45f);
+            outline.effectDistance = new Vector2(2f, 2f);
+
+            refs.CardTitle = MakeLabel(refs.Card.transform, "Title",
+                "", 22, TextAnchor.LowerRight,
+                new Vector2(0, 8), new Vector2(-16, 8), bold: true,
+                color: new Color(0.55f, 0.72f, 1f, 0.85f));
+
+            refs.CardBody = MakeLabel(refs.Card.transform, "Body",
+                "", 20, TextAnchor.UpperLeft,
+                new Vector2(28, -12), new Vector2(-28, -26),
+                color: new Color(0.88f, 0.93f, 1f));
+
+            refs.CardTapHint = MakeLabel(refs.Card.transform, "TapHint",
+                "", 17, TextAnchor.LowerRight,
+                new Vector2(28, 8), new Vector2(-28, 8),
+                color: new Color(1f, 0.88f, 0.35f));
+            refs.CardTapHint.gameObject.SetActive(false);
+
+            refs.CardTitle.raycastTarget   = false;
+            refs.CardBody.raycastTarget    = false;
+            refs.CardTapHint.raycastTarget = false;
+
+            // ── Highlight box ─────────────────────────────────────────────────
+            refs.HlBox = MakePanel("Highlight", cGo.transform,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(120, 60),
+                new Color(1f, 0.85f, 0.1f, 0.08f));
+            refs.HlRect = refs.HlBox.GetComponent<RectTransform>();
+            refs.HlBox.GetComponent<Image>().raycastTarget = false;
+
+            var hlOutline = refs.HlBox.AddComponent<Outline>();
+            hlOutline.effectColor    = new Color(1f, 0.88f, 0.05f, 1f);
+            hlOutline.effectDistance = new Vector2(3f, 3f);
+            refs.HlBox.SetActive(false);
+
+            // ── Arrow label ───────────────────────────────────────────────────
+            var arrowGo = new GameObject("Arrow");
+            arrowGo.transform.SetParent(cGo.transform, false);
+            var arrowRt = arrowGo.AddComponent<RectTransform>();
+            arrowRt.sizeDelta        = new Vector2(80, 36);
+            arrowRt.anchorMin        = arrowRt.anchorMax = new Vector2(0.5f, 0.5f);
+            refs.ArrowLabel          = arrowGo.AddComponent<Text>();
+            refs.ArrowLabel.text     = "▼";
+            refs.ArrowLabel.fontSize = 32;
+            refs.ArrowLabel.alignment    = TextAnchor.MiddleCenter;
+            refs.ArrowLabel.color        = new Color(1f, 0.9f, 0.15f, 1f);
+            refs.ArrowLabel.font         = TutorialFontProvider.GetSafeFont();
+            refs.ArrowLabel.raycastTarget = false;
+            arrowGo.SetActive(false);
+
+            // ── World-space beam ──────────────────────────────────────────────
+            var beamGo = new GameObject("TutBeam");
+            beamGo.transform.SetParent(owner, false);
+            refs.Beam = beamGo.AddComponent<LineRenderer>();
+            refs.Beam.positionCount = 2;
+            refs.Beam.startWidth    = 0.07f;
+            refs.Beam.endWidth      = 0.07f;
+            refs.Beam.useWorldSpace = true;
+            refs.Beam.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            refs.Beam.receiveShadows    = false;
+            Shader sh     = Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
+            var beamMat   = new Material(sh);
+            beamMat.color = new Color(1f, 0.88f, 0.1f, 0.92f);
+            refs.Beam.material = beamMat;
+            refs.Beam.enabled  = false;
+
+            refs.Canvas.enabled = false; // hidden until first step
+            return refs;
+        }
+
+        // ── Internal UI factory helpers ──────────────────────────────────────
+        private static GameObject MakePanel(string name, Transform parent,
+            Vector2 anchorMin, Vector2 anchorMax,
+            Vector2 anchoredPos, Vector2 size,
+            Color color, bool stretch = false)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            if (stretch)
+            {
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+            }
+            else
+            {
+                rt.anchoredPosition = anchoredPos;
+                rt.sizeDelta        = size;
+            }
+            var img = go.AddComponent<Image>();
+            img.color = color;
+            return go;
+        }
+
+        private static Text MakeLabel(Transform parent, string name,
+            string text, int fontSize, TextAnchor anchor,
+            Vector2 offsetMin, Vector2 offsetMax,
+            bool bold = false, Color? color = null)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = offsetMin;
+            rt.offsetMax = offsetMax;
+            var t = go.AddComponent<Text>();
+            t.text      = text;
+            t.fontSize  = fontSize;
+            t.alignment = anchor;
+            t.color     = color ?? Color.white;
+            t.font      = TutorialFontProvider.GetSafeFont();
+            if (bold) t.fontStyle = FontStyle.Bold;
+            return t;
+        }
+    }
+}
