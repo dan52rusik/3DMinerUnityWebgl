@@ -28,7 +28,8 @@ namespace SimpleVoxelSystem
         public bool MinePressedThisFrame { get; private set; }
         public bool LookTapPressedThisFrame { get; private set; }
         public bool InteractPressedThisFrame { get; private set; }
-        public bool MenuPressedThisFrame { get; private set; }
+        public bool MinionMenuPressedThisFrame { get; private set; }
+        public bool MenuPressedThisFrame => MinionMenuPressedThisFrame;
         public bool RemovePressedThisFrame { get; private set; }
         public bool RunHeld { get; private set; }
         public bool RemoveHeld { get; private set; }
@@ -43,7 +44,7 @@ namespace SimpleVoxelSystem
         private TouchTapButton jumpButton;
         private TouchTapButton mineButton;
         private TouchTapButton interactButton;
-        private TouchTapButton menuButton;
+        private TouchTapButton minionMenuButton;
         private TouchHoldButton removeButton;
         private Text interactButtonLabel;
 
@@ -111,7 +112,7 @@ namespace SimpleVoxelSystem
             MinePressedThisFrame = mineButton != null && mineButton.PressedThisFrame;
             LookTapPressedThisFrame = lookPad != null && lookPad.TappedThisFrame;
             InteractPressedThisFrame = interactButton != null && interactButton.PressedThisFrame;
-            MenuPressedThisFrame = menuButton != null && menuButton.PressedThisFrame;
+            MinionMenuPressedThisFrame = minionMenuButton != null && minionMenuButton.PressedThisFrame;
             RemovePressedThisFrame = removeButton != null && removeButton.PressedThisFrame;
             RunHeld = runButton != null && runButton.Held;
             RemoveHeld = removeButton != null && removeButton.Held;
@@ -137,7 +138,7 @@ namespace SimpleVoxelSystem
             jumpButton?.ResetFrameFlags();
             mineButton?.ResetFrameFlags();
             interactButton?.ResetFrameFlags();
-            menuButton?.ResetFrameFlags();
+            minionMenuButton?.ResetFrameFlags();
             runButton?.ResetFrameFlags();
             removeButton?.ResetFrameFlags();
             lookPad?.ResetFrameFlags();
@@ -280,7 +281,7 @@ namespace SimpleVoxelSystem
             removeButton = CreateHoldButton(parent, "RemoveButton", "DEL", new Vector2(1f, 1f), new Vector2(24f, 182f), new Vector2(92f, 72f), new Color(0.95f, 0.2f, 0.2f, 0.82f), 20);
             zoomInButton = CreateHoldButton(parent, "ZoomInButton", "+", new Vector2(1f, 1f), new Vector2(24f, 102f), new Vector2(72f, 60f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
             zoomOutButton = CreateHoldButton(parent, "ZoomOutButton", "-", new Vector2(1f, 1f), new Vector2(24f, 36f), new Vector2(72f, 60f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
-            menuButton = CreateTapButton(parent, "MenuButton", "MENU", new Vector2(0f, 1f), new Vector2(24f, 24f), new Vector2(112f, 62f), new Color(0.2f, 0.3f, 0.45f, 0.86f), 18);
+            minionMenuButton = CreateTapButton(parent, "MinionsButton", "MINIONS", new Vector2(0f, 1f), new Vector2(24f, 24f), new Vector2(160f, 62f), new Color(0.22f, 0.34f, 0.56f, 0.88f), 18);
 
             if (interactButton != null)
                 interactButtonLabel = interactButton.GetComponentInChildren<Text>();

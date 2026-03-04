@@ -26,6 +26,9 @@ namespace SimpleVoxelSystem
         private GameObject _overlay;       // Ñ‚Ñ‘Ð¼Ð½Ñ‹Ð¹ Ñ„Ð¾Ð½ Ð¿Ð¾Ð´ Ð¿Ð°Ð½ÐµÐ»ÑŒÑŽ
         private GameObject hud;
         private Text       moneyText;
+        private Text       panelMoneyText;
+        private Text       switchWorldBtnText;
+        private Text       cancelBtnText;
 
         public bool IsVisible => shopPanel != null && shopPanel.activeSelf;
 
@@ -133,16 +136,16 @@ namespace SimpleVoxelSystem
             // HUD: деньги в левом верхнем углу ────────────────────
             hud = RuntimeUIFactory.MakePanel("HUD", rootCanvas.transform,
                 anchor: new Vector2(0f, 1f), pivot: new Vector2(0f, 1f),
-                pos: new Vector2(10f, -10f), size: new Vector2(280f, 48f),
+                pos: new Vector2(10f, -10f), size: new Vector2(420f, 78f),
                 color: ColHUD);
 
             moneyText = RuntimeUIFactory.MakeLabel(hud.transform, "MoneyText",
                 "$ 0  |  Lv. 1", 16, TextAnchor.MiddleLeft,
-                new Vector2(10, 0), new Vector2(-10, 0));
+                new Vector2(10, 32), new Vector2(-10, 0));
 
             statusLabel = RuntimeUIFactory.MakeLabel(hud.transform, "StatusLabel",
-                "", 14, TextAnchor.MiddleCenter,
-                new Vector2(10, -50), new Vector2(-10, -30));
+                "", 13, TextAnchor.MiddleLeft,
+                new Vector2(10, 0), new Vector2(-10, -34));
             statusLabel.color = new Color(1f, 1f, 0.7f, 1f); // Мягкий бежевый
 
             // Кнопка Отмена (режим размещения) ─────────────────────
@@ -151,6 +154,7 @@ namespace SimpleVoxelSystem
                 anchor: new Vector2(1f, 0f), pivot: new Vector2(1f, 0f),
                 pos: new Vector2(-10f, 10f), size: new Vector2(120f, 40f));
             cancelBtn.onClick.AddListener(() => mineMarket.CancelPlacementPublic());
+            cancelBtnText = cancelBtn.GetComponentInChildren<Text>();
             cancelBtn.gameObject.SetActive(false);
 
             // Кнопка Продать ─────────────────────────────────────────────
@@ -173,6 +177,7 @@ namespace SimpleVoxelSystem
                 else
                     mineMarket.WellGen.SwitchToLobby();
             });
+            switchWorldBtnText = switchWorldBtn.GetComponentInChildren<Text>();
             switchWorldBtn.gameObject.SetActive(false);
 
             // Кнопка Создать Остров (теперь сверху, в виде иконки/маленькой панели) ──
@@ -213,15 +218,22 @@ namespace SimpleVoxelSystem
                 anchor: new Vector2(0.5f, 0.5f), pivot: new Vector2(0.5f, 0.5f),
                 pos: Vector2.zero, size: new Vector2(380f, 460f),
                 color: ColPanel);
+            RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.50f);
 
             // Заголовок
             RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopTitle",
                 "MINE SHOP", 20, TextAnchor.UpperCenter,
                 new Vector2(0, -12), new Vector2(0, 0), bold: true);
 
+            Button closeShopBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseShopBtn", "X",
+                new Color(0.78f, 0.22f, 0.22f, 0.95f),
+                anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
+                pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
+            closeShopBtn.onClick.AddListener(() => SetPanelVisible(false));
+
             // Подзаголовок с деньгами
-            RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopMoney",
-                "Balance: $0  |  [B] close", 12, TextAnchor.UpperCenter,
+            panelMoneyText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopMoney",
+                "Balance: $0  |  [B]/[X] close", 12, TextAnchor.UpperCenter,
                 new Vector2(0, -42), new Vector2(0, -22), bold: false);
 
             // Горизонтальный разделитель
@@ -261,7 +273,7 @@ namespace SimpleVoxelSystem
             if (shopPanel != null)
             {
                 RectTransform rt = shopPanel.GetComponent<RectTransform>();
-                rt.sizeDelta = new Vector2(rt.sizeDelta.x, Mathf.Max(200f, h));
+                rt.sizeDelta = new Vector2(rt.sizeDelta.x, Mathf.Clamp(h, 260f, 760f));
             }
         }
 
@@ -410,9 +422,8 @@ namespace SimpleVoxelSystem
             if (switchWorldBtn != null)
             {
                 switchWorldBtn.gameObject.SetActive(islandBuilt);
-                var txt = switchWorldBtn.GetComponentInChildren<Text>();
-                if (txt != null)
-                    txt.text = inLobby ? "To Island" : "To Lobby";
+                if (switchWorldBtnText != null)
+                    switchWorldBtnText.text = inLobby ? "To Island" : "To Lobby";
             }
 
             // ÐšÐ½Ð¾Ð¿ÐºÐ¸ Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹ Ð¢ÐžÐ›Ð¬ÐšÐž Ð² Ð»Ð¾Ð±Ð±Ð¸
@@ -439,8 +450,8 @@ namespace SimpleVoxelSystem
                 // Ð½ÐµÐ·Ð°Ð²Ð¸ÑÐ¸Ð¼Ð¾ Ð¾Ñ‚ Ñ‚Ð¾Ð³Ð¾, Ð² Ð»Ð¾Ð±Ð±Ð¸ Ð¼Ñ‹ Ð¸Ð»Ð¸ Ð½Ð° Ð¾ÑÑ‚Ñ€Ð¾Ð²Ðµ.
                 cancelBtn.gameObject.SetActive(isPlacing);
 
-                var txt = cancelBtn.GetComponentInChildren<Text>();
-                if (txt != null) txt.text = "Refund";
+                if (cancelBtnText != null)
+                    cancelBtnText.text = "Refund";
             }
 
             // Ð¡Ñ‚Ð°Ñ‚ÑƒÑ Ñ€Ð°Ð·Ð¼ÐµÑ‰ÐµÐ½Ð¸Ñ
@@ -481,10 +492,8 @@ namespace SimpleVoxelSystem
         void UpdatePanelMoneyLabel()
         {
             // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ Ñ‚ÐµÐºÑÑ‚ Ð¿Ð¾Ð´Ð·Ð°Ð³Ð¾Ð»Ð¾Ð²ÐºÐ° Ð² Ð¿Ð°Ð½ÐµÐ»Ð¸ (ÐµÑÐ»Ð¸ ÐµÑÑ‚ÑŒ)
-            if (shopPanel == null) return;
-            var txt = shopPanel.transform.Find("ShopMoney")?.GetComponent<Text>();
-            if (txt != null)
-                txt.text = $"Balance: ${GlobalEconomy.Money}  |  [B] close";
+            if (panelMoneyText != null)
+                panelMoneyText.text = $"Balance: ${GlobalEconomy.Money}  |  [B]/[X] close";
         }
 
         void SetStatus(string msg)

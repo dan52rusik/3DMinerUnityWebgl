@@ -115,6 +115,32 @@ namespace SimpleVoxelSystem
             return txt;
         }
 
+        /// <summary>
+        /// Creates a text label with fixed position/size (non-stretch).
+        /// Use this when you need explicit placement instead of offset-based stretch labels.
+        /// </summary>
+        public static Text MakeLabelFixed(Transform parent, string name, string text, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, int fontSize = 13, TextAnchor align = TextAnchor.MiddleCenter, bool bold = false, Color? color = null)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = anchor;
+            rt.anchorMax = anchor;
+            rt.pivot = pivot;
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+
+            var txt = go.AddComponent<Text>();
+            txt.font = GetStandardFont();
+            txt.fontSize = fontSize;
+            txt.alignment = align;
+            txt.color = color ?? TextDefault;
+            txt.text = bold ? $"<b>{text}</b>" : text;
+            txt.supportRichText = true;
+            return txt;
+        }
+
         /// <summary>Creates an InputField with a descriptive label above it.</summary>
         public static InputField MakeInputField(Transform parent, string name, string label, ref float offsetY, float width = 280f)
         {
@@ -174,7 +200,10 @@ namespace SimpleVoxelSystem
             go.AddComponent<Image>().color = SeparatorColor;
         }
 
-        /// <summary>Creates a ScrollView container with VerticalLayoutGroup and ContentSizeFitter.</summary>
+        /// <summary>
+        /// Creates a container with vertical layout and dynamic height.
+        /// Returned transform is the direct parent for list entries.
+        /// </summary>
         public static Transform MakeScrollContainer(Transform parent, Vector2? offsetMin = null, Vector2? offsetMax = null)
         {
             GameObject go = new GameObject("ScrollContainer");
@@ -185,7 +214,6 @@ namespace SimpleVoxelSystem
             rt.offsetMin = offsetMin ?? new Vector2(10f, 10f);
             rt.offsetMax = offsetMax ?? new Vector2(-10f, -70f);
 
-            // Add ScrollRect if needed? For now just layout
             VerticalLayoutGroup vlg = go.AddComponent<VerticalLayoutGroup>();
             vlg.spacing = 8f;
             vlg.childForceExpandWidth = true;
@@ -196,8 +224,88 @@ namespace SimpleVoxelSystem
 
             ContentSizeFitter csf = go.AddComponent<ContentSizeFitter>();
             csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
             return go.transform;
+        }
+
+        /// <summary>
+        /// Ensures centered panel stays inside screen bounds by shrinking its scale on smaller screens.
+        /// Works best for fixed-size modal panels.
+        /// </summary>
+        public static void EnableAdaptivePanelScale(GameObject panel, float maxWidthPercent = 0.92f, float maxHeightPercent = 0.88f, float minScale = 0.55f)
+        {
+            if (panel == null)
+                return;
+
+            RectTransform rt = panel.GetComponent<RectTransform>();
+            if (rt == null)
+                return;
+
+            RuntimeUIPanelAutoScale scaler = panel.GetComponent<RuntimeUIPanelAutoScale>();
+            if (scaler == null)
+                scaler = panel.AddComponent<RuntimeUIPanelAutoScale>();
+
+            scaler.maxWidthPercent = Mathf.Clamp(maxWidthPercent, 0.4f, 1f);
+            scaler.maxHeightPercent = Mathf.Clamp(maxHeightPercent, 0.4f, 1f);
+            scaler.minScale = Mathf.Clamp(minScale, 0.25f, 1f);
+            scaler.RefreshNow();
+        }
+    }
+
+    [DisallowMultipleComponent]
+    public sealed class RuntimeUIPanelAutoScale : MonoBehaviour
+    {
+        [Range(0.4f, 1f)] public float maxWidthPercent = 0.92f;
+        [Range(0.4f, 1f)] public float maxHeightPercent = 0.88f;
+        [Range(0.25f, 1f)] public float minScale = 0.55f;
+
+        private RectTransform rt;
+        private Vector2 lastScreenSize;
+        private Vector2 lastPanelSize;
+
+        void Awake()
+        {
+            rt = GetComponent<RectTransform>();
+            RefreshNow();
+        }
+
+        void OnEnable()
+        {
+            RefreshNow();
+        }
+
+        void Update()
+        {
+            if (rt == null)
+                rt = GetComponent<RectTransform>();
+            if (rt == null)
+                return;
+
+            Vector2 screenSize = new Vector2(Screen.width, Screen.height);
+            Vector2 panelSize = rt.sizeDelta;
+            if (screenSize != lastScreenSize || panelSize != lastPanelSize)
+                RefreshNow();
+        }
+
+        public void RefreshNow()
+        {
+            if (rt == null)
+                rt = GetComponent<RectTransform>();
+            if (rt == null)
+                return;
+
+            float panelW = Mathf.Max(1f, rt.sizeDelta.x);
+            float panelH = Mathf.Max(1f, rt.sizeDelta.y);
+            float allowedW = Mathf.Max(1f, Screen.width * maxWidthPercent);
+            float allowedH = Mathf.Max(1f, Screen.height * maxHeightPercent);
+
+            float scale = Mathf.Min(allowedW / panelW, allowedH / panelH, 1f);
+            scale = Mathf.Clamp(scale, minScale, 1f);
+
+            rt.localScale = new Vector3(scale, scale, 1f);
+            lastScreenSize = new Vector2(Screen.width, Screen.height);
+            lastPanelSize = rt.sizeDelta;
         }
     }
 

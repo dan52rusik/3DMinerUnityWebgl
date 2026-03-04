@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Collections;
 
 namespace SimpleVoxelSystem
 {
@@ -24,8 +25,15 @@ namespace SimpleVoxelSystem
 
             overlay = RuntimeUIFactory.MakePanel("MinionShopOverlay", canvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000, 10000), new Color(0, 0, 0, 0.6f));
             shopPanel = RuntimeUIFactory.MakePanel("MinionShopPanel", canvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400, 300));
+            RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.55f);
             
             RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "MINION SHOP", 20, TextAnchor.UpperCenter, new Vector2(0, -15));
+
+            Button closeBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseBtn", "X",
+                new Color(0.78f, 0.22f, 0.22f, 0.95f),
+                anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
+                pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
+            closeBtn.onClick.AddListener(() => SetPanelVisible(false));
             
             container = RuntimeUIFactory.MakeScrollContainer(shopPanel.transform, new Vector2(10, 10), new Vector2(-10, -50));
             
@@ -61,7 +69,7 @@ namespace SimpleVoxelSystem
             if (GlobalEconomy.Money >= price)
             {
                 GlobalEconomy.Money -= price;
-                SpawnMinion();
+                StartCoroutine(SpawnMinionRoutine());
                 SetPanelVisible(false);
             }
             else
@@ -70,17 +78,28 @@ namespace SimpleVoxelSystem
             }
         }
 
-        private void SpawnMinion()
+        private IEnumerator SpawnMinionRoutine()
         {
             WellGenerator wellGen = FindFirstObjectByType<WellGenerator>();
-            Vector3 spawnPos = Vector3.zero;
+            if (wellGen != null && wellGen.IsInLobbyMode)
+            {
+                wellGen.SwitchToMine();
+            }
 
+            float timeoutAt = Time.unscaledTime + 2.5f;
+            while (wellGen != null && (wellGen.IsInLobbyMode || wellGen.ActiveIsland == null) && Time.unscaledTime < timeoutAt)
+            {
+                yield return null;
+            }
+
+            SpawnMinion(wellGen);
+        }
+
+        private void SpawnMinion(WellGenerator wellGen)
+        {
+            Vector3 spawnPos = Vector3.zero;
             if (wellGen != null)
             {
-                // Minion should always be spawned on private island.
-                if (wellGen.IsInLobbyMode)
-                    wellGen.SwitchToMine();
-
                 VoxelIsland island = wellGen.ActiveIsland;
                 if (island != null)
                 {

@@ -70,10 +70,17 @@ namespace SimpleVoxelSystem
             if (canvas == null) return;
 
             panel = RuntimeUIFactory.MakePanel("MinionManagePanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 250));
+            RuntimeUIFactory.EnableAdaptivePanelScale(panel, 0.94f, 0.90f, 0.60f);
             
-            RuntimeUIFactory.MakeLabel(panel.transform, "Title", "MINION DETAILS", 16, TextAnchor.UpperCenter, new Vector2(0, -10));
-            
-            infoLabel = RuntimeUIFactory.MakeLabel(panel.transform, "Info", "Stats...", 13, TextAnchor.MiddleCenter, new Vector2(0, 20));
+            RuntimeUIFactory.MakeLabelFixed(panel.transform, "Title", "MINION DETAILS",
+                anchor: new Vector2(0.5f, 1f), pivot: new Vector2(0.5f, 1f),
+                pos: new Vector2(0f, -14f), size: new Vector2(240f, 28f),
+                fontSize: 16, align: TextAnchor.MiddleCenter);
+
+            infoLabel = RuntimeUIFactory.MakeLabelFixed(panel.transform, "Info", "Stats...",
+                anchor: new Vector2(0.5f, 1f), pivot: new Vector2(0.5f, 1f),
+                pos: new Vector2(0f, -78f), size: new Vector2(270f, 70f),
+                fontSize: 13, align: TextAnchor.MiddleCenter);
             
             sellBtn = RuntimeUIFactory.MakeBtn(panel.transform, "SellBtn", "SELL INVENTORY", pos: new Vector2(0, -30));
             sellBtn.onClick.AddListener(OnSell);
@@ -84,16 +91,29 @@ namespace SimpleVoxelSystem
             upgradeCapBtn = RuntimeUIFactory.MakeBtn(panel.transform, "UpgCap", "UPG CAP ($200)", pos: new Vector2(70, -80), size: new Vector2(130, 30));
             upgradeCapBtn.onClick.AddListener(OnUpgradeCapacity);
 
-            Button closeBtn = RuntimeUIFactory.MakeBtn(panel.transform, "Close", "X", pos: new Vector2(135, 110), size: new Vector2(30, 30));
+            Button closeBtn = RuntimeUIFactory.MakeBtn(panel.transform, "Close", "X",
+                color: new Color(0.78f, 0.22f, 0.22f, 0.95f),
+                anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
+                pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
             closeBtn.onClick.AddListener(() => panel.SetActive(false));
 
             panel.SetActive(false);
 
             // --- BUILD OVERVIEW PANEL ---
             overviewPanel = RuntimeUIFactory.MakePanel("MinionOverviewPanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(400, 450));
-            RuntimeUIFactory.MakeLabel(overviewPanel.transform, "Title", "MINION OVERVIEW", 20, TextAnchor.UpperCenter, new Vector2(0, -15));
+            RuntimeUIFactory.EnableAdaptivePanelScale(overviewPanel, 0.94f, 0.90f, 0.52f);
+            RuntimeUIFactory.MakeLabelFixed(overviewPanel.transform, "Title", "MINION OVERVIEW",
+                anchor: new Vector2(0.5f, 1f), pivot: new Vector2(0.5f, 1f),
+                pos: new Vector2(0f, -14f), size: new Vector2(340f, 30f),
+                fontSize: 20, align: TextAnchor.MiddleCenter);
             
             overviewContainer = RuntimeUIFactory.MakeScrollContainer(overviewPanel.transform, new Vector2(10, 10), new Vector2(-10, -60));
+
+            Button closeOverviewTopBtn = RuntimeUIFactory.MakeBtn(overviewPanel.transform, "CloseOverviewTop", "X",
+                color: new Color(0.78f, 0.22f, 0.22f, 0.95f),
+                anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
+                pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
+            closeOverviewTopBtn.onClick.AddListener(() => overviewPanel.SetActive(false));
             
             Button closeOverviewBtn = RuntimeUIFactory.MakeBtn(overviewPanel.transform, "CloseOverview", "CLOSE", pos: new Vector2(0, -200), size: new Vector2(100, 40));
             closeOverviewBtn.onClick.AddListener(() => overviewPanel.SetActive(false));
@@ -127,7 +147,7 @@ namespace SimpleVoxelSystem
                     nearestMobileMinion = FindNearestMinionForMobile();
                 }
 
-                if (mobileControls.MenuPressedThisFrame)
+                if (mobileControls.MinionMenuPressedThisFrame)
                     ToggleOverview();
 
                 if (!ShopZone.IsAnyLocalPlayerInsideZone && nearestMobileMinion != null)
@@ -185,9 +205,6 @@ namespace SimpleVoxelSystem
         {
             Transform player = ResolveLocalPlayer();
             if (player == null)
-                return null;
-
-            if (FindFirstObjectByType<MinionAI>() == null)
                 return null;
 
             MinionAI[] minions = FindObjectsByType<MinionAI>(FindObjectsSortMode.None);

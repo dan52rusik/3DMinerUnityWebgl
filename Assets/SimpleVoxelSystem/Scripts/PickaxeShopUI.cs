@@ -19,7 +19,9 @@ namespace SimpleVoxelSystem
         private UpgradeManager upgradeManager;
 
         private readonly List<GameObject> builtItems = new List<GameObject>();
+        private readonly List<PickaxeData> runtimeGeneratedPickaxes = new List<PickaxeData>();
         private readonly HashSet<int> ownedPickaxeIndices = new HashSet<int>();
+        private bool buttonsDirty = true;
 
         private const string OwnedPrefsKey = "svs_pickaxe_owned_indices_v1";
         private const string EquippedPrefsKey = "svs_pickaxe_equipped_index_v1";
@@ -69,13 +71,26 @@ namespace SimpleVoxelSystem
         private PickaxeData CreateData(string n, string d, int p, int pow, int lvl, Color c)
         {
             PickaxeData data = ScriptableObject.CreateInstance<PickaxeData>();
+            data.hideFlags = HideFlags.DontSave;
             data.displayName = n;
             data.description = d;
             data.buyPrice = p;
             data.miningPower = pow;
             data.requiredMiningLevel = lvl;
             data.iconColor = c;
+            runtimeGeneratedPickaxes.Add(data);
             return data;
+        }
+
+        private void OnDestroy()
+        {
+            for (int i = 0; i < runtimeGeneratedPickaxes.Count; i++)
+            {
+                PickaxeData data = runtimeGeneratedPickaxes[i];
+                if (data != null)
+                    Destroy(data);
+            }
+            runtimeGeneratedPickaxes.Clear();
         }
 
         private void BuildUI()
@@ -92,10 +107,17 @@ namespace SimpleVoxelSystem
 
             overlay = RuntimeUIFactory.MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000f, 10000f), new Color(0f, 0f, 0f, 0.6f));
             shopPanel = RuntimeUIFactory.MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(420f, 520f), ColPanel);
+            RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.52f);
 
             RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "PICKAXE SHOP", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
             levelText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "LevelInfo", "Mining level: 1 (0 XP)", 14, TextAnchor.UpperCenter);
             levelText.rectTransform.anchoredPosition = new Vector2(0f, -45f);
+
+            Button closeBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseBtn", "X",
+                new Color(0.78f, 0.22f, 0.22f, 0.95f),
+                anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
+                pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
+            closeBtn.onClick.AddListener(() => SetPanelVisible(false));
 
             buttonContainer = RuntimeUIFactory.MakeScrollContainer(shopPanel.transform, new Vector2(10f, 10f), new Vector2(-10f, -80f));
             
@@ -153,6 +175,8 @@ namespace SimpleVoxelSystem
                 Button btn = item.AddComponent<Button>();
                 btn.onClick.AddListener(() => TryBuy(index, data));
             }
+
+            buttonsDirty = false;
         }
 
         private void Update()
@@ -165,7 +189,8 @@ namespace SimpleVoxelSystem
         {
             EnsureUIBuilt();
             if (shopPanel == null || overlay == null) return;
-            BuildButtons();
+            if (buttonsDirty)
+                BuildButtons();
             bool next = !shopPanel.activeSelf;
             SetPanelVisible(next);
         }
@@ -173,6 +198,8 @@ namespace SimpleVoxelSystem
         public void SetPanelVisible(bool visible)
         {
             EnsureUIBuilt();
+            if (visible && buttonsDirty)
+                BuildButtons();
             if (shopPanel != null) shopPanel.SetActive(visible);
             if (overlay != null) overlay.SetActive(visible);
         }
@@ -203,7 +230,9 @@ namespace SimpleVoxelSystem
                 PlayerPrefs.SetInt(EquippedPrefsKey, index);
                 PlayerPrefs.Save();
                 Debug.Log($"Equipped: {data.displayName}");
-                BuildButtons();
+                buttonsDirty = true;
+                if (shopPanel != null && shopPanel.activeSelf)
+                    BuildButtons();
                 return;
             }
 
@@ -238,7 +267,7 @@ namespace SimpleVoxelSystem
                 playerPickaxe.currentPickaxe = data;
 
             Debug.Log($"Bought: {data.displayName}");
-            BuildButtons();
+            buttonsDirty = true;
             SetPanelVisible(false);
         }
 
