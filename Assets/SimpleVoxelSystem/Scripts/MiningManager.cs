@@ -87,6 +87,8 @@ namespace SimpleVoxelSystem
             int wl = mine.shopData.wellLength;
             int wd = mine.rolledDepth;
             int pad = mine.shopData.padding;
+            int areaW = ww + pad * 2;
+            int areaL = wl + pad * 2;
 
             int x0 = gx - (ww / 2) - pad;
             int z0 = gz - (wl / 2) - pad;
@@ -95,11 +97,11 @@ namespace SimpleVoxelSystem
             int shaftZ = z0; 
 
             if (!mine.HasVoxelsData)
-                mine.InitializeVoxels(ww + pad * 2, wl + pad * 2, wd);
+                mine.InitializeVoxels(areaW, areaL, wd);
 
             int actualBlocksCount = 0;
-            for (int ix = 0; ix < ww + pad * 2; ix++)
-            for (int iz = 0; iz < wl + pad * 2; iz++)
+            for (int ix = 0; ix < areaW; ix++)
+            for (int iz = 0; iz < areaL; iz++)
             {
                 int curX = x0 + ix;
                 int curZ = z0 + iz;
@@ -115,8 +117,7 @@ namespace SimpleVoxelSystem
                         activeIsland.RemoveVoxel(curX, curY, curZ, false);
                         continue;
                     }
-
-                    bool inWell = ix >= pad && ix < ww + pad && iz >= pad && iz < wl + pad;
+                    actualBlocksCount++;
 
                     if (mine.IsVoxelMined(curX, curY, curZ))
                     {
@@ -127,7 +128,7 @@ namespace SimpleVoxelSystem
                     BlockType t;
                     if (!mine.HasVoxelValue(ix, iy, iz))
                     {
-                        t = inWell ? mine.shopData.RollBlockType(iy) : BlockType.Dirt;
+                        t = iy == 0 ? BlockType.Dirt : mine.shopData.RollBlockType(iy);
                         mine.SetVoxel(ix, iy, iz, t);
                     }
                     else
@@ -136,7 +137,6 @@ namespace SimpleVoxelSystem
                     }
 
                     activeIsland.SetVoxel(curX, curY, curZ, t);
-                    if (inWell) actualBlocksCount++;
                 }
             }
 

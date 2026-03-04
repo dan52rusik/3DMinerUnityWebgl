@@ -459,6 +459,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimpleVoxelSystem.PlayerPickaxe
   pickaxePower: 1
+  playerStrength: 0
   miningRange: 100
   miningCamera: {fileID: 1573803044}
   miningLayers:
@@ -1123,33 +1124,6 @@ MonoBehaviour:
   keepLobbyAlwaysLoaded: 1
   lobbyRenderDistance: 100
   disableLobbyColliderWhenFar: 1
-  blockDataConfig:
-  - type: 0
-    maxHealth: 1
-    reward: 1
-    xpReward: 0
-    requiredMiningLevel: 0
-    blockColor: {r: 0.6320754, g: 0.6067553, b: 0.032796368, a: 0}
-  - type: 1
-    maxHealth: 3
-    reward: 5
-    xpReward: 0
-    requiredMiningLevel: 0
-    blockColor: {r: 0.4339623, g: 0.43191528, b: 0.43191528, a: 0}
-  - type: 2
-    maxHealth: 5
-    reward: 15
-    xpReward: 0
-    requiredMiningLevel: 0
-    blockColor: {r: 0.8018868, g: 0.59675545, b: 0.3063813, a: 0}
-  - type: 3
-    maxHealth: 10
-    reward: 50
-    xpReward: 0
-    requiredMiningLevel: 0
-    blockColor: {r: 0.9511088, g: 1, b: 0, a: 0}
-  lockDeeperLayersUntilCleared: 1
-  elevatorColor: {r: 0.6, g: 0.3, b: 0.1, a: 1}
   playerPrefab: {fileID: 0}
   playerToPlace: {fileID: 0}
   playerSpawnHeight: 1.05

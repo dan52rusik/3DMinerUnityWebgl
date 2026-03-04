@@ -27,6 +27,9 @@ namespace SimpleVoxelSystem
         [Header("State")]
         public MineInstance targetMine;
 
+        // Блеклист истощённых шахт (чтобы не скакать к ним снова и снова)
+        private HashSet<MineInstance> exhaustedMines = new HashSet<MineInstance>();
+
         private void Start()
         {
             CreateVisuals();
@@ -36,22 +39,25 @@ namespace SimpleVoxelSystem
 
         private void CreateVisuals()
         {
-            // Root group for visuals (to allow scaling/rotating independently of AI)
+            // Root group for visuals
             GameObject group = new GameObject("VisualGroup");
             group.transform.SetParent(transform, false);
             visualGroup = group.transform;
             visualGroup.localScale = Vector3.one * 0.5f;
 
-            // Main Body (Capsule)
+            // Main Body (Capsule) — используем встроенный материал примитива, просто меняем цвет
             GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
             body.transform.SetParent(visualGroup, false);
-            Destroy(body.GetComponent<Collider>()); // Colliders are on the root or not needed for visual
-            
-            var mr = body.GetComponent<MeshRenderer>();
-            mr.material.color = new Color(1f, 0.5f, 0f); // Worker Orange
+            Destroy(body.GetComponent<Collider>());
 
-            // Simple Pickaxe
+            // Используем sharedMaterial → создаём instance чтобы не трогать общий
+            var mr = body.GetComponent<MeshRenderer>();
+            var mat = new Material(mr.sharedMaterial); // наследуем рабочий шейдер примитива
+            mat.color = new Color(1f, 0.55f, 0f); // оранжевый рабочий
+            mr.material = mat;
+
+            // Pickaxe Pivot
             GameObject pPivot = new GameObject("PickaxePivot");
             pPivot.transform.SetParent(visualGroup, false);
             pPivot.transform.localPosition = new Vector3(0.6f, 0.2f, 0.5f);
@@ -61,8 +67,9 @@ namespace SimpleVoxelSystem
             GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
             handle.transform.SetParent(pickaxePivot, false);
             handle.transform.localScale = new Vector3(0.1f, 0.1f, 0.8f);
-            handle.transform.localPosition = new Vector3(0, 0, 0);
-            handle.GetComponent<MeshRenderer>().material.color = new Color(0.4f, 0.2f, 0f);
+            var handleMat = new Material(handle.GetComponent<MeshRenderer>().sharedMaterial);
+            handleMat.color = new Color(0.4f, 0.2f, 0f);
+            handle.GetComponent<MeshRenderer>().material = handleMat;
             Destroy(handle.GetComponent<Collider>());
 
             // Pickaxe Head
@@ -70,7 +77,9 @@ namespace SimpleVoxelSystem
             head.transform.SetParent(pickaxePivot, false);
             head.transform.localScale = new Vector3(0.15f, 0.5f, 0.15f);
             head.transform.localPosition = new Vector3(0, 0, 0.4f);
-            head.GetComponent<MeshRenderer>().material.color = Color.gray;
+            var headMat = new Material(head.GetComponent<MeshRenderer>().sharedMaterial);
+            headMat.color = new Color(0.65f, 0.65f, 0.65f);
+            head.GetComponent<MeshRenderer>().material = headMat;
             Destroy(head.GetComponent<Collider>());
         }
 
@@ -79,84 +88,81 @@ namespace SimpleVoxelSystem
             floatingLabel = new GameObject("MinionLabel");
             floatingLabel.transform.SetParent(transform, false);
             floatingLabel.transform.localPosition = Vector3.up * 2.5f;
-            
+
             var nestedCanvas = floatingLabel.AddComponent<Canvas>();
             nestedCanvas.renderMode = RenderMode.WorldSpace;
             var rt = floatingLabel.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(200, 50);
             rt.localScale = Vector3.one * 0.01f;
 
-            floatingText = RuntimeUIFactory.MakeLabel(floatingLabel.transform, "Text", "MINION\n[Click to Manage]", 14, TextAnchor.MiddleCenter);
+            floatingText = RuntimeUIFactory.MakeLabel(floatingLabel.transform, "Text", "MINION\n[M to Manage]", 14, TextAnchor.MiddleCenter);
             floatingText.color = Color.yellow;
         }
 
         private void Update()
         {
-            if (floatingLabel != null)
+            if (floatingLabel != null && Camera.main != null)
             {
                 floatingLabel.transform.LookAt(Camera.main.transform);
                 floatingLabel.transform.Rotate(0, 180, 0);
-                
-                // Proximity check
-                float distToPlayer = Vector3.Distance(transform.position, Camera.main.transform.position);
-                bool isClose = distToPlayer < 5f;
 
-                if (isClose)
-                {
-                    floatingText.text = $"MINION ({currentLoad}/{capacity})\n<color=lime>Press [E]</color>";
-                    
-                    bool ePressed = false;
-#if ENABLE_INPUT_SYSTEM
-                    if (Keyboard.current != null) ePressed = Keyboard.current.eKey.wasPressedThisFrame;
-#else
-                    ePressed = Input.GetKeyDown(KeyCode.E);
-#endif
-
-                    if (ePressed)
-                    {
-                        MinionManagementUI.Show(this);
-                    }
-                }
-                else
-                {
-                    floatingText.text = $"MINION ({currentLoad}/{capacity})\n[Manage]";
-                }
+                string status = currentLoad >= capacity ? "<color=orange>FULL! Collect via [M]</color>" : $"({currentLoad}/{capacity}) [M]";
+                floatingText.text = $"MINION\n{status}";
             }
         }
 
         private IEnumerator BehaviorRoot()
         {
+            // Кэшируем WellGenerator раз в корутине
+            WellGenerator wg = null;
+            VoxelIsland island = null;
+
             while (true)
             {
                 if (currentLoad >= capacity)
                 {
-                    // Full, wait for player
+                    // Full — ждём пока игрок заберёт добычу
                     yield return new WaitForSeconds(1.0f);
                     continue;
                 }
 
-                if (targetMine == null || targetMine.IsExhausted)
+                // Найди/обнови WellGenerator если нет
+                if (wg == null) wg = FindFirstObjectByType<WellGenerator>();
+                if (wg == null) { yield return new WaitForSeconds(2f); continue; }
+
+                island = wg.ActiveIsland;
+                if (island == null) { yield return new WaitForSeconds(2f); continue; }
+
+                // Нужна шахта?
+                if (targetMine == null || targetMine.IsExhausted || exhaustedMines.Contains(targetMine))
                 {
-                    FindNewMine();
+                    targetMine = null;
+                    FindNewMine(wg);
+
                     if (targetMine == null)
                     {
-                        yield return new WaitForSeconds(2.0f);
+                        // Нет доступных шахт — отдыхаем
+                        yield return new WaitForSeconds(3.0f);
                         continue;
                     }
                 }
 
-                var wg = FindFirstObjectByType<WellGenerator>();
-                if (wg == null) { yield return new WaitForSeconds(2f); continue; }
-                
-                VoxelIsland island = wg.ActiveIsland;
-                if (island == null) { yield return new WaitForSeconds(2f); continue; }
+                // Центр шахты
+                int baseW = targetMine.shopData != null ? targetMine.shopData.wellWidth : 5;
+                int baseL = targetMine.shopData != null ? targetMine.shopData.wellLength : 5;
+                int pad = targetMine.shopData != null ? targetMine.shopData.padding : 0;
+                int mineW = baseW + pad * 2;
+                int mineL = baseL + pad * 2;
+                int x0 = targetMine.originX - (baseW / 2) - pad;
+                int z0 = targetMine.originZ - (baseL / 2) - pad;
+                Vector3 targetPos = island.transform.TransformPoint(
+                    new Vector3(x0 + mineW * 0.5f, -wg.LobbyFloorY, z0 + mineL * 0.5f));
 
-                // Move toward mine
-                Vector3 targetPos = island.transform.TransformPoint(new Vector3(targetMine.originX + 2.5f, 1f, targetMine.originZ + 2.5f));
                 float dist = Vector3.Distance(transform.position, targetPos);
-                
+
                 if (dist > 3f)
                 {
+                    // Двигаемся к шахте
                     Vector3 dir = (targetPos - transform.position).normalized;
                     transform.position += dir * moveSpeed * Time.deltaTime;
                     transform.LookAt(targetPos);
@@ -164,64 +170,78 @@ namespace SimpleVoxelSystem
                 }
                 else
                 {
-                    // At mine, choose a block and mine it
-                    yield return StartCoroutine(MiningRoutine(island));
+                    // Копаем блок
+                    yield return StartCoroutine(MiningRoutine(island, wg));
                 }
             }
         }
 
-        private IEnumerator MiningRoutine(VoxelIsland island)
+        private IEnumerator MiningRoutine(VoxelIsland island, WellGenerator wg)
         {
             if (targetMine == null) yield break;
-            
-            Vector3Int? blockPos = FindSolidBlockInMine(island, targetMine);
-            
+
+            int baseW = targetMine.shopData != null ? targetMine.shopData.wellWidth : 5;
+            int baseL = targetMine.shopData != null ? targetMine.shopData.wellLength : 5;
+            int pad = targetMine.shopData != null ? targetMine.shopData.padding : 0;
+            int mineW = baseW + pad * 2;
+            int mineL = baseL + pad * 2;
+            int mineD = targetMine.rolledDepth > 0 ? targetMine.rolledDepth : 20;
+            int x0 = targetMine.originX - (baseW / 2) - pad;
+            int z0 = targetMine.originZ - (baseL / 2) - pad;
+            int floorY = wg != null ? wg.LobbyFloorY : 0;
+
+            Vector3Int? blockPos = FindSolidBlockInMine(island, x0, z0, floorY, mineW, mineL, mineD);
+
             if (blockPos.HasValue)
             {
-                Vector3 worldTarget = island.transform.TransformPoint(new Vector3(blockPos.Value.x + 0.5f, -blockPos.Value.y + 0.5f, blockPos.Value.z + 0.5f));
+                Vector3 worldTarget = island.transform.TransformPoint(
+                    new Vector3(blockPos.Value.x + 0.5f, -blockPos.Value.y + 0.5f, blockPos.Value.z + 0.5f));
                 transform.LookAt(worldTarget);
-                
-                // Attack animation (tilt pickaxe)
+
+                // Анимация удара
                 float tiltTime = 0.5f / mineSpeed;
-                
-                // Swing Forward
+
                 float elapsed = 0f;
                 while (elapsed < tiltTime)
                 {
                     elapsed += Time.deltaTime;
-                    if (pickaxePivot != null) pickaxePivot.localRotation = Quaternion.Euler(Mathf.Lerp(0, 60, elapsed / tiltTime), 0, 0);
+                    if (pickaxePivot != null)
+                        pickaxePivot.localRotation = Quaternion.Euler(Mathf.Lerp(0, 60, elapsed / tiltTime), 0, 0);
                     yield return null;
                 }
 
                 MineOneBlockAt(island, blockPos.Value);
 
-                // Swing Back
                 elapsed = 0f;
                 while (elapsed < tiltTime)
                 {
                     elapsed += Time.deltaTime;
-                    if (pickaxePivot != null) pickaxePivot.localRotation = Quaternion.Euler(Mathf.Lerp(60, 0, elapsed / tiltTime), 0, 0);
+                    if (pickaxePivot != null)
+                        pickaxePivot.localRotation = Quaternion.Euler(Mathf.Lerp(60, 0, elapsed / tiltTime), 0, 0);
                     yield return null;
                 }
             }
             else
             {
-                targetMine = null; 
-                yield return new WaitForSeconds(1.0f);
+                // В шахте нет видимых блоков — добавляем в блэклист и ищем другую
+                Debug.Log($"[MinionAI] No solid blocks found in mine at ({targetMine.originX},{targetMine.originZ}). Blacklisting.");
+                exhaustedMines.Add(targetMine);
+                targetMine = null;
+                yield return new WaitForSeconds(2.0f);
             }
         }
 
-        private Vector3Int? FindSolidBlockInMine(VoxelIsland island, MineInstance mine)
+        private Vector3Int? FindSolidBlockInMine(VoxelIsland island, int startX, int startZ, int floorY, int mineW, int mineL, int mineD)
         {
-            for (int y = 0; y < 15; y++) 
+            for (int y = 0; y < mineD; y++)
             {
-                for (int x = 0; x < 5; x++)
+                for (int x = 0; x < mineW; x++)
                 {
-                    for (int z = 0; z < 5; z++)
+                    for (int z = 0; z < mineL; z++)
                     {
-                        int gx = mine.originX + x;
-                        int gy = y;
-                        int gz = mine.originZ + z;
+                        int gx = startX + x;
+                        int gy = floorY + y;
+                        int gz = startZ + z;
                         if (island.IsSolid(gx, gy, gz))
                             return new Vector3Int(gx, gy, gz);
                     }
@@ -236,19 +256,44 @@ namespace SimpleVoxelSystem
             {
                 island.RemoveVoxel(pos.x, pos.y, pos.z);
                 targetMine?.RegisterMinedBlock(pos.x, pos.y, pos.z);
-
-                storedValue += 5; 
+                storedValue += 5;
                 currentLoad++;
             }
         }
 
-        private void FindNewMine()
+        private void FindNewMine(WellGenerator wg)
         {
-            var wg = FindFirstObjectByType<WellGenerator>();
-            if (wg != null && wg.PlacedMines != null && wg.PlacedMines.Count > 0)
+            if (wg.PlacedMines == null || wg.PlacedMines.Count == 0) return;
+
+            // Ищем ближайшую незаблокированную, неистощённую шахту
+            MineInstance best = null;
+            float bestDist = float.MaxValue;
+
+            foreach (var mine in wg.PlacedMines)
             {
-                targetMine = wg.PlacedMines[Random.Range(0, wg.PlacedMines.Count)];
+                if (mine == null || mine.IsExhausted || exhaustedMines.Contains(mine)) continue;
+                int baseW = mine.shopData != null ? mine.shopData.wellWidth : 5;
+                int baseL = mine.shopData != null ? mine.shopData.wellLength : 5;
+                int pad = mine.shopData != null ? mine.shopData.padding : 0;
+                int mineW = baseW + pad * 2;
+                int mineL = baseL + pad * 2;
+                int x0 = mine.originX - (baseW / 2) - pad;
+                int z0 = mine.originZ - (baseL / 2) - pad;
+                float d = Vector3.Distance(transform.position,
+                    new Vector3(x0 + mineW * 0.5f, transform.position.y, z0 + mineL * 0.5f));
+                if (d < bestDist) { bestDist = d; best = mine; }
             }
+
+            // Если все в блэклисте — сбрасываем блэклист и пробуем снова
+            if (best == null && exhaustedMines.Count > 0)
+            {
+                Debug.Log("[MinionAI] All mines blacklisted, resetting blacklist.");
+                exhaustedMines.Clear();
+                FindNewMine(wg);
+                return;
+            }
+
+            targetMine = best;
         }
 
         public void EmptyInventory()
