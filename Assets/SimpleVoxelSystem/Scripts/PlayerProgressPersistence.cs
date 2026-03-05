@@ -119,6 +119,10 @@ namespace SimpleVoxelSystem
         private bool cachedHasCustomSpawn;
         private Vector3 cachedCustomSpawn;
 
+        // FIX #6: кешируем компоненты, чтобы не искать их каждый кадр
+        private PlayerPickaxe cachedPickaxe;
+        private UpgradeManager cachedUpgradeManager;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
@@ -320,7 +324,8 @@ namespace SimpleVoxelSystem
             {
                 // Delta path – purchases raced ahead of the load.
                 int deltaFromStart = GlobalEconomy.Money - EconomyTuning.StartMoney;
-                GlobalEconomy.Money = save.money + deltaFromStart;
+                // FIX #3: добавлен Mathf.Max(0, ...) — баланс не может уйти в минус
+                GlobalEconomy.Money = Mathf.Max(0, save.money + deltaFromStart);
                 // XP can only increase in a session; take the larger value.
                 GlobalEconomy.MiningXP = Mathf.Max(GlobalEconomy.MiningXP, save.miningXP);
                 Debug.Log($"[PlayerProgressPersistence] Load raced with session purchases. " +
@@ -333,6 +338,8 @@ namespace SimpleVoxelSystem
                 pp.playerStrength = Mathf.Max(0, save.playerStrength);
                 pp.maxBackpackCapacity = Mathf.Max(5, save.maxBackpackCapacity);
             }
+            // FIX #6: кешируем после первого поиска
+            cachedPickaxe = pp;
 
             UpgradeManager um = FindFirstObjectByType<UpgradeManager>();
             if (um != null)
@@ -340,6 +347,7 @@ namespace SimpleVoxelSystem
                 um.playerStrengthCost = Mathf.Max(10, save.upgStrengthCost);
                 um.backpackCapacityCost = Mathf.Max(10, save.upgBackpackCost);
             }
+            cachedUpgradeManager = um;
 
             if (save.hasPrivateIsland)
                 wellGenerator.EnsurePrivateIslandAtOffset(save.privateIslandOffset.ToVector3());
@@ -445,19 +453,13 @@ namespace SimpleVoxelSystem
                     if (m != null) minedBlocks += Mathf.Max(0, m.minedBlocks);
                 }
             }
-            
-            PlayerPickaxe pp = FindFirstObjectByType<PlayerPickaxe>();
-            int curStr = pp != null ? pp.playerStrength : 0;
-            int curCap = pp != null ? pp.maxBackpackCapacity : 10;
-            UpgradeManager um = FindFirstObjectByType<UpgradeManager>();
-            int curStrC = um != null ? um.playerStrengthCost : EconomyTuning.PlayerStrengthUpgradeStartCost;
-            int curCapC = um != null ? um.backpackCapacityCost : EconomyTuning.BackpackUpgradeStartCost;
+
+            // FIX #6: используем кешированные ссылки вместо FindFirstObjectByType каждый кадр
+            if (cachedPickaxe == null) cachedPickaxe = FindFirstObjectByType<PlayerPickaxe>();
+            if (cachedUpgradeManager == null) cachedUpgradeManager = FindFirstObjectByType<UpgradeManager>();
 
             bool hasCustomSpawn = wellGenerator != null && wellGenerator.HasCustomIslandSpawnPoint;
             Vector3 customSpawn = hasCustomSpawn ? wellGenerator.GetCustomIslandSpawnPoint() : Vector3.zero;
-
-            // Simple check cache - let's skip strict caching for these minor ones for now or add them
-            bool upgradesChanged = false; // We can detect it later
 
             if (currentMoney != cachedMoney ||
                 currentXP != cachedXP ||
@@ -614,14 +616,15 @@ namespace SimpleVoxelSystem
                 customIslandSpawnPoint = new SerializableVector3(wellGenerator.GetCustomIslandSpawnPoint())
             };
 
-            PlayerPickaxe pp = FindFirstObjectByType<PlayerPickaxe>();
+            // FIX #6: используем кешированные ссылки
+            PlayerPickaxe pp = cachedPickaxe != null ? cachedPickaxe : FindFirstObjectByType<PlayerPickaxe>();
             if (pp != null)
             {
                 save.playerStrength = pp.playerStrength;
                 save.maxBackpackCapacity = pp.maxBackpackCapacity;
             }
 
-            UpgradeManager um = FindFirstObjectByType<UpgradeManager>();
+            UpgradeManager um = cachedUpgradeManager != null ? cachedUpgradeManager : FindFirstObjectByType<UpgradeManager>();
             if (um != null)
             {
                 save.upgStrengthCost = um.playerStrengthCost;

@@ -201,8 +201,8 @@ namespace SimpleVoxelSystem
                 if (elev == null) continue;
                 if (elev.shaftGridX == sx && elev.shaftGridZ == sz)
                 {
+                    // FIX #11: удаляем все лифты на данной позиции (был break — удалял только первый)
                     Destroy(elev.gameObject);
-                    break;
                 }
             }
 

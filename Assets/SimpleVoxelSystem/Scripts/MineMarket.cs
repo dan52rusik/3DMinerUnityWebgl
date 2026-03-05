@@ -306,6 +306,21 @@ namespace SimpleVoxelSystem
         void ConfirmPlacement()
         {
             if (pendingMine == null) return;
+
+            // FIX #10: защита от NullReferenceException — previewInstance может не существовать,
+            // если игрок нажал PLACE не наведя курсор на остров
+            if (previewInstance == null || !previewInstance.activeSelf)
+            {
+                if (verboseLogs) Debug.LogWarning("[MineMarket] ConfirmPlacement: previewInstance is null or inactive. Placement cancelled.");
+                return;
+            }
+
+            if (WellGen == null || WellGen.ActiveIsland == null)
+            {
+                if (verboseLogs) Debug.LogWarning("[MineMarket] ConfirmPlacement: ActiveIsland not available.");
+                return;
+            }
+
             Vector3 worldPos = previewInstance.transform.position;
             Vector3 localPos = WellGen.ActiveIsland.transform.InverseTransformPoint(worldPos);
             int gx = Mathf.RoundToInt(localPos.x);
@@ -326,9 +341,15 @@ namespace SimpleVoxelSystem
             {
                 var networkAvatar = GetLocalNetworkAvatar();
                 if (networkAvatar != null && networkAvatar.IsSpawned)
+                {
+                    // FIX #2: возвращаем через сервер — тот же путь, каки при покупке
                     networkAvatar.AddRewardsServerRpc(pendingMine.shopData.buyPrice, 0);
+                }
                 else
-                    GlobalEconomy.Money += pendingMine.shopData.buyPrice;
+                {
+                    // FIX #2: возвращаем локально, но без превышения начального баланса
+                    GlobalEconomy.Money = Mathf.Max(0, GlobalEconomy.Money + pendingMine.shopData.buyPrice);
+                }
             }
             pendingMine = null;
             IsPlacementMode = false;

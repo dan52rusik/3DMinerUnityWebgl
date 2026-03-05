@@ -16,8 +16,6 @@ namespace SimpleVoxelSystem
         [Header("Mouse Targeting")]
         public float maxMineDistance = 7f;
         public float maxTargetDistance = 60f;
-        public bool autoMoveToFarTargets = false; // Legacy option: kept for compatibility, auto-move is disabled.
-        public float autoMoveStopDistance = 1.6f;
 
         [Header("Highlight")]
         public GameObject highlightPrefab;
@@ -28,7 +26,6 @@ namespace SimpleVoxelSystem
         private VoxelIsland island;
         private VoxelIsland currentTargetIsland;
         private PlayerPickaxe pickaxe;
-        private PlayerCharacterController playerController;
         private MobileTouchControls mobileControls;
 
         private GameObject highlightInstance;
@@ -38,21 +35,12 @@ namespace SimpleVoxelSystem
         private bool hasTarget;
         private float lastMineTime;
 
-        private bool queuedAutoMine;
-        private Vector3Int queuedTargetGridPos;
-        private Vector3 queuedTargetWorldPos;
-        private VoxelIsland queuedTargetIsland;
-
         void Start()
         {
             pickaxe = GetComponent<PlayerPickaxe>();
             if (pickaxe == null)
                 pickaxe = GetComponentInChildren<PlayerPickaxe>();
             mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
-
-            playerController = GetComponent<PlayerCharacterController>();
-            if (playerController == null)
-                playerController = GetComponentInChildren<PlayerCharacterController>();
 
             wellGenerator = FindFirstObjectByType<WellGenerator>();
             if (wellGenerator != null)
@@ -86,13 +74,7 @@ namespace SimpleVoxelSystem
                 return;
 
             if (currentTargetDistance > maxMineDistance)
-            {
-                queuedAutoMine = false;
-                queuedTargetIsland = null;
-                if (playerController != null)
-                    playerController.CancelAutoMove();
                 return;
-            }
 
             if (Time.time < lastMineTime + mineCooldown)
                 return;
@@ -105,49 +87,6 @@ namespace SimpleVoxelSystem
                 PlayerPickaxe.NotifyMineAttempt();
                 lastMineTime = Time.time;
             }
-        }
-
-        void HandleQueuedAutoMine()
-        {
-            if (!queuedAutoMine)
-                return;
-
-            float dist = Vector3.Distance(transform.position, queuedTargetWorldPos);
-            if (dist > maxMineDistance)
-                return;
-
-            if (Time.time < lastMineTime + mineCooldown)
-                return;
-
-            if (IsBackpackFull())
-            {
-                queuedAutoMine = false;
-                queuedTargetIsland = null;
-                if (playerController != null)
-                    playerController.CancelAutoMove();
-                return;
-            }
-
-            if (MineTargetBlock(queuedTargetGridPos, queuedTargetIsland))
-            {
-                lastMineTime = Time.time;
-                queuedAutoMine = false;
-                queuedTargetIsland = null;
-                if (playerController != null)
-                    playerController.CancelAutoMove();
-            }
-        }
-
-        void TryStartAutoMoveToTarget()
-        {
-            if (!autoMoveToFarTargets || playerController == null || !hasTarget)
-                return;
-
-            queuedAutoMine = true;
-            queuedTargetGridPos = currentTargetGridPos;
-            queuedTargetWorldPos = currentTargetWorldPos;
-            queuedTargetIsland = currentTargetIsland;
-            playerController.SetAutoMoveTarget(currentTargetWorldPos, autoMoveStopDistance);
         }
 
         void FindTargetBlock()
@@ -310,19 +249,6 @@ namespace SimpleVoxelSystem
             return !(float.IsNaN(value.x) || float.IsNaN(value.y) || float.IsInfinity(value.x) || float.IsInfinity(value.y));
         }
 
-        bool WasMinePressedDown()
-        {
-            if (mobileControls != null && mobileControls.IsActive)
-                return mobileControls.MinePressedThisFrame || mobileControls.LookTapPressedThisFrame;
-
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetMouseButtonDown(0);
-#else
-            return false;
-#endif
-        }
 
         bool IsMineHeld()
         {

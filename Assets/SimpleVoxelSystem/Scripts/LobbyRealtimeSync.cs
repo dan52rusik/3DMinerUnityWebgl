@@ -43,6 +43,11 @@ namespace SimpleVoxelSystem
         private readonly List<OpPacket> pendingOps = new List<OpPacket>();
         private readonly HashSet<string> seenOpIds = new HashSet<string>();
         private readonly Dictionary<string, GhostView> ghosts = new Dictionary<string, GhostView>();
+        // FIX #4: ограничиваем память seenOpIds — не более 2000 последних ID
+        private readonly Queue<string> seenOpIdsOrder = new Queue<string>();
+        private const int MaxSeenOpIds = 2000;
+        // FIX #5: один шаред материал для всех призраков — не создаём новый каждый раз
+        private static Material _ghostSharedMaterial;
 
         [Serializable]
         private class SyncRequest
@@ -485,11 +490,16 @@ namespace SimpleVoxelSystem
                 if (op == null || string.IsNullOrWhiteSpace(op.opId))
                     continue;
 
-                if (!seenOpIds.Add(op.opId))
-                    continue;
-
+                // FIX #12: сначала фильтруем свои операции, потом добавляем в HashSet
                 if (!string.IsNullOrWhiteSpace(op.from) && op.from == clientId)
                     continue;
+
+                // FIX #4: ограничиваем размер seenOpIds — удаляем старые записи при превышении лимита
+                if (!seenOpIds.Add(op.opId))
+                    continue;
+                seenOpIdsOrder.Enqueue(op.opId);
+                while (seenOpIdsOrder.Count > MaxSeenOpIds)
+                    seenOpIds.Remove(seenOpIdsOrder.Dequeue());
 
                 Vector3Int pos = new Vector3Int(op.x, op.y, op.z);
                 switch (op.kind)
@@ -552,19 +562,22 @@ namespace SimpleVoxelSystem
             if (col != null)
                 col.enabled = false;
 
+            // FIX #5: используем один шаред материал для всех призраков — нет утечки памяти
             MeshRenderer renderer = go.GetComponent<MeshRenderer>();
             if (renderer != null)
             {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null)
-                    shader = Shader.Find("Standard");
-                Material mat = new Material(shader);
-                mat.color = new Color(0.25f, 0.95f, 0.85f, 0.45f);
-                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                mat.SetInt("_ZWrite", 0);
-                mat.renderQueue = 3000;
-                renderer.material = mat;
+                if (_ghostSharedMaterial == null)
+                {
+                    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                    if (shader == null) shader = Shader.Find("Standard");
+                    _ghostSharedMaterial = new Material(shader);
+                    _ghostSharedMaterial.color = new Color(0.25f, 0.95f, 0.85f, 0.45f);
+                    _ghostSharedMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    _ghostSharedMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    _ghostSharedMaterial.SetInt("_ZWrite", 0);
+                    _ghostSharedMaterial.renderQueue = 3000;
+                }
+                renderer.sharedMaterial = _ghostSharedMaterial;
             }
 
             GameObject labelGo = new GameObject("Label");

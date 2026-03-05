@@ -15,7 +15,7 @@ namespace SimpleVoxelSystem
         [Min(50)] public int maxOpponentTurnTimeMs = 250;
         [Min(0.05f)] public float commitInterval = 0.25f;
         [Min(5f)] public float autoPushIntervalSeconds = 25f;
-        public bool verboseLogs = true;
+        public bool verboseLogs = false; // FIX #13: в релизе должно быть false, иначе дебаг-GUI видят все игроки
 
         [Header("State Commit Filter")]
         [Min(0f)] public float minStateMoveDistance = 0.05f;
@@ -585,13 +585,25 @@ namespace SimpleVoxelSystem
             return created;
         }
 
+        // FIX #5: статический shared material для призраков AsyncMP — не создаём новый на каждый рендерер
+        private static Material _asyncGhostSharedMaterial;
+
         private static void SetGhostVisualStyle(GameObject root, Color tint)
         {
             if (root == null)
                 return;
 
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null) shader = Shader.Find("Standard");
+            if (_asyncGhostSharedMaterial == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                if (shader == null) shader = Shader.Find("Standard");
+                _asyncGhostSharedMaterial = new Material(shader);
+                _asyncGhostSharedMaterial.color = tint;
+                _asyncGhostSharedMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                _asyncGhostSharedMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                _asyncGhostSharedMaterial.SetInt("_ZWrite", 0);
+                _asyncGhostSharedMaterial.renderQueue = 3000;
+            }
 
             MeshRenderer[] renderers = root.GetComponentsInChildren<MeshRenderer>(true);
             for (int i = 0; i < renderers.Length; i++)
@@ -599,14 +611,7 @@ namespace SimpleVoxelSystem
                 MeshRenderer mr = renderers[i];
                 if (mr == null)
                     continue;
-
-                Material mat = new Material(shader);
-                mat.color = tint;
-                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                mat.SetInt("_ZWrite", 0);
-                mat.renderQueue = 3000;
-                mr.sharedMaterial = mat;
+                mr.sharedMaterial = _asyncGhostSharedMaterial;
             }
         }
 
