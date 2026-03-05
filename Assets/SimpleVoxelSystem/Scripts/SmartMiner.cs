@@ -169,6 +169,8 @@ namespace SimpleVoxelSystem
             }
 
             Vector2 pointerPos = ReadPointerPosition();
+            if (!IsFinite(pointerPos))
+                pointerPos = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
             Ray ray = cam.ScreenPointToRay(pointerPos);
 
             if (Physics.Raycast(ray, out RaycastHit hit, maxTargetDistance, voxelLayer, QueryTriggerInteraction.Ignore))
@@ -285,15 +287,32 @@ namespace SimpleVoxelSystem
         Vector2 ReadPointerPosition()
         {
             if (mobileControls != null && mobileControls.IsActive)
-                return mobileControls.AimScreenPosition;
+                return SanitizePointerPosition(mobileControls.AimScreenPosition);
 
 #if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
+            if (Mouse.current != null)
+                return SanitizePointerPosition(Mouse.current.position.ReadValue());
+            return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.mousePosition;
+            return SanitizePointerPosition(Input.mousePosition);
 #else
-            return Vector2.zero;
+            return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
 #endif
+        }
+
+        private static Vector2 SanitizePointerPosition(Vector2 value)
+        {
+            if (!IsFinite(value))
+                return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+
+            float x = Mathf.Clamp(value.x, 0f, Mathf.Max(1f, Screen.width));
+            float y = Mathf.Clamp(value.y, 0f, Mathf.Max(1f, Screen.height));
+            return new Vector2(x, y);
+        }
+
+        private static bool IsFinite(Vector2 value)
+        {
+            return !(float.IsNaN(value.x) || float.IsNaN(value.y) || float.IsInfinity(value.x) || float.IsInfinity(value.y));
         }
 
         bool WasMinePressedDown()

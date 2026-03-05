@@ -59,7 +59,7 @@ namespace SimpleVoxelSystem
             rt.anchorMin = a; rt.anchorMax = a;
             rt.pivot = pivot ?? new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = pos ?? Vector2.zero;
-            rt.sizeDelta = size ?? new Vector2(160f, 40f);
+            rt.sizeDelta = ScaleBySafeArea(size ?? new Vector2(160f, 40f));
 
             var img = go.AddComponent<Image>(); img.color = color ?? ButtonDefault;
             var btn = go.AddComponent<Button>(); btn.targetGraphic = img;
@@ -76,6 +76,15 @@ namespace SimpleVoxelSystem
             txt.color = Color.white; txt.text = label;
             
             return btn;
+        }
+
+        private static Vector2 ScaleBySafeArea(Vector2 baseSize)
+        {
+            Rect safe = Screen.safeArea;
+            float wRatio = safe.width / Mathf.Max(1f, Screen.width);
+            float hRatio = safe.height / Mathf.Max(1f, Screen.height);
+            float scale = Mathf.Clamp(Mathf.Min(wRatio, hRatio), 0.85f, 1f);
+            return baseSize * scale;
         }
 
         /// <summary>Creates a text label using stretch anchors (0,0 to 1,1) and pixel offsets.</summary>

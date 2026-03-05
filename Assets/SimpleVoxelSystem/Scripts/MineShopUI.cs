@@ -176,7 +176,7 @@ namespace SimpleVoxelSystem
             switchWorldBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "SwitchWorldBtn",
                 "To Lobby", new Color(0.2f, 0.7f, 0.2f, 1f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
-                pos: new Vector2(-170f, -10f), size: new Vector2(140f, 40f));
+                pos: new Vector2(-170f, -10f), size: new Vector2(140f, 80f));
             switchWorldBtn.onClick.AddListener(() =>
             {
                 if (mineMarket.WellGen.IsInLobbyMode)
@@ -202,7 +202,7 @@ namespace SimpleVoxelSystem
             setSpawnBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "SetSpawnBtn",
                 "Set Spawn", new Color(0.15f, 0.65f, 0.85f, 0.95f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
-                pos: new Vector2(-320f, -10f), size: new Vector2(140f, 40f));
+                pos: new Vector2(-320f, -10f), size: new Vector2(140f, 80f));
             setSpawnBtn.onClick.AddListener(() =>
             {
                 bool ok = mineMarket != null && mineMarket.WellGen != null && mineMarket.WellGen.SaveCurrentIslandSpawnPoint();

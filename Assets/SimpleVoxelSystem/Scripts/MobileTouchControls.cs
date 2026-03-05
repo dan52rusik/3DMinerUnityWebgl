@@ -15,6 +15,7 @@ namespace SimpleVoxelSystem
         [Header("Activation")]
         public bool autoEnableOnMobile = true;
         public bool forceEnableInEditor = false;
+        public bool autoForceEnableInEditor = true;
 
         [Header("Tuning")]
         [Range(0.02f, 0.5f)] public float lookScale = 0.12f;
@@ -65,6 +66,7 @@ namespace SimpleVoxelSystem
         private TouchHoldButton removeButton;
         private TouchTapButton placeMineButton;   // shown only during mine placement
         private Text interactButtonLabel;
+        private float actionScale = 1f;
 
         private const string DefaultInteractLabel = "ACT";
         private bool interactHintRequested;
@@ -108,6 +110,11 @@ namespace SimpleVoxelSystem
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+#if UNITY_EDITOR
+            if (autoForceEnableInEditor)
+                forceEnableInEditor = true;
+#endif
 
             IsActive = ShouldEnable();
             if (!IsActive)
@@ -280,37 +287,42 @@ namespace SimpleVoxelSystem
             scaler.matchWidthOrHeight = 1f;
 
             var safe = CreateRect("Safe", canvasGo.transform, new Vector2(0f, 0f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
+            safe.gameObject.AddComponent<SafeAreaFitter>();
+            actionScale = CalculateSafeScale();
 
             BuildLeftJoystick(safe);
             BuildRightLookPad(safe);
             BuildButtons(safe);
+            SetEditorModeVisible(false);
         }
 
         private void BuildLeftJoystick(Transform parent)
         {
-            RectTransform area = CreateRect("MoveArea", parent, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 28f), new Vector2(300f, 300f));
+            RectTransform area = CreateRect("MoveArea", parent, new Vector2(0f, 0f), new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero);
             var areaImage = area.gameObject.AddComponent<Image>();
-            areaImage.color = new Color(0f, 0f, 0f, 0.05f); // Substrate area
+            areaImage.color = new Color(0f, 0f, 0f, 0.01f);
 
-            RectTransform bg = CreateRect("MoveBG", area, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-90f, -90f), new Vector2(180f, 180f));
+            float bgSize = 180f * actionScale;
+            RectTransform bg = CreateRect("MoveBG", area, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-bgSize * 0.5f, -bgSize * 0.5f), new Vector2(bgSize * 0.5f, bgSize * 0.5f));
             var bgImg = bg.gameObject.AddComponent<Image>();
-            bgImg.color = new Color(1f, 1f, 1f, 0.12f);
+            bgImg.color = new Color(1f, 1f, 1f, 0.2f);
             bg.gameObject.AddComponent<Outline>().effectColor = new Color(1, 1, 1, 0.2f);
 
-            RectTransform knob = CreateRect("MoveKnob", bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-44f, -44f), new Vector2(88f, 88f));
+            float knobSize = 88f * actionScale;
+            RectTransform knob = CreateRect("MoveKnob", bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-knobSize * 0.5f, -knobSize * 0.5f), new Vector2(knobSize * 0.5f, knobSize * 0.5f));
             var knobImg = knob.gameObject.AddComponent<Image>();
-            knobImg.color = new Color(1f, 1f, 1f, 0.45f);
+            knobImg.color = new Color(1f, 1f, 1f, 0.5f);
             knob.gameObject.AddComponent<Outline>().effectColor = new Color(1, 1, 1, 0.5f);
 
             joystick = area.gameObject.AddComponent<TouchJoystick>();
             joystick.background = bg;
             joystick.knob = knob;
-            joystick.radius = joystickRadius;
+            joystick.radius = joystickRadius * actionScale;
         }
 
         private void BuildRightLookPad(Transform parent)
         {
-            RectTransform lookArea = CreateRect("LookArea", parent, new Vector2(0.35f, 0f), new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(0f, 0f));
+            RectTransform lookArea = CreateRect("LookArea", parent, new Vector2(0.5f, 0f), new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(0f, 0f));
             var image = lookArea.gameObject.AddComponent<Image>();
             image.color = new Color(0f, 0f, 0f, 0.01f);
 
@@ -319,24 +331,24 @@ namespace SimpleVoxelSystem
 
         private void BuildButtons(Transform parent)
         {
+            float m = actionScale;
+
             // --- ACTION CLUSTER (Bottom Right) ---
-            // Column 1 (Closest to right edge)
-            mineButton       = CreateTapButton(parent, "MineButton", "MINE", new Vector2(1f, 0f), new Vector2(30f,  30f), new Vector2(160f, 160f), new Color(0.95f, 0.45f, 0.2f, 0.88f), 28);
-            jumpButton       = CreateTapButton(parent, "JumpButton", "JUMP", new Vector2(1f, 0f), new Vector2(30f, 210f), new Vector2(110f, 110f), new Color(0.2f, 0.62f, 0.95f, 0.86f), 22);
-            
-            // Column 2 (Inner column)
-            runButton        = CreateHoldButton(parent, "RunButton", "RUN",  new Vector2(1f, 0f), new Vector2(210f, 30f), new Vector2(110f, 110f), new Color(0.2f, 0.82f, 0.42f, 0.82f), 22);
-            interactButton   = CreateTapButton(parent, "InteractButton", DefaultInteractLabel, new Vector2(1f, 0f), new Vector2(210f, 160f), new Vector2(110f, 110f), new Color(0.98f, 0.78f, 0.18f, 0.9f), 22);
-            minionMenuButton = CreateTapButton(parent, "MinionsButton", "MINIONS", new Vector2(1f, 0f), new Vector2(210f, 290f), new Vector2(110f, 110f), new Color(0.22f, 0.34f, 0.56f, 0.88f), 18);
+            mineButton       = CreateTapButton(parent, "MineButton", "MINE", new Vector2(1f, 0f), new Vector2(24f * m, 24f * m), new Vector2(252f * m, 252f * m), new Color(0.95f, 0.45f, 0.2f, 0.72f), Mathf.RoundToInt(30f * m));
+            // JUMP/RUN form a clean vertical column centered against MINE height.
+            jumpButton       = CreateTapButton(parent, "JumpButton", "JUMP", new Vector2(1f, 0f), new Vector2(340f * m, 154f * m), new Vector2(92f * m, 92f * m), new Color(0.2f, 0.62f, 0.95f, 0.7f), Mathf.RoundToInt(18f * m));
+            runButton        = CreateHoldButton(parent, "RunButton", "RUN",  new Vector2(1f, 0f), new Vector2(340f * m, 54f * m), new Vector2(92f * m, 92f * m), new Color(0.2f, 0.82f, 0.42f, 0.68f), Mathf.RoundToInt(16f * m));
+            interactButton   = CreateTapButton(parent, "InteractButton", DefaultInteractLabel, new Vector2(1f, 0f), new Vector2(24f * m, 286f * m), new Vector2(252f * m, 100f * m), new Color(0.98f, 0.78f, 0.18f, 0.7f), Mathf.RoundToInt(24f * m));
+            minionMenuButton = CreateTapButton(parent, "MinionsButton", "MINIONS", new Vector2(1f, 0f), new Vector2(107f * m, 792f * m), new Vector2(88f * m, 88f * m), new Color(0.22f, 0.34f, 0.56f, 0.68f), Mathf.RoundToInt(14f * m));
 
             // --- UTILITY CLUSTER (Top Right) ---
-            removeButton     = CreateHoldButton(parent, "RemoveButton", "DEL", new Vector2(1f, 1f), new Vector2(30f, 20f),  new Vector2(80f, 80f), new Color(0.95f, 0.2f, 0.2f, 0.82f), 20);
-            zoomInButton     = CreateHoldButton(parent, "ZoomInButton", "+",   new Vector2(1f, 1f), new Vector2(30f, 110f), new Vector2(80f, 80f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
-            zoomOutButton    = CreateHoldButton(parent, "ZoomOutButton", "-",  new Vector2(1f, 1f), new Vector2(30f, 200f), new Vector2(80f, 80f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
+            removeButton     = CreateHoldButton(parent, "RemoveButton", "DEL", new Vector2(1f, 1f), new Vector2(20f * m, 20f * m),  new Vector2(68f * m, 68f * m), new Color(0.95f, 0.2f, 0.2f, 0.68f), Mathf.RoundToInt(16f * m));
+            zoomInButton     = CreateHoldButton(parent, "ZoomInButton", "+",   new Vector2(1f, 1f), new Vector2(20f * m, 145f * m), new Vector2(64f * m, 64f * m), new Color(0.75f, 0.75f, 0.9f, 0.68f), Mathf.RoundToInt(24f * m));
+            zoomOutButton    = CreateHoldButton(parent, "ZoomOutButton", "-",  new Vector2(1f, 1f), new Vector2(20f * m, 218f * m), new Vector2(64f * m, 64f * m), new Color(0.75f, 0.75f, 0.9f, 0.68f), Mathf.RoundToInt(24f * m));
 
-            // --- SPECIAL (Bottom Center) ---
-            placeMineButton  = CreateTapButton(parent, "PlaceMineButton", "✔  PLACE HERE",
-                new Vector2(0.5f, 0f), new Vector2(0f, 28f), new Vector2(380f, 110f), new Color(0.1f, 0.75f, 0.2f, 0.95f), 30);
+            // --- SPECIAL (Bottom Right, linked with action flow) ---
+            placeMineButton  = CreateTapButton(parent, "PlaceMineButton", "PLACE",
+                new Vector2(1f, 0f), new Vector2(24f * m, 430f * m), new Vector2(150f * m, 74f * m), new Color(0.1f, 0.75f, 0.2f, 0.72f), Mathf.RoundToInt(22f * m));
             placeMineButton.gameObject.SetActive(false);
 
             if (interactButton != null)
@@ -352,6 +364,24 @@ namespace SimpleVoxelSystem
             if (!IsActive) return;
             if (placeMineButton != null)
                 placeMineButton.gameObject.SetActive(visible);
+        }
+
+        public void SetEditorModeVisible(bool visible)
+        {
+            if (!IsActive)
+                return;
+
+            if (removeButton != null)
+                removeButton.gameObject.SetActive(visible);
+        }
+
+        private float CalculateSafeScale()
+        {
+            Rect safe = Screen.safeArea;
+            float wRatio = safe.width / Mathf.Max(1f, Screen.width);
+            float hRatio = safe.height / Mathf.Max(1f, Screen.height);
+            float ratio = Mathf.Min(wRatio, hRatio);
+            return Mathf.Clamp(ratio, 0.85f, 1f);
         }
 
         private static RectTransform CreateRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
@@ -410,18 +440,52 @@ namespace SimpleVoxelSystem
 
         // (Helper methods removed, now using RuntimeUIFactory)
 
-        private class TouchTapButton : MonoBehaviour, IPointerDownHandler
+        private class TouchTapButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
         {
             public bool PressedThisFrame { get; private set; }
+            private Image image;
+            private float idleAlpha = 0.7f;
+
+            void Awake()
+            {
+                image = GetComponent<Image>();
+                if (image != null)
+                    idleAlpha = image.color.a;
+            }
 
             public void OnPointerDown(PointerEventData eventData)
             {
                 PressedThisFrame = true;
+                SetAlpha(1f);
+            }
+
+            public void OnPointerUp(PointerEventData eventData)
+            {
+                SetAlpha(idleAlpha);
+            }
+
+            public void OnPointerExit(PointerEventData eventData)
+            {
+                SetAlpha(idleAlpha);
+            }
+
+            void OnDisable()
+            {
+                SetAlpha(idleAlpha);
             }
 
             public void ResetFrameFlags()
             {
                 PressedThisFrame = false;
+            }
+
+            private void SetAlpha(float a)
+            {
+                if (image == null)
+                    return;
+                Color c = image.color;
+                c.a = a;
+                image.color = c;
             }
         }
 
@@ -429,26 +493,53 @@ namespace SimpleVoxelSystem
         {
             public bool Held { get; private set; }
             public bool PressedThisFrame { get; private set; }
+            private Image image;
+            private float idleAlpha = 0.7f;
+
+            void Awake()
+            {
+                image = GetComponent<Image>();
+                if (image != null)
+                    idleAlpha = image.color.a;
+            }
 
             public void OnPointerDown(PointerEventData eventData)
             {
                 Held = true;
                 PressedThisFrame = true;
+                SetAlpha(1f);
             }
 
             public void OnPointerUp(PointerEventData eventData)
             {
                 Held = false;
+                SetAlpha(idleAlpha);
             }
 
             public void OnPointerExit(PointerEventData eventData)
             {
                 Held = false;
+                SetAlpha(idleAlpha);
+            }
+
+            void OnDisable()
+            {
+                Held = false;
+                SetAlpha(idleAlpha);
             }
 
             public void ResetFrameFlags()
             {
                 PressedThisFrame = false;
+            }
+
+            private void SetAlpha(float a)
+            {
+                if (image == null)
+                    return;
+                Color c = image.color;
+                c.a = a;
+                image.color = c;
             }
         }
 
@@ -458,9 +549,37 @@ namespace SimpleVoxelSystem
             public RectTransform knob;
             public float radius = 72f;
             public Vector2 Direction { get; private set; }
+            private RectTransform area;
+            private Vector2 centerLocal;
+            private Image backgroundImage;
+            private Image knobImage;
+            private float bgIdleAlpha;
+            private float knobIdleAlpha;
+
+            void Awake()
+            {
+                area = GetComponent<RectTransform>();
+                if (background != null)
+                {
+                    backgroundImage = background.GetComponent<Image>();
+                    if (backgroundImage != null)
+                        bgIdleAlpha = backgroundImage.color.a;
+                }
+
+                if (knob != null)
+                {
+                    knobImage = knob.GetComponent<Image>();
+                    if (knobImage != null)
+                        knobIdleAlpha = knobImage.color.a;
+                }
+
+                SetVisualActive(false);
+            }
 
             public void OnPointerDown(PointerEventData eventData)
             {
+                UpdateCenter(eventData);
+                SetVisualActive(true);
                 UpdateFromPointer(eventData);
             }
 
@@ -474,18 +593,51 @@ namespace SimpleVoxelSystem
                 Direction = Vector2.zero;
                 if (knob != null)
                     knob.anchoredPosition = Vector2.zero;
+                SetVisualActive(false);
             }
 
             private void UpdateFromPointer(PointerEventData eventData)
             {
-                if (background == null)
+                if (background == null || area == null)
                     return;
 
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(background, eventData.position, eventData.pressEventCamera, out Vector2 localPoint);
-                Vector2 clamped = Vector2.ClampMagnitude(localPoint, radius);
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(area, eventData.position, eventData.pressEventCamera, out Vector2 localPoint);
+                Vector2 delta = localPoint - centerLocal;
+                Vector2 clamped = Vector2.ClampMagnitude(delta, radius);
                 Direction = clamped / Mathf.Max(radius, 0.001f);
                 if (knob != null)
                     knob.anchoredPosition = clamped;
+            }
+
+            private void UpdateCenter(PointerEventData eventData)
+            {
+                if (background == null || area == null)
+                    return;
+
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(area, eventData.position, eventData.pressEventCamera, out centerLocal);
+                background.anchoredPosition = centerLocal;
+                if (knob != null)
+                    knob.anchoredPosition = Vector2.zero;
+            }
+
+            private void SetVisualActive(bool active)
+            {
+                if (backgroundImage != null)
+                {
+                    Color c = backgroundImage.color;
+                    c.a = active ? 1f : bgIdleAlpha;
+                    backgroundImage.color = c;
+                }
+
+                if (knobImage != null)
+                {
+                    Color c = knobImage.color;
+                    c.a = active ? 1f : knobIdleAlpha;
+                    knobImage.color = c;
+                }
+
+                if (background != null)
+                    background.gameObject.SetActive(active);
             }
         }
 
@@ -533,6 +685,60 @@ namespace SimpleVoxelSystem
             public void ResetFrameFlags()
             {
                 TappedThisFrame = false;
+            }
+        }
+
+        [DisallowMultipleComponent]
+        private sealed class SafeAreaFitter : MonoBehaviour
+        {
+            private RectTransform rect;
+            private Rect lastSafeArea;
+            private Vector2Int lastScreen;
+
+            void Awake()
+            {
+                rect = GetComponent<RectTransform>();
+                ApplySafeArea();
+            }
+
+            void OnEnable()
+            {
+                ApplySafeArea();
+            }
+
+            void Update()
+            {
+                if (rect == null)
+                    rect = GetComponent<RectTransform>();
+                if (rect == null)
+                    return;
+
+                Vector2Int screen = new Vector2Int(Screen.width, Screen.height);
+                Rect safe = Screen.safeArea;
+                if (safe != lastSafeArea || screen != lastScreen)
+                    ApplySafeArea();
+            }
+
+            private void ApplySafeArea()
+            {
+                if (rect == null)
+                    rect = GetComponent<RectTransform>();
+                if (rect == null)
+                    return;
+
+                Rect safe = Screen.safeArea;
+                float minX = safe.xMin / Mathf.Max(1f, Screen.width);
+                float minY = safe.yMin / Mathf.Max(1f, Screen.height);
+                float maxX = safe.xMax / Mathf.Max(1f, Screen.width);
+                float maxY = safe.yMax / Mathf.Max(1f, Screen.height);
+
+                rect.anchorMin = new Vector2(minX, minY);
+                rect.anchorMax = new Vector2(maxX, maxY);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+
+                lastSafeArea = safe;
+                lastScreen = new Vector2Int(Screen.width, Screen.height);
             }
         }
     }

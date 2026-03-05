@@ -196,6 +196,7 @@ namespace SimpleVoxelSystem
         public void ToggleEditMode()
         {
             IsEditMode = !IsEditMode;
+            mobileControls?.SetEditorModeVisible(IsEditMode);
             if (!IsEditMode)
             {
                 HidePreview();
