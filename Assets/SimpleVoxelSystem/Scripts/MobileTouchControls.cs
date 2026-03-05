@@ -68,7 +68,16 @@ namespace SimpleVoxelSystem
         private Text interactButtonLabel;
         private float actionScale = 1f;
 
-        private const string DefaultInteractLabel = "ACT";
+        // Локализация — ссылки на Text кнопок для обновления при смене языка
+        private Text mineButtonLabel;
+        private Text jumpButtonLabel;
+        private Text runButtonLabel;
+        private Text minionMenuButtonLabel;
+        private Text placeMineButtonLabel;
+        private Text removeButtonLabel;
+
+        private const string DefaultInteractLabel = "ACT"; // fallback если Loc не инициализирован
+        private static string LocalizedActLabel => Loc.T("btn_act");
         private bool interactHintRequested;
         private string interactHintText = DefaultInteractLabel;
         private int interactHintPriority = int.MinValue;
@@ -123,8 +132,16 @@ namespace SimpleVoxelSystem
             EnsureEventSystem();
             BuildUI();
 
+            // FIX LOC: подписываемся на смену языка
+            Loc.OnLanguageChanged += RefreshButtonLabels;
+
             // Initialize sticky position to center so it's not (0,0) before first touch
             StickyAimPosition = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        }
+
+        void OnDestroy()
+        {
+            Loc.OnLanguageChanged -= RefreshButtonLabels;
         }
 
         void Update()
@@ -334,25 +351,27 @@ namespace SimpleVoxelSystem
             float m = actionScale;
 
             // --- ACTION CLUSTER (Bottom Right) ---
-            mineButton       = CreateTapButton(parent, "MineButton", "MINE", new Vector2(1f, 0f), new Vector2(24f * m, 24f * m), new Vector2(252f * m, 252f * m), new Color(0.95f, 0.45f, 0.2f, 0.72f), Mathf.RoundToInt(30f * m));
-            // JUMP/RUN form a clean vertical column centered against MINE height.
-            jumpButton       = CreateTapButton(parent, "JumpButton", "JUMP", new Vector2(1f, 0f), new Vector2(340f * m, 154f * m), new Vector2(92f * m, 92f * m), new Color(0.2f, 0.62f, 0.95f, 0.7f), Mathf.RoundToInt(18f * m));
-            runButton        = CreateHoldButton(parent, "RunButton", "RUN",  new Vector2(1f, 0f), new Vector2(340f * m, 54f * m), new Vector2(92f * m, 92f * m), new Color(0.2f, 0.82f, 0.42f, 0.68f), Mathf.RoundToInt(16f * m));
-            interactButton   = CreateTapButton(parent, "InteractButton", DefaultInteractLabel, new Vector2(1f, 0f), new Vector2(24f * m, 286f * m), new Vector2(252f * m, 100f * m), new Color(0.98f, 0.78f, 0.18f, 0.7f), Mathf.RoundToInt(24f * m));
-            minionMenuButton = CreateTapButton(parent, "MinionsButton", "MINIONS", new Vector2(1f, 0f), new Vector2(107f * m, 792f * m), new Vector2(88f * m, 88f * m), new Color(0.22f, 0.34f, 0.56f, 0.68f), Mathf.RoundToInt(14f * m));
+            mineButton       = CreateTapButton(parent, "MineButton",    Loc.T("btn_mine"),    new Vector2(1f, 0f), new Vector2(24f * m, 24f * m),  new Vector2(252f * m, 252f * m), new Color(0.95f, 0.45f, 0.2f, 0.72f), Mathf.RoundToInt(30f * m));
+            jumpButton       = CreateTapButton(parent, "JumpButton",    Loc.T("btn_jump"),    new Vector2(1f, 0f), new Vector2(340f * m, 154f * m), new Vector2(92f * m, 92f * m),   new Color(0.2f, 0.62f, 0.95f, 0.7f),  Mathf.RoundToInt(18f * m));
+            runButton        = CreateHoldButton(parent, "RunButton",    Loc.T("btn_run"),     new Vector2(1f, 0f), new Vector2(340f * m, 54f * m),  new Vector2(92f * m, 92f * m),   new Color(0.2f, 0.82f, 0.42f, 0.68f), Mathf.RoundToInt(16f * m));
+            interactButton   = CreateTapButton(parent, "InteractButton",DefaultInteractLabel,  new Vector2(1f, 0f), new Vector2(24f * m, 286f * m), new Vector2(252f * m, 100f * m), new Color(0.98f, 0.78f, 0.18f, 0.7f),  Mathf.RoundToInt(24f * m));
+            minionMenuButton = CreateTapButton(parent, "MinionsButton", Loc.T("btn_minions"), new Vector2(1f, 0f), new Vector2(107f * m, 792f * m), new Vector2(88f * m, 88f * m),   new Color(0.22f, 0.34f, 0.56f, 0.68f),Mathf.RoundToInt(14f * m));
 
-            // --- UTILITY CLUSTER (Top Right) ---
-            removeButton     = CreateHoldButton(parent, "RemoveButton", "DEL", new Vector2(1f, 1f), new Vector2(20f * m, 20f * m),  new Vector2(68f * m, 68f * m), new Color(0.95f, 0.2f, 0.2f, 0.68f), Mathf.RoundToInt(16f * m));
-            zoomInButton     = CreateHoldButton(parent, "ZoomInButton", "+",   new Vector2(1f, 1f), new Vector2(20f * m, 145f * m), new Vector2(64f * m, 64f * m), new Color(0.75f, 0.75f, 0.9f, 0.68f), Mathf.RoundToInt(24f * m));
-            zoomOutButton    = CreateHoldButton(parent, "ZoomOutButton", "-",  new Vector2(1f, 1f), new Vector2(20f * m, 218f * m), new Vector2(64f * m, 64f * m), new Color(0.75f, 0.75f, 0.9f, 0.68f), Mathf.RoundToInt(24f * m));
+            removeButton     = CreateHoldButton(parent, "RemoveButton", Loc.T("btn_del"),   new Vector2(1f, 1f), new Vector2(20f * m, 20f * m),  new Vector2(68f * m, 68f * m),   new Color(0.95f, 0.2f, 0.2f, 0.68f),  Mathf.RoundToInt(16f * m));
+            zoomInButton     = CreateHoldButton(parent, "ZoomInButton", "+",                new Vector2(1f, 1f), new Vector2(20f * m, 145f * m), new Vector2(64f * m, 64f * m),   new Color(0.75f, 0.75f, 0.9f, 0.68f), Mathf.RoundToInt(24f * m));
+            zoomOutButton    = CreateHoldButton(parent, "ZoomOutButton","-",                new Vector2(1f, 1f), new Vector2(20f * m, 218f * m), new Vector2(64f * m, 64f * m),   new Color(0.75f, 0.75f, 0.9f, 0.68f), Mathf.RoundToInt(24f * m));
 
-            // --- SPECIAL (Bottom Right, linked with action flow) ---
-            placeMineButton  = CreateTapButton(parent, "PlaceMineButton", "PLACE",
+            placeMineButton  = CreateTapButton(parent, "PlaceMineButton", Loc.T("btn_place"),
                 new Vector2(1f, 0f), new Vector2(24f * m, 430f * m), new Vector2(150f * m, 74f * m), new Color(0.1f, 0.75f, 0.2f, 0.72f), Mathf.RoundToInt(22f * m));
             placeMineButton.gameObject.SetActive(false);
 
-            if (interactButton != null)
-                interactButtonLabel = interactButton.GetComponentInChildren<Text>();
+            if (interactButton    != null) interactButtonLabel    = interactButton.GetComponentInChildren<Text>();
+            if (mineButton        != null) mineButtonLabel        = mineButton.GetComponentInChildren<Text>();
+            if (jumpButton        != null) jumpButtonLabel        = jumpButton.GetComponentInChildren<Text>();
+            if (runButton         != null) runButtonLabel         = runButton.GetComponentInChildren<Text>();
+            if (minionMenuButton  != null) minionMenuButtonLabel  = minionMenuButton.GetComponentInChildren<Text>();
+            if (placeMineButton   != null) placeMineButtonLabel   = placeMineButton.GetComponentInChildren<Text>();
+            if (removeButton      != null) removeButtonLabel      = removeButton.GetComponentInChildren<Text>();
         }
 
         /// <summary>
@@ -364,6 +383,17 @@ namespace SimpleVoxelSystem
             if (!IsActive) return;
             if (placeMineButton != null)
                 placeMineButton.gameObject.SetActive(visible);
+        }
+
+        /// <summary>Обновить лейблы всех кнопок при смене языка.</summary>
+        private void RefreshButtonLabels()
+        {
+            if (mineButtonLabel       != null) mineButtonLabel.text       = Loc.T("btn_mine");
+            if (jumpButtonLabel       != null) jumpButtonLabel.text       = Loc.T("btn_jump");
+            if (runButtonLabel        != null) runButtonLabel.text        = Loc.T("btn_run");
+            if (minionMenuButtonLabel != null) minionMenuButtonLabel.text = Loc.T("btn_minions");
+            if (placeMineButtonLabel  != null) placeMineButtonLabel.text  = Loc.T("btn_place");
+            if (removeButtonLabel     != null) removeButtonLabel.text     = Loc.T("btn_del");
         }
 
         public void SetEditorModeVisible(bool visible)
@@ -429,11 +459,13 @@ namespace SimpleVoxelSystem
             if (interactButton != null)
                 interactButton.gameObject.SetActive(interactHintRequested ? interactHintVisibleRequested : true);
 
+            // Используем переводимый лейбл ACT
+            string actLabel = LocalizedActLabel;
             if (interactButtonLabel != null)
-                interactButtonLabel.text = interactHintRequested ? interactHintText : DefaultInteractLabel;
+                interactButtonLabel.text = interactHintRequested ? interactHintText : actLabel;
 
             interactHintRequested = false;
-            interactHintText = DefaultInteractLabel;
+            interactHintText = actLabel;
             interactHintPriority = int.MinValue;
             interactHintVisibleRequested = true;
         }

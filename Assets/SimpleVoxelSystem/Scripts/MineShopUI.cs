@@ -87,18 +87,23 @@ namespace SimpleVoxelSystem
             mineMarket.OnMinePlaced         += OnMinePlaced;
             mineMarket.OnMineSold           += OnMineSold;
             mineMarket.OnPlacementCancelled += OnPlacementCancelled;
+            Loc.OnLanguageChanged           += RefreshLocalization;
 
             BuildShopButtons();
             SetPanelVisible(false);
             RefreshHUD();
+            RefreshLocalization(); // применяем перевод сразу
         }
 
         void OnDestroy()
         {
-            if (mineMarket == null) return;
-            mineMarket.OnMinePlaced         -= OnMinePlaced;
-            mineMarket.OnMineSold           -= OnMineSold;
-            mineMarket.OnPlacementCancelled -= OnPlacementCancelled;
+            if (mineMarket != null)
+            {
+                mineMarket.OnMinePlaced         -= OnMinePlaced;
+                mineMarket.OnMineSold           -= OnMineSold;
+                mineMarket.OnPlacementCancelled -= OnPlacementCancelled;
+            }
+            Loc.OnLanguageChanged -= RefreshLocalization;
         }
 
         void Update()
@@ -157,7 +162,7 @@ namespace SimpleVoxelSystem
 
             // Cancel button (placement mode) ─────────────────────
             cancelBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "CancelBtn",
-                "Cancel", ColBtnCancel,
+                Loc.T("btn_cancel"), ColBtnCancel,
                 anchor: new Vector2(1f, 0f), pivot: new Vector2(1f, 0f),
                 pos: new Vector2(-10f, 10f), size: new Vector2(120f, 40f));
             cancelBtn.onClick.AddListener(() => mineMarket.CancelPlacementPublic());
@@ -166,7 +171,7 @@ namespace SimpleVoxelSystem
 
             // Sell Button ─────────────────────────────────────────────
             sellMineBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "SellMineBtn",
-                "Sell Mine", ColBtnSell,
+                Loc.T("btn_sell_mine"), ColBtnSell,
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-10f, -10f), size: new Vector2(155f, 40f));
             sellMineBtn.onClick.AddListener(() => mineMarket.SellCurrentMine());
@@ -174,7 +179,7 @@ namespace SimpleVoxelSystem
 
             // World Switch Button ──────────────────────────────────
             switchWorldBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "SwitchWorldBtn",
-                "To Lobby", new Color(0.2f, 0.7f, 0.2f, 1f),
+                Loc.T("to_lobby"), new Color(0.2f, 0.7f, 0.2f, 1f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-170f, -10f), size: new Vector2(140f, 80f));
             switchWorldBtn.onClick.AddListener(() =>
@@ -189,7 +194,7 @@ namespace SimpleVoxelSystem
 
             // Create Island Button (now at top, as an icon/small panel) ──
             createIslandBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "CreateIslandBtn",
-                "Create Island", new Color(0.15f, 0.45f, 0.85f, 0.9f),
+                Loc.T("create_island"), new Color(0.15f, 0.45f, 0.85f, 0.9f),
                 anchor: new Vector2(0.5f, 1f), pivot: new Vector2(0.5f, 1f),
                 pos: new Vector2(0, -10f), size: new Vector2(240f, 40f));
             createIslandBtn.onClick.AddListener(() =>
@@ -200,7 +205,7 @@ namespace SimpleVoxelSystem
             createIslandBtn.gameObject.SetActive(true);
 
             setSpawnBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "SetSpawnBtn",
-                "Set Spawn", new Color(0.15f, 0.65f, 0.85f, 0.95f),
+                Loc.T("btn_set_spawn"), new Color(0.15f, 0.65f, 0.85f, 0.95f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-320f, -10f), size: new Vector2(140f, 80f));
             setSpawnBtn.onClick.AddListener(() =>
@@ -229,19 +234,23 @@ namespace SimpleVoxelSystem
 
             // Title
             RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopTitle",
-                "MINE SHOP", 22, TextAnchor.UpperCenter,
+                Loc.T("mine_shop_title"), 22, TextAnchor.UpperCenter,
                 new Vector2(0, -12), new Vector2(0, 0), bold: true);
 
-            Button closeShopBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseShopBtn", "X",
+            Button closeShopBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseShopBtn", Loc.T("btn_close"),
                 new Color(0.78f, 0.22f, 0.22f, 0.95f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
             closeShopBtn.onClick.AddListener(() => SetPanelVisible(false));
 
             // Subtitle with money
-            panelMoneyText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopMoney",
-                "Balance: $0  |  [B]/[X] close", 14, TextAnchor.UpperCenter,
-                new Vector2(0, -42), new Vector2(0, -22), bold: false);
+            {
+                string bal  = Loc.T("shop_balance");
+                string cls  = Loc.T("btn_close").ToLower();
+                panelMoneyText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopMoney",
+                    bal + ": $0  |  [B]/[X] " + cls, 14, TextAnchor.UpperCenter,
+                    new Vector2(0, -42), new Vector2(0, -22), bold: false);
+            }
 
             // Horizontal Separator
             RuntimeUIFactory.MakeSeparator(shopPanel.transform, -62f, 8f);
@@ -324,7 +333,7 @@ namespace SimpleVoxelSystem
 
             // Depth
             RuntimeUIFactory.MakeLabel(go.transform, "Depth",
-                $"🕳 Depth: {data.depthMin}-{data.depthMax} layers.", 13, TextAnchor.UpperLeft,
+                Loc.Tf("mine_depth_format", data.depthMin, data.depthMax), 13, TextAnchor.UpperLeft,
                 new Vector2(14, -28), new Vector2(-12, -28), color: new Color(0.75f, 0.85f, 1f, 1f));
 
             // Composition
@@ -372,7 +381,7 @@ namespace SimpleVoxelSystem
         static string BuildCompositionLine(MineShopData data)
         {
             if (data.layers == null || data.layers.Length == 0) return "-";
-            var l = data.layers[data.layers.Length > 1 ? 1 : 0]; // middle layer
+            var l = data.layers[data.layers.Length > 1 ? 1 : 0];
             int total = l.dirtWeight + l.stoneWeight + l.ironWeight + l.goldWeight;
             if (total <= 0) return "-";
             var parts = new System.Collections.Generic.List<string>();
@@ -411,72 +420,44 @@ namespace SimpleVoxelSystem
             if (mineMarket == null) return;
 
             bool islandBuilt = mineMarket.WellGen != null && mineMarket.WellGen.IsIslandGenerated;
-            bool hasMine     = mineMarket.IsMineGenerated();
             bool inLobby     = mineMarket.WellGen != null && mineMarket.WellGen.IsInLobbyMode;
-            bool hasPending  = mineMarket.IsPlacementMode && !inLobby; // On island with mine in hand
+            bool isPlacing   = mineMarket.IsPlacementMode;
 
             if (moneyText != null)
                 moneyText.text = $"$ {GlobalEconomy.Money}  |  Lv. {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
 
-            // Create button: only in lobby and if no island yet
             if (createIslandBtn != null)
                 createIslandBtn.gameObject.SetActive(inLobby && !islandBuilt);
 
             if (setSpawnBtn != null)
                 setSpawnBtn.gameObject.SetActive(!inLobby && islandBuilt);
 
-            // Switch button:
             if (switchWorldBtn != null)
             {
                 switchWorldBtn.gameObject.SetActive(islandBuilt);
                 if (switchWorldBtnText != null)
-                    switchWorldBtnText.text = inLobby ? "To Island" : "To Lobby";
+                    switchWorldBtnText.text = inLobby ? Loc.T("to_island") : Loc.T("to_lobby");
             }
 
-            // Purchase buttons active ONLY in lobby
             foreach (var btn in mineButtons)
-            {
                 if (btn != null) btn.interactable = inLobby;
-            }
 
-            // Sell Button: only if bought but not yet placed (in placement mode)
             if (sellMineBtn != null)
-            {
-                // User wants to sell only if bought but not yet placed.
-                // In our logic, this means pendingMine != null.
-                // We remove the Sell button for already installed mines.
                 sellMineBtn.gameObject.SetActive(false);
-            }
 
-            bool isPlacing = mineMarket.IsPlacementMode;
-
-            // Cancel placement button: only when bought but not yet placed
             if (cancelBtn != null)
             {
-                // Show refund button if mine is bought (in hand),
-                // regardless of whether we are in lobby or on island.
                 cancelBtn.gameObject.SetActive(isPlacing);
-
                 if (cancelBtnText != null)
-                    cancelBtnText.text = "Refund";
+                    cancelBtnText.text = Loc.T("btn_cancel");
             }
 
-            // Placement status
             if (statusLabel != null)
-            {
-                if (isPlacing)
-                {
-                    statusLabel.text = inLobby
-                        ? "<color=yellow>Mine purchased.</color> Go to Island to place it."
-                        : "<color=yellow>Placement mode.</color> Choose a position with LMB.";
-                }
-                else
-                {
-                    statusLabel.text = "";
-                }
-            }
+                statusLabel.text = isPlacing
+                    ? (inLobby ? "<color=yellow>Mine purchased.</color> Go to Island to place it."
+                               : "<color=yellow>Placement mode.</color> Choose a position with LMB.")
+                    : "";
 
-            // HUD visible ALWAYS (to see money and status in lobby)
             if (hud != null) hud.SetActive(true);
         }
 
@@ -490,19 +471,17 @@ namespace SimpleVoxelSystem
 
         public void SetPanelVisible(bool v)
         {
-            if (shopPanel != null) 
+            if (shopPanel != null)
             {
                 shopPanel.SetActive(v);
                 GameUIWindow.SetWindowActive(shopPanel, v);
             }
-            if (_overlay  != null)  _overlay.SetActive(v);
-            // Updating balance line in the panel
+            if (_overlay != null) _overlay.SetActive(v);
             if (v) UpdatePanelMoneyLabel();
         }
 
         void UpdatePanelMoneyLabel()
         {
-            // Updating subtitle text in the panel (if exists)
             if (panelMoneyText != null)
                 panelMoneyText.text = $"Balance: ${GlobalEconomy.Money}  |  [B]/[X] close";
         }
@@ -512,9 +491,27 @@ namespace SimpleVoxelSystem
             if (statusLabel != null) statusLabel.text = msg;
         }
 
-        // ───────────────────────────────────────────────────────────────────
-        // Helper UI element factories
+        /// <summary>Обновить все переводимые строки после смены языка.</summary>
+        private void RefreshLocalization()
+        {
+            if (createIslandBtn != null)
+            {
+                var t = createIslandBtn.GetComponentInChildren<Text>();
+                if (t != null) t.text = Loc.T("create_island");
+            }
+            if (setSpawnBtn != null)
+            {
+                var t = setSpawnBtn.GetComponentInChildren<Text>();
+                if (t != null) t.text = Loc.T("btn_set_spawn");
+            }
+            if (sellMineBtn != null)
+            {
+                var t = sellMineBtn.GetComponentInChildren<Text>();
+                if (t != null) t.text = Loc.T("btn_sell_mine");
+            }
+            // switchWorldBtnText обновляется в RefreshHUD() каждый Update
+        }
+
         // (Helper methods removed, now using RuntimeUIFactory)
     }
 }
-

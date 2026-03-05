@@ -128,8 +128,25 @@ namespace SimpleVoxelSystem
 
         void Start()
         {
+            Loc.Initialize(); // убеждаемся что локализация инициализирована
             ui = TutorialUIBuilder.Build(transform);
             DetermineFlow();
+        }
+
+        void OnEnable()
+        {
+            Loc.OnLanguageChanged += RefreshCurrentStep;
+        }
+
+        void OnDisable()
+        {
+            Loc.OnLanguageChanged -= RefreshCurrentStep;
+        }
+
+        void RefreshCurrentStep()
+        {
+            if (step != Step.Idle && step != Step.Done)
+                ApplyUI(step);
         }
 
         void Update()
@@ -196,155 +213,104 @@ namespace SimpleVoxelSystem
         {
             switch (s)
             {
-                // ── PC: show controls card, auto-dismiss ─────────────────────
                 case Step.PcControls:
-                    ShowCard("CONTROLS",
-                        "Movement:  W A S D\n" +
-                        "Jump:   Space\n" +
-                        "Dig:   Left Mouse Button\n\n" +
-                        "Press any key or click to start.",
+                    ShowCard(Loc.T("tut_controls_title"),
+                        Loc.T("tut_controls_pc"),
                         tapHint: false);
-                    SetDim(0f);
-                    SetHighlight(null);
-                    SetBeam(false);
+                    SetDim(0f); SetHighlight(null); SetBeam(false);
                     break;
 
-                // ── Mobile step 1: dark screen + joystick callout ────────────
                 case Step.MobJoystick:
-                    ShowCard("CONTROLS",
-                        "This is the movement joystick.\nMove it to walk forward.",
+                    ShowCard(Loc.T("tut_controls_title"),
+                        Loc.T("tut_controls_mob"),
                         tapHint: false);
                     SetDim(0.72f);
                     SetHighlight(mobile?.MoveAreaRect, arrow: true);
                     SetBeam(false);
                     break;
 
-                // ── Mobile step 2: button guide ──────────────────────────────
                 case Step.MobButtons:
-                    ShowCard("BUTTONS",
-                        "MINE  — dig block\n" +
-                        "JUMP  — jump\n" +
-                        "ACT   — interact\n" +
-                        "RUN   — sprint\n" +
-                        "MINIONS — minions menu\n\n" +
-                        "Tap the screen to continue.",
+                    ShowCard(Loc.T("tut_buttons_title"),
+                        Loc.T("tut_buttons_body"),
                         tapHint: true);
                     SetDim(0.62f);
                     SetHighlight(mobile?.MineButtonRect, arrow: true);
                     SetBeam(false);
                     break;
 
-                // ── Mobile step 3: MUST create island ───────────────────────
                 case Step.MobCreateIsland:
-                    ShowCard("CREATE ISLAND",
-                        "Press the Create Island button.\n" +
-                        "Until then, all other actions are blocked.",
+                    ShowCard(Loc.T("tut_create_island_title"),
+                        Loc.T("tut_create_island_body"),
                         tapHint: false);
                     SetDim(0.55f);
                     SetHighlight(GetCreateIslandRect(), arrow: true);
                     SetBeam(false);
                     break;
 
-                // ── Mobile step 4: explore island ────────────────────────────
                 case Step.MobOnIsland:
-                    ShowCard("YOUR ISLAND",
-                        "Here is your island, dear miner!\n" +
-                        "Explore it. When you're ready —\n" +
-                        "go back to the lobby.",
+                    ShowCard(Loc.T("tut_island_title"),
+                        Loc.T("tut_island_body"),
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(GetSwitchWorldRect(), arrow: true);
                     SetBeam(false);
                     break;
 
-                // ── Mobile step 5: buy mine ──────────────────────────────────
                 case Step.MobBuyMine:
-                    ShowCard("FIRST MINE",
-                        "To start, purchase your first mine.\n" +
-                        "The beam points to the mine shop.",
+                    ShowCard(Loc.T("tut_buy_mine_title"),
+                        Loc.T("tut_buy_mine_body"),
                         tapHint: false);
-                    SetDim(0f);
-                    SetHighlight(null);
-                    SetBeam(true);
+                    SetDim(0f); SetHighlight(null); SetBeam(true);
                     break;
 
-                // ── Mobile step 6: go place it ───────────────────────────────
                 case Step.MobPlaceMine:
-                    ShowCard("PLACE MINE",
-                        "Great! Return to your island\n" +
-                        "and place the purchased mine.",
+                    ShowCard(Loc.T("tut_place_mine_title"),
+                        Loc.T("tut_place_mine_body"),
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(GetSwitchWorldRect(), arrow: true);
                     SetBeam(false);
                     break;
 
-                // ── Mining ───────────────────────────────────────────────────────
                 case Step.Mining:
-                    if (isMobile)
-                        ShowCard("MINING",
-                            "Go to the mine and tap the block you want to break.\n" +
-                            "Hold the screen on the block or press the MINE button.",
-                            tapHint: false);
-                    else
-                        ShowCard("MINING",
-                            "Go to your mine.\n" +
-                            "Click LEFT MOUSE BUTTON on a block to dig.\n" +
-                            "Fill your backpack to the brim!",
-                            tapHint: false);
-                    SetDim(0f);
-                    SetHighlight(null);
-                    SetBeam(false);
+                    ShowCard(Loc.T("tut_mining_title"),
+                        isMobile ? Loc.T("tut_mining_mob") : Loc.T("tut_mining_pc"),
+                        tapHint: false);
+                    SetDim(0f); SetHighlight(null); SetBeam(false);
                     break;
 
-                // ── Backpack full ─────────────────────────────────────────────────
                 case Step.BackpackFull:
-                    ShowCard("BACKPACK FULL!",
-                        "Great job! Time to unload.\n" +
-                        "Return to the lobby — the beam will show the ore selling point.",
+                    ShowCard(Loc.T("tut_backpack_title"),
+                        Loc.T("tut_backpack_body"),
                         tapHint: false);
-                    SetDim(0f);
-                    SetHighlight(null);
+                    SetDim(0f); SetHighlight(null);
                     SetBeam(true, ShopZoneType.Sell);
                     break;
 
-                // ── Sell ore ─────────────────────────────────────────────────────
                 case Step.SellOre:
-                    ShowCard("SELL ORE",
-                        "Go to the selling point and turn in your backpack contents.\n" +
-                        "The beam points the way.",
+                    ShowCard(Loc.T("tut_sell_title"),
+                        Loc.T("tut_sell_body"),
                         tapHint: false);
-                    SetDim(0f);
-                    SetHighlight(null);
+                    SetDim(0f); SetHighlight(null);
                     SetBeam(true, ShopZoneType.Sell);
                     break;
 
-                // ── Upgrade pickaxe ──────────────────────────────────────────────
                 case Step.UpgradePickaxe:
-                    ShowCard("UPGRADE EQUIPMENT",
-                        "Want to dig faster and reach rare ores?\n" +
-                        "Go to the pickaxe shop and upgrade your gear.",
-                        tapHint: false,
-                        cardY: 300f);
-                    SetDim(0f);
-                    SetHighlight(null);
+                    ShowCard(Loc.T("tut_upgrade_title"),
+                        Loc.T("tut_upgrade_body"),
+                        tapHint: false, cardY: 300f);
+                    SetDim(0f); SetHighlight(null);
                     SetBeam(true, ShopZoneType.Pickaxe);
                     break;
 
-                // ── Minion hint ──────────────────────────────────────────────────
                 case Step.MinionHint:
-                    ShowCard("AUTOMATE THE MINE",
-                        "If you want to automate your mining —\n" +
-                        "come here and hire your first minion worker!\n\n" +
-                        "Press any key / tap to close.",
-                        tapHint: true,
-                        cardY: 290f);
-                    SetDim(0f);
-                    SetHighlight(null);
+                    ShowCard(Loc.T("tut_minion_title"),
+                        Loc.T("tut_minion_body"),
+                        tapHint: true, cardY: 290f);
+                    SetDim(0f); SetHighlight(null);
                     SetBeam(true, ShopZoneType.Minion);
                     break;
 
-                // ── Done ─────────────────────────────────────────────────────
                 default:
                     HideAll();
                     IsGameplayInputBlocked = false;
@@ -493,7 +459,7 @@ namespace SimpleVoxelSystem
             if (cardTapHint != null)
             {
                 cardTapHint.gameObject.SetActive(tapHint);
-                cardTapHint.text = tapHint ? "Tap the screen to continue ›" : "";
+                cardTapHint.text = tapHint ? Loc.T("tut_tap_hint") : "";
             }
         }
 
