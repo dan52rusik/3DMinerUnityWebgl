@@ -24,6 +24,14 @@ namespace SimpleVoxelSystem
         public Color closeBtnColor     = new Color(0.80f, 0.22f, 0.22f, 1.00f);
         public Color backdropColor     = new Color(0f, 0f, 0f, 0.45f);
         [Range(0.05f, 0.5f)] public float animDuration = 0.18f;
+        private static readonly Color LangSectionBg = new Color(0.11f, 0.12f, 0.19f, 0.92f);
+        private static readonly Color LangCardBg = new Color(0.15f, 0.16f, 0.24f, 1.00f);
+        private static readonly Color LangCardSelectedBg = new Color(0.19f, 0.22f, 0.32f, 1.00f);
+        private static readonly Color LangCardBorder = new Color(1f, 1f, 1f, 0.10f);
+        private static readonly Color LangCardSelectedBorder = new Color(0.47f, 0.87f, 0.62f, 0.95f);
+        private static readonly Color LangCodeColor = new Color(0.82f, 0.86f, 0.95f, 0.86f);
+        private static readonly Color LangCodeSelectedColor = new Color(0.98f, 0.99f, 1f, 1f);
+        private static readonly Color LangAccent = new Color(0.35f, 0.88f, 0.59f, 1f);
 
         // ── Runtime ───────────────────────────────────────────────────────────
         private Canvas    _canvas;
@@ -35,7 +43,8 @@ namespace SimpleVoxelSystem
 
         // Flag button references для обновления выделения
         private FlagBtn[] _flagBtns;
-        private Text      _langLabel; // ссылка на "Язык:" для обновления при смене языка
+        private Text      _langLabel;    // ссылка на "Язык:" для обновления при смене языка
+        private Text      _menuBtnLabel; // ссылка на "☰ Настройки" для обновления
 
         // ── Bootstrap ─────────────────────────────────────────────────────────
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -77,11 +86,12 @@ namespace SimpleVoxelSystem
         private void OnLangChanged()
         {
             RefreshFlagButtons();
-            RefreshMenuBtnLabel();
-            // Обновить заголовок секции языка
+            if (_menuBtnLabel != null)
+                _menuBtnLabel.text = "\u2630  " + Loc.T("settings");
             if (_langLabel != null)
                 _langLabel.text = Loc.T("language") + ":";
         }
+
 
         // ══════════════════════════════════════════════════════════════════════
         // UI Build
@@ -94,11 +104,12 @@ namespace SimpleVoxelSystem
             cgo.transform.SetParent(transform); // дочерний к GameMenuUI (DontDestroyOnLoad)
             _canvas = cgo.AddComponent<Canvas>();
             _canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = 3100; // выше MobileControlsCanvas (3000) — наша кнопка перехватывает тач первой
+            _canvas.sortingOrder = 3100;
+            _canvas.pixelPerfect = true; // критично для чёткости текста
 
             var scaler = cgo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = new Vector2(1600f, 900f); // то же что MineShopCanvas
             scaler.screenMatchMode     = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight  = 0.5f;
 
@@ -135,14 +146,11 @@ namespace SimpleVoxelSystem
             SetButtonColors(_menuBtn, menuBtnColor, Lighten(menuBtnColor, 0.12f));
             _menuBtn.onClick.AddListener(ToggleMenu);
 
-            var mbLabel = CreateText(menuBtnGo.transform, "Label", "☰  " + Loc.T("settings"));
-            var lrt = mbLabel.GetComponent<RectTransform>();
-            lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
-            lrt.offsetMin = lrt.offsetMax = Vector2.zero;
-            mbLabel.alignment = TextAnchor.MiddleCenter;
-            mbLabel.color = menuBtnTextColor;
-            mbLabel.fontSize = 17;
-            mbLabel.fontStyle = FontStyle.Bold;
+            // Текст кнопки — через RuntimeUIFactory для единого стиля
+            _menuBtnLabel = RuntimeUIFactory.MakeLabel(menuBtnGo.transform, "Label",
+                "☰  " + Loc.T("settings"), 15, TextAnchor.MiddleCenter);
+            _menuBtnLabel.color     = menuBtnTextColor;
+            _menuBtnLabel.fontStyle = FontStyle.Bold;
 
             // ── Панель меню ────────────────────────────────────────────────────
             var panelGo = new GameObject("MenuPanel");
@@ -245,24 +253,41 @@ namespace SimpleVoxelSystem
         // ── Секция выбора языка ───────────────────────────────────────────────
         private void BuildLanguageSection(Transform parent)
         {
+            var section = new GameObject("LanguageSection");
+            section.transform.SetParent(parent, false);
+            section.AddComponent<RectTransform>();
+            var sectionImage = section.AddComponent<Image>();
+            sectionImage.color = LangSectionBg;
+            RoundCorners(sectionImage);
+            var sectionLayout = section.AddComponent<VerticalLayoutGroup>();
+            sectionLayout.padding = new RectOffset(12, 12, 10, 12);
+            sectionLayout.spacing = 10f;
+            sectionLayout.childAlignment = TextAnchor.UpperLeft;
+            sectionLayout.childControlWidth = true;
+            sectionLayout.childControlHeight = true;
+            sectionLayout.childForceExpandWidth = true;
+            sectionLayout.childForceExpandHeight = false;
+            var sectionFit = section.AddComponent<ContentSizeFitter>();
+            sectionFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
             // Заголовок секции — сохраняем ссылку для обновления при смене языка
-            _langLabel = CreateText(parent, "LangLabel", Loc.T("language") + ":");
-            _langLabel.fontSize = 14;
+            _langLabel = CreateText(section.transform, "LangLabel", Loc.T("language") + ":");
+            _langLabel.fontSize = 15;
             _langLabel.fontStyle = FontStyle.Bold;
-            _langLabel.color = new Color(0.6f, 0.65f, 0.8f);
+            _langLabel.color = new Color(0.82f, 0.86f, 0.95f, 0.95f);
             _langLabel.alignment = TextAnchor.MiddleLeft;
             var le = _langLabel.GetComponent<LayoutElement>();
-            le.preferredHeight = 20f;
-            le.minHeight = 20f;
+            le.preferredHeight = 22f;
+            le.minHeight = 22f;
 
             // Ряд с флагами
-            var row = CreateHorizontalGroup(parent, "FlagRow", 10f);
+            var row = CreateHorizontalGroup(section.transform, "FlagRow", 10f);
             var rlg = row.GetComponent<HorizontalLayoutGroup>();
             rlg.childAlignment = TextAnchor.MiddleLeft;
             rlg.padding = new RectOffset(0, 0, 0, 0);
             var rle = row.GetComponent<LayoutElement>();
-            rle.preferredHeight = 60f;
-            rle.minHeight = 60f;
+            rle.preferredHeight = 84f;
+            rle.minHeight = 84f;
 
             _flagBtns = new FlagBtn[3];
             _flagBtns[0] = BuildFlagBtn(row.transform, Loc.LangRu);
@@ -278,43 +303,61 @@ namespace SimpleVoxelSystem
             var go = new GameObject($"Flag_{lang.ToUpper()}");
             go.transform.SetParent(parent, false);
             var le = go.AddComponent<LayoutElement>();
-            le.preferredWidth = 64f;
-            le.preferredHeight = 56f;
-            le.minWidth = 64f;
+            le.preferredWidth  = 74f;
+            le.preferredHeight = 84f;
+            le.minWidth        = 74f;
 
             var container = go.AddComponent<Image>();
-            container.color = new Color(0, 0, 0, 0); // прозрачный контейнер
+            container.color = LangCardBg;
+            RoundCorners(container);
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = LangCardBorder;
+            outline.effectDistance = new Vector2(1.2f, -1.2f);
 
-            // Строим флаг из полос
-            BuildFlagStripes(go.transform, lang, 64f, 42f);
+            var flagFrame = new GameObject("FlagFrame");
+            flagFrame.transform.SetParent(go.transform, false);
+            var frameImage = flagFrame.AddComponent<Image>();
+            frameImage.color = new Color(0.05f, 0.06f, 0.10f, 0.65f);
+            var frameRt = flagFrame.GetComponent<RectTransform>();
+            frameRt.anchorMin = new Vector2(0.5f, 1f);
+            frameRt.anchorMax = new Vector2(0.5f, 1f);
+            frameRt.pivot = new Vector2(0.5f, 1f);
+            frameRt.anchoredPosition = new Vector2(0f, -8f);
+            frameRt.sizeDelta = new Vector2(62f, 34f);
 
-            // Текст кода страны под флагом
-            var code = CreateText(go.transform, "Code", lang.ToUpper());
-            code.fontSize = 13;
+            // Строим флаг внутри рамки.
+            BuildFlagStripes(flagFrame.transform, lang, 58f, 30f);
+
+            // Текст кода страны — через RuntimeUIFactory как весь HUD
+            var code = RuntimeUIFactory.MakeLabel(go.transform, "Code",
+                lang.ToUpper(), 12, TextAnchor.LowerCenter,
+                offsetMin: new Vector2(0f, 6f),
+                offsetMax: new Vector2(0f, -58f));
             code.fontStyle = FontStyle.Bold;
-            code.color = Color.white;
-            code.alignment = TextAnchor.MiddleCenter;
-            var crt = code.GetComponent<RectTransform>();
-            crt.anchorMin = new Vector2(0f, 0f);
-            crt.anchorMax = new Vector2(1f, 0f);
-            crt.pivot     = new Vector2(0.5f, 0f);
-            crt.anchoredPosition = new Vector2(0f, 1f);
-            crt.sizeDelta = new Vector2(0f, 16f);
+            code.color     = LangCodeColor;
 
-            // Обводка (выделение выбранного)
-            var border = new GameObject("Border");
-            border.transform.SetParent(go.transform, false);
-            var bImg = border.AddComponent<Image>();
-            bImg.color = new Color(0.3f, 0.9f, 0.5f, 0f); // скрыта изначально
-            var brt = border.GetComponent<RectTransform>();
-            brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one;
-            brt.offsetMin = new Vector2(-3f, 13f); // по высоте флага
-            brt.offsetMax = new Vector2(3f, 3f);
-            border.AddComponent<Outline>().effectColor = new Color(0.3f, 0.95f, 0.5f, 0f);
+            var accent = new GameObject("Accent");
+            accent.transform.SetParent(go.transform, false);
+            var accentImg = accent.AddComponent<Image>();
+            accentImg.color = new Color(LangAccent.r, LangAccent.g, LangAccent.b, 0f);
+            var art = accent.GetComponent<RectTransform>();
+            art.anchorMin = new Vector2(0.5f, 0f);
+            art.anchorMax = new Vector2(0.5f, 0f);
+            art.pivot = new Vector2(0.5f, 0f);
+            art.anchoredPosition = new Vector2(0f, 4f);
+            art.sizeDelta = new Vector2(28f, 3f);
 
             // Кнопка
             var btn = go.AddComponent<Button>();
             btn.transition = Selectable.Transition.ColorTint;
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
+            colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+            colors.selectedColor = Color.white;
+            colors.fadeDuration = 0.06f;
+            btn.colors = colors;
+
             var captureLang = lang;
             btn.onClick.AddListener(() =>
             {
@@ -322,102 +365,137 @@ namespace SimpleVoxelSystem
                 CloseMenu();
             });
 
-            return new FlagBtn { root = go, border = bImg, codeText = code, lang = lang };
+            return new FlagBtn
+            {
+                root = go,
+                card = container,
+                cardOutline = outline,
+                accent = accentImg,
+                codeText = code,
+                lang = lang
+            };
         }
 
         // ── Строит полосы флага ──────────────────────────────────────────────
         private void BuildFlagStripes(Transform parent, string lang, float w, float h)
         {
-            Color[] stripes;
-            bool hasCircle = false;
-            switch (lang)
+            var root = new GameObject("FlagArt");
+            root.transform.SetParent(parent, false);
+            var rootRt = root.AddComponent<RectTransform>();
+            rootRt.anchorMin = new Vector2(0.5f, 1f);
+            rootRt.anchorMax = new Vector2(0.5f, 1f);
+            rootRt.pivot = new Vector2(0.5f, 1f);
+            rootRt.anchoredPosition = new Vector2(0f, -2f);
+            rootRt.sizeDelta = new Vector2(w, h);
+
+            if (lang == Loc.LangRu)
             {
-                case Loc.LangRu: // Белый, Синий, Красный
-                    stripes = new[] {
-                        new Color(1.00f, 1.00f, 1.00f),
-                        new Color(0.00f, 0.22f, 0.66f),
-                        new Color(0.80f, 0.08f, 0.08f)
-                    };
-                    break;
-                case Loc.LangEn: // Синий, Красный, Белый (упрощённый Union Jack)
-                    stripes = new[] {
-                        new Color(0.00f, 0.14f, 0.56f),
-                        new Color(0.80f, 0.08f, 0.08f),
-                        new Color(1.00f, 1.00f, 1.00f)
-                    };
-                    break;
-                case Loc.LangTr: // Красный, Красный, Красный + белый текст полумесяц
-                    stripes = new[] {
-                        new Color(0.84f, 0.09f, 0.09f),
-                        new Color(0.84f, 0.09f, 0.09f),
-                        new Color(0.84f, 0.09f, 0.09f)
-                    };
-                    hasCircle = true;
-                    break;
-                default:
-                    stripes = new[] { Color.grey, Color.grey, Color.grey };
-                    break;
+                BuildHorizontalFlag(root.transform, h, new[]
+                {
+                    new Color(1.00f, 1.00f, 1.00f),
+                    new Color(0.05f, 0.24f, 0.73f),
+                    new Color(0.83f, 0.11f, 0.13f)
+                });
+                return;
             }
 
-            float stripeH = h / 3f;
-            for (int i = 0; i < 3; i++)
-            {
-                var sg = new GameObject($"S{i}");
-                sg.transform.SetParent(parent, false);
-                var sImg = sg.AddComponent<Image>();
-                sImg.color = stripes[i];
-                var srt = sg.GetComponent<RectTransform>();
-                srt.anchorMin = new Vector2(0f, 1f);
-                srt.anchorMax = new Vector2(1f, 1f);
-                srt.pivot     = new Vector2(0.5f, 1f);
-                srt.anchoredPosition = new Vector2(0f, -(stripeH * i));
-                srt.sizeDelta = new Vector2(0f, stripeH);
-            }
-
-            // Полумесяц для Турции
-            if (hasCircle)
-            {
-                var ct = CreateText(parent, "Crescent", "☽★");
-                ct.fontSize = 18;
-                ct.color = Color.white;
-                ct.alignment = TextAnchor.MiddleCenter;
-                var crt = ct.GetComponent<RectTransform>();
-                crt.anchorMin = Vector2.zero;
-                crt.anchorMax = new Vector2(1f, 1f);
-                crt.offsetMin = new Vector2(0f, 14f);
-                crt.offsetMax = Vector2.zero;
-            }
-
-            // Крест для UK — белые горизонтальная и вертикальная полосы
             if (lang == Loc.LangEn)
             {
-                // Вертикальная полоса
-                var v = new GameObject("VCross");
-                v.transform.SetParent(parent, false);
-                var vi = v.AddComponent<Image>();
-                vi.color = Color.white;
-                var vrt = v.GetComponent<RectTransform>();
-                vrt.anchorMin = new Vector2(0.5f, 0f);
-                vrt.anchorMax = new Vector2(0.5f, 1f);
-                vrt.offsetMin = new Vector2(-4f, 14f);
-                vrt.offsetMax = new Vector2(4f, 0f);
-
-                // Горизонтальная полоса
-                var hz = new GameObject("HCross");
-                hz.transform.SetParent(parent, false);
-                var hi = hz.AddComponent<Image>();
-                hi.color = Color.white;
-                var hrt = hz.GetComponent<RectTransform>();
-                hrt.anchorMin = new Vector2(0f, 0.5f);
-                hrt.anchorMax = new Vector2(1f, 0.5f);
-                hrt.offsetMin = new Vector2(0f, 14f + h / 2f - 4f - h / 2f);
-                hrt.offsetMax = new Vector2(0f, 14f + h / 2f + 4f - h / 2f);
-                // упрощаем
-                hrt.anchorMin = new Vector2(0f, 0f);
-                hrt.anchorMax = new Vector2(1f, 0f);
-                hrt.offsetMin = new Vector2(0f, 14f + h / 2f - 4f);
-                hrt.offsetMax = new Vector2(0f, 14f + h / 2f + 4f);
+                BuildSolidRect(root.transform, "Field", new Color(0.02f, 0.16f, 0.55f), Vector2.zero, Vector2.zero);
+                BuildCross(root.transform, Color.white, 10f, 10f);
+                BuildCross(root.transform, new Color(0.80f, 0.08f, 0.08f), 5f, 5f);
+                return;
             }
+
+            if (lang == Loc.LangTr)
+            {
+                BuildSolidRect(root.transform, "Field", new Color(0.86f, 0.08f, 0.09f), Vector2.zero, Vector2.zero);
+                BuildTurkishMoonAndStar(root.transform);
+                return;
+            }
+
+            BuildSolidRect(root.transform, "Field", Color.gray, Vector2.zero, Vector2.zero);
+        }
+
+        private void BuildHorizontalFlag(Transform parent, float height, Color[] stripes)
+        {
+            float stripeH = height / stripes.Length;
+            for (int i = 0; i < stripes.Length; i++)
+            {
+                var stripe = new GameObject($"Stripe_{i}");
+                stripe.transform.SetParent(parent, false);
+                var img = stripe.AddComponent<Image>();
+                img.color = stripes[i];
+                var rt = stripe.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0f, 1f);
+                rt.anchorMax = new Vector2(1f, 1f);
+                rt.pivot = new Vector2(0.5f, 1f);
+                rt.anchoredPosition = new Vector2(0f, -stripeH * i);
+                rt.sizeDelta = new Vector2(0f, stripeH);
+            }
+        }
+
+        private void BuildCross(Transform parent, Color color, float verticalWidth, float horizontalHeight)
+        {
+            BuildSolidRect(parent, "CrossV", color, new Vector2(0.5f, 0.5f), new Vector2(verticalWidth, 0f), stretchY: true);
+            BuildSolidRect(parent, "CrossH", color, new Vector2(0.5f, 0.5f), new Vector2(0f, horizontalHeight), stretchX: true);
+        }
+
+        private void BuildTurkishMoonAndStar(Transform parent)
+        {
+            BuildCircle(parent, "MoonOuter", new Color(0.97f, 0.97f, 0.97f), new Vector2(-10f, -2f), 12f);
+            BuildCircle(parent, "MoonInner", new Color(0.86f, 0.08f, 0.09f), new Vector2(-6f, -2f), 9f);
+
+            var star = CreateText(parent, "Star", "★");
+            star.fontSize = 13;
+            star.color = new Color(0.99f, 0.99f, 0.99f);
+            star.alignment = TextAnchor.MiddleCenter;
+            var rt = star.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(8f, -2f);
+            rt.sizeDelta = new Vector2(14f, 14f);
+        }
+
+        private void BuildCircle(Transform parent, string name, Color color, Vector2 offset, float size)
+        {
+            var dot = CreateText(parent, name, "\u25cf");
+            dot.fontSize = Mathf.RoundToInt(size * 1.5f);
+            dot.color = color;
+            dot.alignment = TextAnchor.MiddleCenter;
+            var rt = dot.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = offset;
+            rt.sizeDelta = new Vector2(size, size);
+        }
+
+        private void BuildSolidRect(Transform parent, string name, Color color, Vector2 pivotAnchor, Vector2 sizeDelta, bool stretchX = false, bool stretchY = false)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var img = go.AddComponent<Image>();
+            img.color = color;
+            var rt = go.GetComponent<RectTransform>();
+            if (stretchX)
+            {
+                rt.anchorMin = new Vector2(0f, pivotAnchor.y);
+                rt.anchorMax = new Vector2(1f, pivotAnchor.y);
+            }
+            else
+            {
+                rt.anchorMin = rt.anchorMax = new Vector2(pivotAnchor.x, pivotAnchor.y);
+            }
+
+            if (stretchY)
+            {
+                rt.anchorMin = new Vector2(rt.anchorMin.x, 0f);
+                rt.anchorMax = new Vector2(rt.anchorMax.x, 1f);
+            }
+
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = sizeDelta;
         }
 
         // ═════════════════════════════════════════════════════════════════════
@@ -494,17 +572,24 @@ namespace SimpleVoxelSystem
                 if (fb == null) continue;
                 bool selected = Loc.CurrentLanguage == fb.lang;
 
-                // Обводка
-                if (fb.border != null)
-                    fb.border.color = selected
-                        ? new Color(0.25f, 0.92f, 0.48f, 0.9f)
-                        : new Color(0f, 0f, 0f, 0f);
+                if (fb.card != null)
+                    fb.card.color = selected ? LangCardSelectedBg : LangCardBg;
 
-                // Текст кода
+                if (fb.cardOutline != null)
+                    fb.cardOutline.effectColor = selected ? LangCardSelectedBorder : LangCardBorder;
+
+                if (fb.accent != null)
+                    fb.accent.color = selected
+                        ? new Color(LangAccent.r, LangAccent.g, LangAccent.b, 1f)
+                        : new Color(LangAccent.r, LangAccent.g, LangAccent.b, 0f);
+
                 if (fb.codeText != null)
+                {
                     fb.codeText.color = selected
-                        ? new Color(0.3f, 1f, 0.6f)
-                        : Color.white;
+                        ? LangCodeSelectedColor
+                        : LangCodeColor;
+                    fb.codeText.fontStyle = selected ? FontStyle.Bold : FontStyle.Normal;
+                }
             }
         }
 
@@ -597,7 +682,9 @@ namespace SimpleVoxelSystem
         {
             public string lang;
             public GameObject root;
-            public Image border;
+            public Image card;
+            public Outline cardOutline;
+            public Image accent;
             public Text  codeText;
         }
     }
