@@ -307,13 +307,8 @@ namespace SimpleVoxelSystem
             if (payload == null)
                 return;
 
-            if (!string.IsNullOrWhiteSpace(payload.playerId))
-                localPlayerId = payload.playerId.Trim();
-            if (!string.IsNullOrWhiteSpace(payload.playerName))
-                localPlayerName = payload.playerName.Trim();
-
-            localIsGuest = IsGuestIdentity(localPlayerId, localPlayerName);
-            SaveLocalIdentityPrefs();
+            // FIX #7: делегируем в единый PlayerIdentity
+            PlayerIdentity.UpdateFromSdk(payload.playerId, payload.playerName);
         }
 
         public void OnMpInitResult(string json)
@@ -417,13 +412,14 @@ namespace SimpleVoxelSystem
                     return;
             }
 
+            // FIX #7: берём данные из единого PlayerIdentity
             bool inLobby = wellGenerator == null || wellGenerator.IsInLobbyMode;
             CommitPayload payload = new CommitPayload
             {
                 kind = "state",
-                playerId = localPlayerId,
-                playerName = localPlayerName,
-                isGuest = localIsGuest,
+                playerId = PlayerIdentity.PlayerId,
+                playerName = PlayerIdentity.PlayerName,
+                isGuest = PlayerIdentity.IsGuest,
                 x = pos.x,
                 y = pos.y,
                 z = pos.z,
@@ -441,13 +437,14 @@ namespace SimpleVoxelSystem
 
         private void OnLocalGameplayEvent(AsyncGameplayEvent e)
         {
+            // FIX #7: берём данные из единого PlayerIdentity
             CommitPayload payload = new CommitPayload
             {
                 kind = "event",
                 eventType = e.Type.ToString(),
-                playerId = localPlayerId,
-                playerName = localPlayerName,
-                isGuest = localIsGuest,
+                playerId = PlayerIdentity.PlayerId,
+                playerName = PlayerIdentity.PlayerName,
+                isGuest = PlayerIdentity.IsGuest,
                 gx = e.gx,
                 gy = e.gy,
                 gz = e.gz,

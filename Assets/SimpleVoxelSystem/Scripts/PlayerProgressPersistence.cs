@@ -137,11 +137,25 @@ namespace SimpleVoxelSystem
         private void OnEnable()
         {
             YG2.onGetSDKData += OnSdkReady;
+            // FIX #15: подписываемся на события Экономики — больше не нужно поллить каждый кадр
+            GlobalEconomy.OnMoneyChanged  += OnEconomyChanged;
+            GlobalEconomy.OnXPChanged     += OnEconomyChanged;
+            GlobalEconomy.OnLevelChanged  += OnEconomyChanged;
         }
 
         private void OnDisable()
         {
             YG2.onGetSDKData -= OnSdkReady;
+            GlobalEconomy.OnMoneyChanged  -= OnEconomyChanged;
+            GlobalEconomy.OnXPChanged     -= OnEconomyChanged;
+            GlobalEconomy.OnLevelChanged  -= OnEconomyChanged;
+        }
+
+        private void OnEconomyChanged(int _)
+        {
+            // срабатывает при любом изменении денег/XP/уровня — один центральный обработчик
+            if (isLoaded)
+                MarkDirty();
         }
 
         private void OnDestroy()
@@ -422,9 +436,7 @@ namespace SimpleVoxelSystem
             if (mineMarket == null || mineMarket.availableMines == null || mineMarket.availableMines.Count == 0)
                 return null;
 
-            if (saveMine.mineIndex >= 0 && saveMine.mineIndex < mineMarket.availableMines.Count)
-                return mineMarket.availableMines[saveMine.mineIndex];
-
+            // FIX #8: сначала ищем по имени — устойчиво к изменению порядка в списке шахт
             if (!string.IsNullOrWhiteSpace(saveMine.mineDisplayName))
             {
                 foreach (MineShopData data in mineMarket.availableMines)
@@ -434,14 +446,16 @@ namespace SimpleVoxelSystem
                 }
             }
 
+            // Fallback: индекс как запасной вариант (старые сохранения без имени)
+            if (saveMine.mineIndex >= 0 && saveMine.mineIndex < mineMarket.availableMines.Count)
+                return mineMarket.availableMines[saveMine.mineIndex];
+
             return null;
         }
 
         private void DetectStateChanges()
         {
-            int currentMoney = GlobalEconomy.Money;
-            int currentXP = GlobalEconomy.MiningXP;
-            int currentLevel = GlobalEconomy.MiningLevel;
+            // FIX #15: Деньги/XP/уровень отслеживаются через события (OnEconomyChanged) — здесь только игровые объекты
             bool hasMine = wellGenerator != null && wellGenerator.PlacedMines != null && wellGenerator.PlacedMines.Count > 0;
             bool hasIsland = wellGenerator != null && wellGenerator.IsIslandGenerated;
             int minedBlocks = 0;
@@ -454,17 +468,13 @@ namespace SimpleVoxelSystem
                 }
             }
 
-            // FIX #6: используем кешированные ссылки вместо FindFirstObjectByType каждый кадр
             if (cachedPickaxe == null) cachedPickaxe = FindFirstObjectByType<PlayerPickaxe>();
             if (cachedUpgradeManager == null) cachedUpgradeManager = FindFirstObjectByType<UpgradeManager>();
 
             bool hasCustomSpawn = wellGenerator != null && wellGenerator.HasCustomIslandSpawnPoint;
             Vector3 customSpawn = hasCustomSpawn ? wellGenerator.GetCustomIslandSpawnPoint() : Vector3.zero;
 
-            if (currentMoney != cachedMoney ||
-                currentXP != cachedXP ||
-                currentLevel != cachedLevel ||
-                hasMine != cachedHasMine ||
+            if (hasMine != cachedHasMine ||
                 hasIsland != cachedHasIsland ||
                 minedBlocks != cachedMinedBlocks ||
                 hasCustomSpawn != cachedHasCustomSpawn ||
@@ -477,9 +487,6 @@ namespace SimpleVoxelSystem
 
         private void CaptureStateCache()
         {
-            cachedMoney = GlobalEconomy.Money;
-            cachedXP = GlobalEconomy.MiningXP;
-            cachedLevel = GlobalEconomy.MiningLevel;
             cachedHasMine = wellGenerator != null && wellGenerator.PlacedMines != null && wellGenerator.PlacedMines.Count > 0;
             cachedHasIsland = wellGenerator != null && wellGenerator.IsIslandGenerated;
             cachedMinedBlocks = 0;

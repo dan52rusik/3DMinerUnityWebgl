@@ -22,6 +22,8 @@ namespace SimpleVoxelSystem
         [Tooltip("Semi-transparent preview cube (optional)")]
         public GameObject placementPreviewPrefab;
         public Color previewColor = new Color(0f, 1f, 0.5f, 0.3f);
+        [Tooltip("Maximum number of mines that can be placed simultaneously. 0 = unlimited.")]
+        [Min(0)] public int maxPlacedMines = 5;
         public bool verboseLogs = false;
 
         // ─── Runtime ────────────────────────────────────────────────────────
@@ -254,6 +256,12 @@ namespace SimpleVoxelSystem
             if (data == null) return false;
             if (GlobalEconomy.Money < data.buyPrice) { if (verboseLogs) Debug.Log("[MineMarket] Not enough money."); return false; }
 
+            // FIX #16: проверяем лимит шахт
+            if (maxPlacedMines > 0 && WellGen != null && WellGen.PlacedMines != null && WellGen.PlacedMines.Count >= maxPlacedMines)
+            {
+                if (verboseLogs) Debug.Log($"[MineMarket] Mine limit reached ({maxPlacedMines}). Sell an existing mine first.");
+                return false;
+            }
             // Notify persistence BEFORE deducting so it can snapshot the pre-purchase
             // state and won't overwrite with a stale load arriving moments later.
             var persistence = UnityEngine.Object.FindFirstObjectByType<PlayerProgressPersistence>();

@@ -33,8 +33,6 @@ namespace SimpleVoxelSystem
         private WellGenerator wellGenerator;
         private Transform localPlayer;
         private string cachedEndpoint = string.Empty;
-        private string clientId = string.Empty;
-        private string clientName = "Player";
         private long lastSeq;
         private bool identityRequested;
         private bool snapshotApplied;
@@ -199,23 +197,8 @@ namespace SimpleVoxelSystem
             if (payload == null)
                 return;
 
-            bool changed = false;
-            if (!string.IsNullOrWhiteSpace(payload.playerId))
-            {
-                clientId = payload.playerId.Trim();
-                PlayerPrefs.SetString(ClientIdPrefKey, clientId);
-                changed = true;
-            }
-
-            if (!string.IsNullOrWhiteSpace(payload.playerName))
-            {
-                clientName = payload.playerName.Trim();
-                PlayerPrefs.SetString(ClientNamePrefKey, clientName);
-                changed = true;
-            }
-
-            if (changed)
-                PlayerPrefs.Save();
+            // FIX #7: делегируем в единый PlayerIdentity
+            PlayerIdentity.UpdateFromSdk(payload.playerId, payload.playerName);
         }
 
         private IEnumerator SyncLoop()
@@ -243,9 +226,6 @@ namespace SimpleVoxelSystem
             if (wellGenerator == null || !wellGenerator.IsInLobbyMode)
                 return false;
 
-            if (string.IsNullOrWhiteSpace(clientId))
-                EnsureClientIdentity();
-
             return true;
         }
 
@@ -254,6 +234,10 @@ namespace SimpleVoxelSystem
             string endpoint = ResolveEndpoint();
             if (string.IsNullOrWhiteSpace(endpoint))
                 yield break;
+
+            // FIX #7: берём ID из единого PlayerIdentity
+            string clientId   = PlayerIdentity.PlayerId;
+            string clientName = PlayerIdentity.PlayerName;
 
             OpPacket[] opsChunk = DequeueOpsChunk();
             PlayerStatePacket statePacket = null;
@@ -342,18 +326,7 @@ namespace SimpleVoxelSystem
             return string.Empty;
         }
 
-        private void EnsureClientIdentity()
-        {
-            clientId = PlayerPrefs.GetString(ClientIdPrefKey, string.Empty);
-            clientName = PlayerPrefs.GetString(ClientNamePrefKey, "Player");
-
-            if (string.IsNullOrWhiteSpace(clientId))
-            {
-                clientId = "guest_" + Guid.NewGuid().ToString("N");
-                PlayerPrefs.SetString(ClientIdPrefKey, clientId);
-                PlayerPrefs.Save();
-            }
-        }
+        private void EnsureClientIdentity() { /* FIX #7: делегировано в PlayerIdentity */ }
 
         private void RequestIdentityFromWeb()
         {
@@ -401,6 +374,10 @@ namespace SimpleVoxelSystem
             Transform player = ResolveLocalPlayer();
             if (player == null)
                 return null;
+
+            // FIX #7: используем единый PlayerIdentity
+            string clientId   = PlayerIdentity.PlayerId;
+            string clientName = PlayerIdentity.PlayerName;
 
             return new PlayerStatePacket
             {
