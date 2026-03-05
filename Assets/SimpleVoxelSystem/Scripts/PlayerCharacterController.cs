@@ -87,7 +87,7 @@ namespace SimpleVoxelSystem
 
             mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
 
-            // Подписываемся на смену мира, чтобы отменять автобег при телепортации
+            // Subscribe to world switch to cancel auto-move on teleport
             WellGenerator wg = FindFirstObjectByType<WellGenerator>();
             if (wg != null)
             {

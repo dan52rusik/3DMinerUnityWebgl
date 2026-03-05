@@ -6,9 +6,9 @@ using Unity.Collections;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Оптимизированная версия VoxelIsland.
-    /// Вместо одного огромного меша разбивает остров на Чанки (16x16x16).
-    /// Использует NativeArray для хранения данных, что позволяет передавать их в Job System.
+    /// Optimized version of VoxelIsland.
+    /// Instead of one huge mesh, it splits the island into Chunks (16x16x16).
+    /// Uses NativeArray to store data, allowing it to be passed to Job System.
     /// </summary>
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
     public class VoxelIsland : MonoBehaviour
@@ -21,7 +21,7 @@ namespace SimpleVoxelSystem
         public int TotalY => sizeY;
         public int TotalZ => sizeZ + paddingZ * 2;
 
-        // Данные вокселей в плоском массиве (для Job System)
+        // Voxel data in flat array (for Job System)
         private NativeArray<byte> voxels;
         private bool isDataCreated = false;
 
@@ -55,7 +55,7 @@ namespace SimpleVoxelSystem
             int total = TotalX * TotalY * TotalZ;
             if (isDataCreated) voxels.Dispose();
             
-            // Используем NativeArrayOptions.ClearMemory для гарантии нулевых вокселей
+            // Use NativeArrayOptions.ClearMemory to ensure zero voxels
             voxels = new NativeArray<byte>(total, Allocator.Persistent, NativeArrayOptions.ClearMemory);
             isDataCreated = true;
 
@@ -67,8 +67,8 @@ namespace SimpleVoxelSystem
         {
             if (blockColorsNative.IsCreated) blockColorsNative.Dispose();
             
-            // Динамически определяем размер массива цветов на основе enum.
-            // Grass = 5, значит нам нужно минимум 6 слотов (индексы 0-5).
+            // Dynamically determine color array size based on enum.
+            // Grass = 5, so we need at least 6 slots (indices 0-5).
             int maxEnumVal = 0;
             foreach (int val in System.Enum.GetValues(typeof(BlockType))) 
                 if (val > maxEnumVal) maxEnumVal = val;
@@ -80,10 +80,10 @@ namespace SimpleVoxelSystem
                 else finalCols[i] = Color.gray; // Fallback
             }
 
-            // Прямая поддержка Grass (5) если массив короче
+            // Direct support for Grass (5) if array is shorter
             if (maxEnumVal >= 5)
             {
-                 // Если Grass еще не задан или за пределами blockColors
+                 // If Grass is not yet set or beyond blockColors
                  if (finalCols[5] == Color.gray || finalCols[5] == Color.clear)
                      finalCols[5] = new Color(0.2f, 0.8f, 0.2f); // Green for Grass
             }
@@ -179,10 +179,10 @@ namespace SimpleVoxelSystem
         {
             Vector3Int dims = new Vector3Int(TotalX, TotalY, TotalZ);
             
-            // Основной чанк
+            // Main chunk
             RebuildChunkAt(x, y, z, dims);
 
-            // Если блок на границе чанка, нужно обновить и соседа (т.к. грань может открыться)
+            // If block is on chunk boundary, we need to update the neighbor as well (since a face might open up)
             if (x % chunkSize == 0) RebuildChunkAt(x - 1, y, z, dims);
             if ((x + 1) % chunkSize == 0) RebuildChunkAt(x + 1, y, z, dims);
             if (y % chunkSize == 0) RebuildChunkAt(x, y - 1, z, dims);

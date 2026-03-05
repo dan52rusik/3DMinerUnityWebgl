@@ -14,8 +14,8 @@ using UnityEngine.InputSystem.UI;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Редактор лобби-площадки.
-    /// Основной скрипт, делегирующий работу под-системам.
+    /// Lobby area editor.
+    /// Main script delegating work to sub-systems.
     /// </summary>
     public class LobbyEditor : MonoBehaviour
     {

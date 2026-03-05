@@ -4,25 +4,25 @@ using SimpleVoxelSystem.Data;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Данные об активной (купленной, но ещё не истощённой) шахте.
-    /// Создаётся при покупке, уничтожается при продаже/истощении.
+    /// Data about an active (purchased, but not yet exhausted) mine.
+    /// Created when purchased, destroyed when sold/exhausted.
     /// </summary>
     public class MineInstance
     {
-        public MineShopData shopData;       // ScriptableObject с настройками
-        public int          rolledDepth;    // Реальная глубина (выпала при покупке)
-        public int          totalBlocks;    // Сколько блоков было при генерации
-        public int          minedBlocks;    // Сколько уже добыто
+        public MineShopData shopData;       // ScriptableObject with settings
+        public int          rolledDepth;    // Real depth (rolled at purchase)
+        public int          totalBlocks;    // Number of blocks during generation
+        public int          minedBlocks;    // Number of blocks already mined
 
-        // Хранит типы блоков, чтобы они не менялись при перезагрузках
+        // Stores block types so they don't change on reloads
         private byte[,,]    voxelsData; 
 
         public System.Collections.Generic.HashSet<Vector3Int> minedPositions = new System.Collections.Generic.HashSet<Vector3Int>();
 
-        public int originX, originZ; // координаты размещения на острове
+        public int originX, originZ; // placement coordinates on the island
         public bool IsExhausted => minedBlocks >= totalBlocks;
 
-        /// <summary>Цена продажи истощённой шахты.</summary>
+        /// <summary>Sale price of an exhausted mine.</summary>
         public int SellPrice => Mathf.RoundToInt(shopData.buyPrice * shopData.sellBackRatio);
 
         public MineInstance(MineShopData data, int depth, int totalBlockCount)
@@ -59,7 +59,7 @@ namespace SimpleVoxelSystem
 
         public void RegisterMinedBlock(int x, int y, int z)
         {
-            // Сохраняем локальные координаты (относительно начала шахты)
+            // Save local coordinates (relative to the start of the mine)
             if (minedPositions.Add(new Vector3Int(x - originX, y, z - originZ)))
                 minedBlocks++;
         }

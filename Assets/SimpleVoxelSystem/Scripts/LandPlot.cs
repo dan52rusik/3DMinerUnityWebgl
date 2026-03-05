@@ -3,20 +3,20 @@ using UnityEngine;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Участок острова, который можно купить.
-    /// После покупки — вызывает расширение VoxelIsland, а не просто SetActive.
+    /// An island plot that can be purchased.
+    /// Once purchased, it triggers a VoxelIsland expansion rather than just SetActive.
     /// </summary>
     public class LandPlot : MonoBehaviour
     {
-        [Header("Цена")]
+        [Header("Price")]
         public int purchasePrice = EconomyTuning.LandPlotPurchasePrice;
         public bool isPurchased  = false;
 
-        [Header("Сцена")]
-        public GameObject buyVisuals;      // Табличка с ценой (отключается при покупке)
-        public WellGenerator wellGenerator; // На кого расширяться
+        [Header("Scene")]
+        public GameObject buyVisuals;      // Price tag visuals (disabled upon purchase)
+        public WellGenerator wellGenerator; // Generator instance to expand
 
-        [Header("Смещение в воксельных координатах")]
+        [Header("Voxel Offset")]
         public int offsetX = 15;
         public int offsetZ = 0;
         public int width   = 5;
@@ -34,28 +34,28 @@ namespace SimpleVoxelSystem
         {
             if (isPurchased)
             {
-                Debug.Log("[LandPlot] Участок уже куплен.");
+                Debug.Log("[LandPlot] Plot already purchased.");
                 return;
             }
 
             if (GlobalEconomy.Money < purchasePrice)
             {
-                Debug.Log($"[LandPlot] Нужно {purchasePrice}₽, есть {GlobalEconomy.Money}₽.");
+                Debug.Log($"[LandPlot] Need ${purchasePrice}, have ${GlobalEconomy.Money}.");
                 return;
             }
 
             GlobalEconomy.Money -= purchasePrice;
             isPurchased = true;
 
-            // Скрываем табличку
+            // Hide visuals
             if (buyVisuals != null)
                 buyVisuals.SetActive(false);
 
-            // Расширяем воксельный остров (не создаём новые GameObject-ы)
+            // Expand voxel island (instead of creating new GameObjects)
             if (wellGenerator != null)
                 wellGenerator.GeneratePlotExtension(offsetX, offsetZ, width, length);
 
-            Debug.Log($"[LandPlot] Куплен! Остаток: {GlobalEconomy.Money}₽");
+            Debug.Log($"[LandPlot] Purchased! Remaining: ${GlobalEconomy.Money}");
         }
     }
 }

@@ -9,7 +9,7 @@ namespace SimpleVoxelSystem
         public int currentHealth;
         public BlockData currentData;
 
-        // Координаты в сетке генератора
+        // Grid coordinates
         public int gridX, gridY, gridZ;
 
         private MeshRenderer meshRenderer;
@@ -28,8 +28,8 @@ namespace SimpleVoxelSystem
 
             if (meshRenderer != null)
             {
-                // Для простоты и производительности меняем цвет материала
-                // Лучше использовать MaterialPropertyBlock для webgl
+                // For simplicity and performance, we change the material color.
+                // It's better to use MaterialPropertyBlock for WebGL in a larger project.
                 meshRenderer.material.color = data.blockColor;
             }
         }

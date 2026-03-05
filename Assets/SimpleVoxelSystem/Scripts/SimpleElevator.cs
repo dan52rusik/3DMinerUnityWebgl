@@ -6,8 +6,8 @@ using UnityEngine.InputSystem;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Простой лифт-платформа. Заход игрока в триггер может запускать движение,
-    /// а также есть ручной запуск кнопкой E пока игрок стоит на платформе.
+    /// Simple elevator platform. Player entering the trigger can initiate movement,
+    /// and there is also manual activation via the E key while the player is standing on the platform.
     /// </summary>
     public class SimpleElevator : MonoBehaviour
     {
@@ -20,14 +20,14 @@ namespace SimpleVoxelSystem
         public int shaftGridX;
         public int shaftGridZ;
         public float platformHalfHeight = 0.125f;
-        public float moveCooldown = 1.0f; // Пауза между поездками
+        public float moveCooldown = 1.0f; // Pause between trips
 
         private Vector3 targetPos;
         private bool isMoving;
         private Transform rider;
         private Collider[] selfColliders;
         private bool playerInsideTrigger;
-        private float lastMoveTime; // Время завершения последнего движения
+        private float lastMoveTime; // Completion time of the last movement
 
         void Awake()
         {
@@ -47,7 +47,7 @@ namespace SimpleVoxelSystem
             transform.position = Vector3.MoveTowards(transform.position, targetPos, speed * Time.deltaTime);
             Vector3 delta = transform.position - oldPos;
 
-            // Двигаем игрока за собой вручную
+            // Manually move the player with the elevator
             if (rider != null)
             {
                 CharacterController cc = rider.GetComponent<CharacterController>();
@@ -67,7 +67,7 @@ namespace SimpleVoxelSystem
             {
                 isMoving = false;
                 ReleaseRider();
-                lastMoveTime = Time.time; // Ставим метку времени завершения
+                lastMoveTime = Time.time; // Set the completion timestamp
             }
         }
 
@@ -78,11 +78,11 @@ namespace SimpleVoxelSystem
 
             playerInsideTrigger = true;
 
-            // Если только что приехали или уже в пути — не перезапускаем
+            // If we just arrived or are already in transit — do not restart
             if (isMoving || (Time.time - lastMoveTime < moveCooldown))
                 return;
 
-            // Если мы и так на самом верху — ехать некуда
+            // If we are already at the top — nowhere to go
             if (Mathf.Abs(transform.position.y - topY) < 0.1f)
                 return;
 
@@ -113,7 +113,7 @@ namespace SimpleVoxelSystem
         private void StartRideToTop(Transform player)
         {
             rider = player;
-            // rider.SetParent(transform, true); // Вызывает ошибку в Netcode
+            // rider.SetParent(transform, true); // Causes an error in Netcode
             MoveToTop();
         }
 
@@ -160,27 +160,27 @@ namespace SimpleVoxelSystem
             if (wellGenerator == null || island == null || wellGenerator.Mining == null)
                 return;
 
-            // Не опускаемся, если недавно двигались (защита от дерготни)
+            // Do not lower if moved recently (jitter protection)
             if (Time.unscaledTime - lastMoveTime < moveCooldown)
                 return;
 
             int clearedDepth = wellGenerator.Mining.GetContiguousClearedDepthAtShaft(shaftGridX, shaftGridZ);
             float desiredY = GetWorldYForDepth(clearedDepth);
 
-            // Если мы уже на месте
+            // If already at destination
             if (Mathf.Abs(transform.position.y - desiredY) < 0.02f)
                 return;
 
-            // ВАЖНО: Если мы на самом верху и игрок внутри — НЕ ОПУСКАЕМСЯ.
-            // Даем игроку возможность выйти из шахты.
+            // IMPORTANT: If we are at the top and the player is inside — DO NOT LOWER.
+            // Give the player a chance to exit the mine.
             if (playerInsideTrigger && Mathf.Abs(transform.position.y - topY) < 0.1f)
                 return;
 
             targetPos = new Vector3(transform.position.x, desiredY, transform.position.z);
             isMoving = true;
             
-            // Если игрок на платформе — берем его с собой как rider, 
-            // чтобы движение вниз было плавным и не вызывало OnTriggerEnter/Exit
+            // If the player is on the platform — take them along as a rider,
+            // so the downward movement is smooth and doesn't trigger OnTriggerEnter/Exit
             if (playerInsideTrigger)
             {
                 GameObject p = GameObject.FindGameObjectWithTag("Player");
@@ -190,8 +190,8 @@ namespace SimpleVoxelSystem
 
         private float GetWorldYForDepth(int depthIndex)
         {
-            // depthIndex 0 в шахте соответствует уровню LobbyFloorY в сетке вокселей.
-            // Также добавляем платформу на 0.5f выше пола ячейки.
+            // depthIndex 0 in the mine corresponds to the LobbyFloorY level in the voxel grid.
+            // Also placing the platform 0.5f above the cell floor.
             int gridY = (wellGenerator != null) ? wellGenerator.LobbyFloorY + depthIndex : depthIndex;
             Vector3 local = island.GridToLocal(shaftGridX, gridY, shaftGridZ) + new Vector3(0.5f, platformHalfHeight, 0.5f);
             return island.transform.TransformPoint(local).y;
@@ -216,7 +216,7 @@ namespace SimpleVoxelSystem
             if (rider == null)
                 return;
 
-            // rider.SetParent(null, true); // Не нужно, так как больше нет привязки
+            // rider.SetParent(null, true); // Not needed since there is no binding anymore
             rider = null;
         }
 

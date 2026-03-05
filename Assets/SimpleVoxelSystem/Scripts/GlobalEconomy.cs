@@ -17,8 +17,8 @@ namespace SimpleVoxelSystem
 
         public static bool AddMiningXP(int amount)
         {
-            // Теперь это делает сервер. Клиент просто ждет обновления через NetworkVariable.
-            // Но для мгновенного UI фидбека можно оставить локальную логику (предикция)
+            // Now the server does this. The client just waits for updates via NetworkVariable.
+            // But for instant UI feedback, we can leave the local logic (prediction)
             MiningXP += amount;
             int nextLevelThreshold = MiningLevel * EconomyTuning.MiningXpPerLevelMultiplier;
             if (MiningXP >= nextLevelThreshold)

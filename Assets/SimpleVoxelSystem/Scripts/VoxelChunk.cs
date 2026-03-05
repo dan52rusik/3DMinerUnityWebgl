@@ -7,8 +7,8 @@ using System.Collections.Generic;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Рендерер отдельного участка (чанка) вокселей.
-    /// Использует Job System + Burst для сборки геометрии без фризов.
+    /// Renderer for an individual chunk of voxels.
+    /// Uses Job System + Burst to assemble geometry without freezes.
     /// </summary>
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
     public class VoxelChunk : MonoBehaviour
@@ -17,11 +17,11 @@ namespace SimpleVoxelSystem
         private MeshCollider meshCollider;
         private Mesh mesh;
 
-        // Координаты чанка в сетке Ворлда (умноженные на ChunkSize)
+        // Chunk coordinates in World grid (multiplied by ChunkSize)
         public Vector3Int chunkPos;
         public int chunkSize = 16;
         
-        // Буферы для Job
+        // Buffers for Job
         private NativeList<Vector3> jobVerts;
         private NativeList<int> jobTris;
         private NativeList<Color> jobColors;
@@ -65,7 +65,7 @@ namespace SimpleVoxelSystem
             };
 
             JobHandle handle = job.Schedule();
-            handle.Complete(); // Для WebGL лучше Complete сразу, либо через Coroutine в конце кадра
+            handle.Complete(); // On WebGL it is better to Complete immediately, or via Coroutine at the end of the frame
 
             UpdateMesh();
         }
@@ -147,7 +147,7 @@ namespace SimpleVoxelSystem
             {
                 int baseIdx = outVerts.Length;
 
-                // Используем те же смещения, что были в VoxelIsland
+                // Use the same offsets as in VoxelIsland
                 switch (faceIdx)
                 {
                     case 0: // TOP

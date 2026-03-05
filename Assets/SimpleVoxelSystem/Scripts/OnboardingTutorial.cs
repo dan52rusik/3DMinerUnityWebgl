@@ -25,20 +25,20 @@ namespace SimpleVoxelSystem
 
         // ─── Debug / Editor ───────────────────────────────────────────────────
         [Header("Debug")]
-        [Tooltip("Принудительно запустить обучение заново при старте (только для тестирования)")]
+        [Tooltip("Force tutorial restart on start (testing only)")]
         public bool forceRestartInEditor = false;
 
-        /// <summary>Сбросить флаги обучения прямо в Inspector (ПКМ → Reset Tutorial).</summary>
+        /// <summary>Reset tutorial flags directly in the Inspector (RMB -> Reset Tutorial).</summary>
         [ContextMenu("Reset Tutorial (clear PlayerPrefs)")]
         public void ResetTutorial()
         {
             PlayerPrefs.DeleteKey(KeyMobileDone);
             PlayerPrefs.DeleteKey(KeyPcShown);
             PlayerPrefs.Save();
-            Debug.Log("[OnboardingTutorial] PlayerPrefs сброшены. Перезапусти сцену.");
+            Debug.Log("[OnboardingTutorial] PlayerPrefs reset. Restart the scene.");
         }
 
-        /// <summary>Статический сброс, удобно вызвать из кода или консоли.</summary>
+        /// <summary>Static reset, useful for calling from code or console.</summary>
         public static void ResetTutorialStatic()
         {
             PlayerPrefs.DeleteKey(KeyMobileDone);
@@ -157,19 +157,19 @@ namespace SimpleVoxelSystem
                 PlayerPrefs.DeleteKey(KeyMobileDone);
                 PlayerPrefs.DeleteKey(KeyPcShown);
                 PlayerPrefs.Save();
-                Debug.Log("[OnboardingTutorial] forceRestartInEditor=true — сброс PlayerPrefs.");
+                Debug.Log("[OnboardingTutorial] forceRestartInEditor=true — resetting PlayerPrefs.");
             }
 #endif
 
             if (isMobile)
             {
-                Debug.Log("[OnboardingTutorial] Мобильный поток. Done=" + PlayerPrefs.GetInt(KeyMobileDone, 0));
+                Debug.Log("[OnboardingTutorial] Mobile flow. Done=" + PlayerPrefs.GetInt(KeyMobileDone, 0));
                 if (PlayerPrefs.GetInt(KeyMobileDone, 0) == 1) { GoStep(Step.Done); return; }
                 GoStep(Step.MobJoystick);
             }
             else
             {
-                Debug.Log("[OnboardingTutorial] ПК поток. Done=" + PlayerPrefs.GetInt(KeyPcShown, 0));
+                Debug.Log("[OnboardingTutorial] PC flow. Done=" + PlayerPrefs.GetInt(KeyPcShown, 0));
                 if (PlayerPrefs.GetInt(KeyPcShown, 0) == 1) { GoStep(Step.Done); return; }
                 GoStep(Step.PcControls);
             }
@@ -198,11 +198,11 @@ namespace SimpleVoxelSystem
             {
                 // ── PC: show controls card, auto-dismiss ─────────────────────
                 case Step.PcControls:
-                    ShowCard("УПРАВЛЕНИЕ",
-                        "Движение:  W A S D\n" +
-                        "Прыжок:   Пробел\n" +
-                        "Копать:   Левая кнопка мыши\n\n" +
-                        "Нажми любую клавишу или покликай, чтобы начать.",
+                    ShowCard("CONTROLS",
+                        "Movement:  W A S D\n" +
+                        "Jump:   Space\n" +
+                        "Dig:   Left Mouse Button\n\n" +
+                        "Press any key or click to start.",
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(null);
@@ -211,8 +211,8 @@ namespace SimpleVoxelSystem
 
                 // ── Mobile step 1: dark screen + joystick callout ────────────
                 case Step.MobJoystick:
-                    ShowCard("УПРАВЛЕНИЕ",
-                        "Это джойстик движения.\nПодвигай его, чтобы идти вперёд.",
+                    ShowCard("CONTROLS",
+                        "This is the movement joystick.\nMove it to walk forward.",
                         tapHint: false);
                     SetDim(0.72f);
                     SetHighlight(mobile?.MoveAreaRect, arrow: true);
@@ -221,13 +221,13 @@ namespace SimpleVoxelSystem
 
                 // ── Mobile step 2: button guide ──────────────────────────────
                 case Step.MobButtons:
-                    ShowCard("КНОПКИ",
-                        "MINE  — копать блок\n" +
-                        "JUMP  — прыжок\n" +
-                        "ACT   — взаимодействие\n" +
-                        "RUN   — бег\n" +
-                        "MINIONS — меню миньонов\n\n" +
-                        "Нажми на экран, чтобы продолжить.",
+                    ShowCard("BUTTONS",
+                        "MINE  — dig block\n" +
+                        "JUMP  — jump\n" +
+                        "ACT   — interact\n" +
+                        "RUN   — sprint\n" +
+                        "MINIONS — minions menu\n\n" +
+                        "Tap the screen to continue.",
                         tapHint: true);
                     SetDim(0.62f);
                     SetHighlight(mobile?.MineButtonRect, arrow: true);
@@ -236,9 +236,9 @@ namespace SimpleVoxelSystem
 
                 // ── Mobile step 3: MUST create island ───────────────────────
                 case Step.MobCreateIsland:
-                    ShowCard("СОЗДАЙ ОСТРОВ",
-                        "Нажми кнопку Create Island.\n" +
-                        "До этого все остальные действия заблокированы.",
+                    ShowCard("CREATE ISLAND",
+                        "Press the Create Island button.\n" +
+                        "Until then, all other actions are blocked.",
                         tapHint: false);
                     SetDim(0.55f);
                     SetHighlight(GetCreateIslandRect(), arrow: true);
@@ -247,10 +247,10 @@ namespace SimpleVoxelSystem
 
                 // ── Mobile step 4: explore island ────────────────────────────
                 case Step.MobOnIsland:
-                    ShowCard("ВОТ И ТВОЙ ОСТРОВ",
-                        "Вот и твой остров, мой дорогой шахтер!\n" +
-                        "Исследуй его. Когда насладишься видами —\n" +
-                        "возвращайся обратно в лобби.",
+                    ShowCard("YOUR ISLAND",
+                        "Here is your island, dear miner!\n" +
+                        "Explore it. When you're ready —\n" +
+                        "go back to the lobby.",
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(GetSwitchWorldRect(), arrow: true);
@@ -259,9 +259,9 @@ namespace SimpleVoxelSystem
 
                 // ── Mobile step 5: buy mine ──────────────────────────────────
                 case Step.MobBuyMine:
-                    ShowCard("ПЕРВАЯ ШАХТА",
-                        "Для начала приобрети свою первую шахту.\n" +
-                        "Луч указывает на магазин шахт.",
+                    ShowCard("FIRST MINE",
+                        "To start, purchase your first mine.\n" +
+                        "The beam points to the mine shop.",
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(null);
@@ -270,9 +270,9 @@ namespace SimpleVoxelSystem
 
                 // ── Mobile step 6: go place it ───────────────────────────────
                 case Step.MobPlaceMine:
-                    ShowCard("РАЗМЕСТИ ШАХТУ",
-                        "Отлично! Возвращайся на свой остров\n" +
-                        "и размести купленную шахту.",
+                    ShowCard("PLACE MINE",
+                        "Great! Return to your island\n" +
+                        "and place the purchased mine.",
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(GetSwitchWorldRect(), arrow: true);
@@ -282,15 +282,15 @@ namespace SimpleVoxelSystem
                 // ── Mining ───────────────────────────────────────────────────────
                 case Step.Mining:
                     if (isMobile)
-                        ShowCard("ДОБЫЧА",
-                            "Подойди к шахте и нажми на блок который хочешь сломать.\n" +
-                            "Зажми экран на блоке или нажми кнопку MINE.",
+                        ShowCard("MINING",
+                            "Go to the mine and tap the block you want to break.\n" +
+                            "Hold the screen on the block or press the MINE button.",
                             tapHint: false);
                     else
-                        ShowCard("ДОБЫЧА",
-                            "Подойди к своей шахте.\n" +
-                            "Нажми ЛЕВУЮ КНОПКУ МЫШИ на блок, чтобы копать.\n" +
-                            "Заполни рюкзак до отказа!",
+                        ShowCard("MINING",
+                            "Go to your mine.\n" +
+                            "Click LEFT MOUSE BUTTON on a block to dig.\n" +
+                            "Fill your backpack to the brim!",
                             tapHint: false);
                     SetDim(0f);
                     SetHighlight(null);
@@ -299,9 +299,9 @@ namespace SimpleVoxelSystem
 
                 // ── Backpack full ─────────────────────────────────────────────────
                 case Step.BackpackFull:
-                    ShowCard("РЮКЗАК ПОЛОН!",
-                        "Отличная работа! Пора разгрузиться.\n" +
-                        "Вернись в лобби — луч покажет точку продажи руды.",
+                    ShowCard("BACKPACK FULL!",
+                        "Great job! Time to unload.\n" +
+                        "Return to the lobby — the beam will show the ore selling point.",
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(null);
@@ -310,9 +310,9 @@ namespace SimpleVoxelSystem
 
                 // ── Sell ore ─────────────────────────────────────────────────────
                 case Step.SellOre:
-                    ShowCard("ПРОДАЙ РУДУ",
-                        "Подойди к точке продажи и сдай содержимое рюкзака.\n" +
-                        "Луч указывает направление.",
+                    ShowCard("SELL ORE",
+                        "Go to the selling point and turn in your backpack contents.\n" +
+                        "The beam points the way.",
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(null);
@@ -321,9 +321,9 @@ namespace SimpleVoxelSystem
 
                 // ── Upgrade pickaxe ──────────────────────────────────────────────
                 case Step.UpgradePickaxe:
-                    ShowCard("УЛУЧШИ СНАРЯЖЕНИЕ",
-                        "Хочешь копать быстрее и добраться до редких руд?\n" +
-                        "Подойди к магазину кирок и прокачай снаряжение.",
+                    ShowCard("UPGRADE EQUIPMENT",
+                        "Want to dig faster and reach rare ores?\n" +
+                        "Go to the pickaxe shop and upgrade your gear.",
                         tapHint: false);
                     SetDim(0f);
                     SetHighlight(null);
@@ -332,10 +332,10 @@ namespace SimpleVoxelSystem
 
                 // ── Minion hint ──────────────────────────────────────────────────
                 case Step.MinionHint:
-                    ShowCard("АВТОМАТИЗИРУЙ ШАХТУ",
-                        "Если захочешь автоматизировать добычу —\n" +
-                        "приходи сюда и найми своего первого работника-миньона!\n\n" +
-                        "Нажми любую клавишу / тапни, чтобы закрыть.",
+                    ShowCard("AUTOMATE THE MINE",
+                        "If you want to automate your mining —\n" +
+                        "come here and hire your first minion worker!\n\n" +
+                        "Press any key / tap to close.",
                         tapHint: true);
                     SetDim(0f);
                     SetHighlight(null);
@@ -362,7 +362,7 @@ namespace SimpleVoxelSystem
             {
                 // ─────────────────────────────────────────────────────────────
                 case Step.PcControls:
-                    // Минимум 3 секунды показа — не закрывается случайно при загрузке
+                    // Minimum 3 seconds display — doesn't close accidentally during loading
                     bool acknowledged = elapsed > 3f && Application.isFocused && TutorialInputReader.IsContinuePressed();
                     if (acknowledged)
                     {
@@ -481,7 +481,7 @@ namespace SimpleVoxelSystem
             if (cardTapHint != null)
             {
                 cardTapHint.gameObject.SetActive(tapHint);
-                cardTapHint.text = tapHint ? "Нажми на экран, чтобы продолжить ›" : "";
+                cardTapHint.text = tapHint ? "Tap the screen to continue ›" : "";
             }
         }
 

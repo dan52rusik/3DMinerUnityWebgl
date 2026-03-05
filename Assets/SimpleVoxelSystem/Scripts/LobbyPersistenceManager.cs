@@ -34,7 +34,7 @@ namespace SimpleVoxelSystem
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[LobbyPersistence] Ошибка записи чанка {cx},{cz}: {ex.Message}");
+                Debug.LogError($"[LobbyPersistence] Error writing chunk {cx},{cz}: {ex.Message}");
             }
         }
 
@@ -68,7 +68,7 @@ namespace SimpleVoxelSystem
                 PlayerPrefs.Save();
                 File.WriteAllText(ShopSavePath, json);
             }
-            catch (System.Exception ex) { Debug.LogError($"[LobbyPersistence] Сохранение зон: {ex.Message}"); }
+            catch (System.Exception ex) { Debug.LogError($"[LobbyPersistence] Saving zones: {ex.Message}"); }
         }
 
         public ShopZoneSaveData LoadShopZones()

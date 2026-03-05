@@ -49,7 +49,7 @@ namespace SimpleVoxelSystem
         public void BuildUI(System.Action toggleAction, System.Action<BlockType> setBlockAction, 
             System.Action<EditorToolMode> setToolAction, System.Action saveAction, System.Action clearAction)
         {
-            // Очистка старых панелей (если остались от прошлых запусков или ошибок)
+            // Clear old panels (if left from past launches or errors)
             var oldPanel = rootCanvasTrans.Find("LobbyEditorPanel");
             if (oldPanel != null) GameObject.DestroyImmediate(oldPanel.gameObject);
             var oldToggle = rootCanvasTrans.Find("LobbyEditToggle");
@@ -57,7 +57,7 @@ namespace SimpleVoxelSystem
 
             Debug.Log("[LobbyEditor] Building UI with Minion Shop tool included.");
 
-            // Кнопка-тоггл
+            // Toggle button
             toggleBtn = RuntimeUIFactory.MakeBtn(rootCanvasTrans, "LobbyEditToggle",
                 "Lobby Editor [F2]",
                 new Color(0.25f, 0.65f, 0.25f, 1f),
@@ -65,7 +65,7 @@ namespace SimpleVoxelSystem
                 new Vector2(-10f, -110f), new Vector2(168f, 36f));
             toggleBtn.onClick.AddListener(() => toggleAction());
 
-            // Панель инструментов
+            // Tools panel
             editorPanel = RuntimeUIFactory.MakePanel("LobbyEditorPanel", rootCanvasTrans,
                 new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
                 new Vector2(-10f, 0f), new Vector2(168f, 580f),
@@ -82,7 +82,7 @@ namespace SimpleVoxelSystem
             float currentY = -86f;
             float stepY = 46f;
 
-            // Блочные инструменты
+            // Block tools
             for (int i = 0; i < BtnTypes.Length; i++)
             {
                 int idx = i;
@@ -101,7 +101,7 @@ namespace SimpleVoxelSystem
                 currentY -= stepY;
             }
 
-            // Магазины
+            // Shops
             shopToolBtn = RuntimeUIFactory.MakeBtn(editorPanel.transform, "ShopTool", "Mine Shop Zone",
                 new Color(0.15f, 0.35f, 0.80f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, currentY), new Vector2(148f, 38f));
@@ -126,7 +126,7 @@ namespace SimpleVoxelSystem
             minionShopToolBtn.onClick.AddListener(() => setToolAction(EditorToolMode.MinionShop));
             currentY -= stepY;
 
-            // Управление
+            // Controls
             Button saveBtn = RuntimeUIFactory.MakeBtn(editorPanel.transform, "ManualSaveBtn", "Save",
                 new Color(0.2f, 0.45f, 0.9f, 1f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 10f), new Vector2(148f, 38f));

@@ -5,26 +5,26 @@ using SimpleVoxelSystem.Data;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// ScriptableObject — описание одного «класса» шахты в магазине.
-    /// Создать: Assets → Create → SimpleVoxelSystem → Mine Shop Data
+    /// ScriptableObject — description of one "class" of mine in the shop.
+    /// Create: Assets → Create → SimpleVoxelSystem → Mine Shop Data
     /// </summary>
     [CreateAssetMenu(
         menuName = "SimpleVoxelSystem/Mine Shop Data",
         fileName = "MineShopData_New")]
     public class MineShopData : ScriptableObject
     {
-        [Header("Внешний вид в магазине")]
-        public string displayName  = "Бронзовая шахта";
+        [Header("Shop Appearance")]
+        public string displayName  = "Bronze Mine";
         [TextArea(2, 4)]
-        public string description  = "Небольшая шахта с преимущественно каменными породами.";
+        public string description  = "A small mine with predominantly stone rocks.";
         public Color  labelColor   = new Color(0.8f, 0.5f, 0.2f);
 
-        [Header("Цена")]
-        public int buyPrice  = EconomyTuning.BronzeMinePrice;   // цена покупки
+        [Header("Price")]
+        public int buyPrice  = EconomyTuning.BronzeMinePrice;   // purchase price
         [Range(0f, 1f)]
-        public float sellBackRatio = EconomyTuning.BronzeMineSellBackRatio; // за сколько можно продать истощённую шахту
+        public float sellBackRatio = EconomyTuning.BronzeMineSellBackRatio; // sale price of exhausted mine
 
-        [Header("Размер шахты")]
+        [Header("Mine Size")]
         public int wellWidth  = EconomyTuning.DefaultMineWellWidth;
         public int wellLength = EconomyTuning.DefaultMineWellLength;
         [Range(1, 30)]
@@ -33,7 +33,7 @@ namespace SimpleVoxelSystem
         public int depthMax = EconomyTuning.BronzeMineDepthMax;
         public int padding  = EconomyTuning.DefaultMinePadding;
 
-        [Header("Состав блоков (веса по слою)")]
+        [Header("Block Composition (weights by layer)")]
         public BlockLayer[] layers = new BlockLayer[]
         {
             new BlockLayer { maxDepth = 2,  dirtWeight = 90, stoneWeight = 10, ironWeight = 0,  goldWeight = 0  },
@@ -43,13 +43,13 @@ namespace SimpleVoxelSystem
 
         // ─────────────────────────────────────────────────────────────────────
 
-        /// <summary>Возвращает случайную глубину в допустимом диапазоне.</summary>
+        /// <summary>Returns a random depth within the allowed range.</summary>
         public int RollDepth() => UnityEngine.Random.Range(depthMin, depthMax + 1);
 
-        /// <summary>Возвращает случайный тип блока для заданной глубины.</summary>
+        /// <summary>Returns a random block type for the given depth.</summary>
         public BlockType RollBlockType(int depth)
         {
-            // Ищем подходящий слой
+            // Finding a suitable layer
             BlockLayer layer = layers[layers.Length - 1];
             for (int i = 0; i < layers.Length; i++)
             {
@@ -78,10 +78,10 @@ namespace SimpleVoxelSystem
     [Serializable]
     public class BlockLayer
     {
-        [Tooltip("Эти веса применяются для глубин 0..maxDepth")]
+        [Tooltip("These weights are applied for depths 0..maxDepth")]
         public int maxDepth = 5;
 
-        [Header("Веса (сумма произвольная, нормализуется автоматически)")]
+        [Header("Weights (arbitrary sum, normalized automatically)")]
         public int dirtWeight  = 50;
         public int stoneWeight = 40;
         public int ironWeight  = 10;

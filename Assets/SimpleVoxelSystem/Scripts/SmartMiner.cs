@@ -224,7 +224,7 @@ namespace SimpleVoxelSystem
         {
             if (pickaxe == null)
             {
-                Debug.LogWarning("[SmartMiner] Не найден PlayerPickaxe на игроке.", this);
+                Debug.LogWarning("[SmartMiner] PlayerPickaxe not found on player.", this);
                 return false;
             }
 

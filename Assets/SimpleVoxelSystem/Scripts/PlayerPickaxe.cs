@@ -9,8 +9,8 @@ using UnityEngine.InputSystem;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Кирка игрока. Raycast попадает на единый меш VoxelIsland,
-    /// вычисляет воксельные координаты из точки удара и добывает блок.
+    /// Player's pickaxe. Raycast hits the single VoxelIsland mesh,
+    /// calculates voxel coordinates from the hit point, and mines the block.
     /// </summary>
     public class PlayerPickaxe : MonoBehaviour
     {
@@ -130,7 +130,7 @@ namespace SimpleVoxelSystem
             if (wellGenerator != null && !wellGenerator.CanMineVoxel(gx, gy, gz))
             {
                 if (verboseLogs)
-                    Debug.Log($"[Pickaxe] Сначала очистите предыдущий слой. Заблокирована глубина y={gy}.", this);
+                    Debug.Log($"[Pickaxe] Clear the previous layer first. Depth y={gy} is blocked.", this);
                 return false;
             }
 
@@ -142,11 +142,11 @@ namespace SimpleVoxelSystem
 
             BlockData data = GetBlockData(blockType);
 
-            // Проверка уровня копки
+            // Mining level check
             if (GlobalEconomy.MiningLevel < data.requiredMiningLevel)
             {
                 if (verboseLogs)
-                    Debug.Log($"[Pickaxe] Нужен уровень копки {data.requiredMiningLevel}, чтобы добывать {data.type}!");
+                    Debug.Log($"[Pickaxe] Mining level {data.requiredMiningLevel} required to mine {data.type}!");
                 return false;
             }
 
@@ -161,7 +161,7 @@ namespace SimpleVoxelSystem
                 miningCamera = Camera.main;
                 if (miningCamera == null)
                 {
-                    Debug.LogWarning("[Pickaxe] Не найдена камера для Raycast (miningCamera/Camera.main).", this);
+                    Debug.LogWarning("[Pickaxe] No camera found for Raycast (miningCamera/Camera.main).", this);
                     return;
                 }
             }
@@ -171,7 +171,7 @@ namespace SimpleVoxelSystem
             if (!Physics.Raycast(ray, out RaycastHit hit, miningRange, miningLayers, QueryTriggerInteraction.Ignore))
             {
                 if (verboseLogs)
-                    Debug.Log("[Pickaxe] Raycast не попал в коллайдер в пределах дистанции.", this);
+                    Debug.Log("[Pickaxe] Raycast didn't hit a collider within range.", this);
                 return;
             }
 
@@ -179,7 +179,7 @@ namespace SimpleVoxelSystem
             if (island == null)
             {
                 if (verboseLogs)
-                    Debug.Log($"[Pickaxe] Попадание в {hit.collider.name}, но это не VoxelIsland.", this);
+                    Debug.Log($"[Pickaxe] Hit {hit.collider.name}, but it's not a VoxelIsland.", this);
                 return;
             }
 
@@ -199,7 +199,7 @@ namespace SimpleVoxelSystem
             {
                 blockHealth.Remove(new Vector3Int(gx, gy, gz));
                 if (verboseLogs)
-                    Debug.Log($"[Pickaxe] Промах — в [{gx},{gy},{gz}] нет блока.", this);
+                    Debug.Log($"[Pickaxe] Miss — no block at [{gx},{gy},{gz}].", this);
                 return;
             }
 
@@ -207,25 +207,25 @@ namespace SimpleVoxelSystem
             {
                 blockHealth.Remove(new Vector3Int(gx, gy, gz));
                 if (verboseLogs)
-                    Debug.Log($"[Pickaxe] Промах — в [{gx},{gy},{gz}] воздух.", this);
+                    Debug.Log($"[Pickaxe] Miss — air at [{gx},{gy},{gz}].", this);
                 return;
             }
 
             if (wellGenerator != null && !wellGenerator.CanMineVoxel(gx, gy, gz))
             {
-                // Показываем причину в консоль раз в 1 сек, чтобы пользователь видел блокировку
+                // Show reason in console once per sec so the user sees the block
                 if (Time.frameCount % 90 == 0)
-                    Debug.Log($"[Pickaxe] Не могу копать в [{gx},{gy},{gz}]. Проверьте глубину вашей шахты!");
+                    Debug.Log($"[Pickaxe] Can't dig at [{gx},{gy},{gz}]. Check your mine depth!");
                 return;
             }
 
             BlockData data = GetBlockData(blockType);
 
-            // Проверка уровня копки
+            // Mining level check
             if (GlobalEconomy.MiningLevel < data.requiredMiningLevel)
             {
                 if (Time.frameCount % 90 == 0)
-                    Debug.Log($"<color=orange>[Pickaxe] Нужен уровень копки {data.requiredMiningLevel}, чтобы добывать {data.type}!</color>");
+                    Debug.Log($"<color=orange>[Pickaxe] Mining level {data.requiredMiningLevel} required to mine {data.type}!</color>");
                 return;
             }
 
@@ -253,12 +253,12 @@ namespace SimpleVoxelSystem
             blockHealth.Remove(key);
             CollectResources(data);
             
-            // Начисление опыта
+            // Experience reward
             int xp = data.xpReward;
-            if (xp <= 0) xp = 2; // Минимальный XP
+            if (xp <= 0) xp = 2; // Minimum XP
             bool inLobby = wellGenerator != null && wellGenerator.IsInLobbyMode;
 
-            // Локальный апдейт острова (Client-side prediction)
+            // Local island update (Client-side prediction)
             if (wellGenerator != null)
                 wellGenerator.MineVoxel(gx, gy, gz);
             else
@@ -266,15 +266,15 @@ namespace SimpleVoxelSystem
 
             AsyncGameplayEvents.PublishMineBlock(gx, gy, gz, data.type, xp, inLobby);
 
-            // СИНХРОНИЗАЦИЯ: Отправляем на сервер
+            // SYNC: Send to server
             if (networkAvatar != null && networkAvatar.IsSpawned)
             {
                 networkAvatar.RequestMineBlockServerRpc(new Vector3Int(gx, gy, gz), inLobby);
-                networkAvatar.AddRewardsServerRpc(0, xp); // Деньги при продаже, XP сейчас
+                networkAvatar.AddRewardsServerRpc(0, xp); // Money when sold, XP now
             }
             else
             {
-                // Если не в сети — просто локально
+                // Offline — just local update
                 GlobalEconomy.AddMiningXP(xp);
             }
         }
@@ -356,8 +356,8 @@ namespace SimpleVoxelSystem
             if (verboseLogs)
             {
                 Debug.Log(
-                    $"Добыт: {data.type} (+{data.reward}₽). " +
-                    $"Рюкзак: {currentBackpackLoad}/{maxBackpackCapacity}. " +
+                    $"Mined: {data.type} (+{data.reward}$), " +
+                    $"Backpack: {currentBackpackLoad}/{maxBackpackCapacity}, " +
                     $"[D:{dirtCount} S:{stoneCount} Fe:{ironCount} Au:{goldCount}]"
                 );
             }
@@ -379,7 +379,7 @@ namespace SimpleVoxelSystem
 
             AsyncGameplayEvents.PublishSellBackpack(totalValueInBackpack);
 
-            Debug.Log($"Продано на {totalValueInBackpack}₽. Итого: {GlobalEconomy.Money}₽");
+            Debug.Log($"Sold for {totalValueInBackpack}$. Total: {GlobalEconomy.Money}$");
             ClearBackpack();
         }
 
@@ -396,7 +396,7 @@ namespace SimpleVoxelSystem
                 return;
 
             nextBackpackLogTime = Time.unscaledTime + backpackFullLogCooldown;
-            Debug.Log("Рюкзак полон! Нужно разгрузиться на складе.");
+            Debug.Log("Backpack full! Need to unload at the storage.");
         }
     }
 }

@@ -7,12 +7,12 @@ using System.Collections.Generic;
 namespace SimpleVoxelSystem.Editor
 {
     /// <summary>
-    /// Одно меню: Tools → Mine System → Setup Scene
-    /// Делает всё сам:
-    ///   1. Создаёт папку Assets/SimpleVoxelSystem/Mines/
-    ///   2. Создаёт три ScriptableObject-шахты (если их ещё нет)
-    ///   3. Добавляет MineMarket на GameObject с WellGenerator
-    ///   4. Подключает созданные шахты в MineMarket.availableMines
+    /// One menu: Tools → Mine System → Setup Scene
+    /// Performs automation:
+    ///   1. Creates folder Assets/SimpleVoxelSystem/Mines/
+    ///   2. Creates three mine ScriptableObjects (if they don't exist yet)
+    ///   3. Adds MineMarket to the WellGenerator GameObject
+    ///   4. Links created mines in MineMarket.availableMines
     /// </summary>
     public static class MineSystemSetup
     {
@@ -21,12 +21,12 @@ namespace SimpleVoxelSystem.Editor
         [MenuItem("Tools/Mine System/Setup Scene")]
         public static void SetupScene()
         {
-            // 1 — Папка Assets/SimpleVoxelSystem/Mines
+            // 1 — Folder Assets/SimpleVoxelSystem/Mines
             EnsureFolder("Assets/SimpleVoxelSystem");
             EnsureFolder(MinesFolder);
 
-            // 2 — ScriptableObject'ы шахт
-            MineShopData bronze  = EnsureMineAsset("Mine_Bronze",  "Бронзовая шахта",
+            // 2 — Mine ScriptableObjects
+            MineShopData bronze  = EnsureMineAsset("Mine_Bronze",  "Bronze Mine",
                 buyPrice: EconomyTuning.BronzeMinePrice, depthMin: EconomyTuning.BronzeMineDepthMin, depthMax: EconomyTuning.BronzeMineDepthMax,
                 labelColor: new Color(0.80f, 0.50f, 0.20f),
                 layers: new BlockLayer[]
@@ -35,7 +35,7 @@ namespace SimpleVoxelSystem.Editor
                     new BlockLayer { maxDepth=30, dirtWeight=40, stoneWeight=55, ironWeight=5,  goldWeight=0 },
                 });
 
-            MineShopData silver  = EnsureMineAsset("Mine_Silver", "Серебряная шахта",
+            MineShopData silver  = EnsureMineAsset("Mine_Silver", "Silver Mine",
                 buyPrice: EconomyTuning.SilverMinePrice, depthMin: EconomyTuning.SilverMineDepthMin, depthMax: EconomyTuning.SilverMineDepthMax,
                 labelColor: new Color(0.70f, 0.70f, 0.75f),
                 layers: new BlockLayer[]
@@ -45,7 +45,7 @@ namespace SimpleVoxelSystem.Editor
                     new BlockLayer { maxDepth=30, dirtWeight=5,  stoneWeight=60, ironWeight=30, goldWeight=5 },
                 });
 
-            MineShopData gold    = EnsureMineAsset("Mine_Gold", "Золотая шахта",
+            MineShopData gold    = EnsureMineAsset("Mine_Gold", "Gold Mine",
                 buyPrice: EconomyTuning.GoldMinePrice, depthMin: EconomyTuning.GoldMineDepthMin, depthMax: EconomyTuning.GoldMineDepthMax,
                 labelColor: new Color(1.00f, 0.84f, 0.10f),
                 layers: new BlockLayer[]
@@ -57,13 +57,13 @@ namespace SimpleVoxelSystem.Editor
 
             AssetDatabase.SaveAssets();
 
-            // 3 — MineMarket на WellGenerator
+            // 3 — MineMarket on WellGenerator
             WellGenerator wg = Object.FindFirstObjectByType<WellGenerator>();
             if (wg == null)
             {
-                Debug.LogWarning("[MineSystemSetup] WellGenerator не найден в сцене. Добавьте его вручную.");
+                Debug.LogWarning("[MineSystemSetup] WellGenerator not found in the scene. Add it manually.");
                 EditorUtility.DisplayDialog("Mine System Setup",
-                    "WellGenerator не найден в сцене.\nДобавьте GameObject с WellGenerator и запустите Setup ещё раз.", "OK");
+                    "WellGenerator not found in the scene.\nAdd a GameObject with WellGenerator and run Setup again.", "OK");
                 return;
             }
 
@@ -71,15 +71,15 @@ namespace SimpleVoxelSystem.Editor
             if (market == null)
                 market = wg.gameObject.AddComponent<MineMarket>();
 
-            // 4 — Подключаем шахты
+            // 4 — Link mines
             market.availableMines = new List<MineShopData> { bronze, silver, gold };
             EditorUtility.SetDirty(market);
 
-            // 5 — MineShopUI (добавляем на тот же GameObject если нет)
+            // 5 — MineShopUI (add to the same GameObject if missing)
             MineShopUI shopUI = Object.FindFirstObjectByType<MineShopUI>();
             if (shopUI == null)
             {
-                // Ищем Canvas или создаём пустой GO
+                // Search for Canvas or create a new GO
                 Canvas canvas = Object.FindFirstObjectByType<Canvas>();
                 GameObject uiHost;
                 if (canvas != null)
@@ -91,24 +91,24 @@ namespace SimpleVoxelSystem.Editor
                     uiHost = new GameObject("MineShopUI");
                 }
                 shopUI = uiHost.AddComponent<MineShopUI>();
-                Debug.Log("[MineSystemSetup] MineShopUI добавлен на " + uiHost.name);
+                Debug.Log("[MineSystemSetup] MineShopUI added to " + uiHost.name);
             }
 
             shopUI.mineMarket = market;
             EditorUtility.SetDirty(shopUI);
 
-            // 6 — Стартовые деньги (только если 0)
+            // 6 — Starting money (only if 0)
             if (GlobalEconomy.Money == 0)
                 GlobalEconomy.Money = EconomyTuning.StartMoney;
 
-            Debug.Log("[MineSystemSetup] ✅ Готово! MineMarket настроен, 3 шахты созданы в " + MinesFolder);
+            Debug.Log("[MineSystemSetup] ✅ Done! MineMarket configured, 3 mines created in " + MinesFolder);
             EditorUtility.DisplayDialog("Mine System Setup",
-                "✅ Настройка завершена!\n\n" +
-                "• 3 класса шахт созданы в Assets/SimpleVoxelSystem/Mines/\n" +
-                "• MineMarket добавлен на WellGenerator\n" +
-                "• MineShopUI добавлен — весь UI строится автоматически\n" +
-                $"• Стартовые деньги: {EconomyTuning.StartMoney}₽\n\n" +
-                "▶ Просто нажмите Play!", "OK");
+                "✅ Setup completed!\n\n" +
+                "• 3 mine classes created in Assets/SimpleVoxelSystem/Mines/\n" +
+                "• MineMarket added to WellGenerator\n" +
+                "• MineShopUI added — all UI is built automatically\n" +
+                $"• Starting money: ${EconomyTuning.StartMoney}\n\n" +
+                "▶ Just press Play!", "OK");
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ namespace SimpleVoxelSystem.Editor
             MineShopData existing = AssetDatabase.LoadAssetAtPath<MineShopData>(path);
             if (existing != null)
             {
-                Debug.Log($"[MineSystemSetup] '{assetName}' уже существует, пропускаем.");
+                Debug.Log($"[MineSystemSetup] '{assetName}' already exists, skipping.");
                 return existing;
             }
 
@@ -148,7 +148,7 @@ namespace SimpleVoxelSystem.Editor
             data.padding        = EconomyTuning.DefaultMinePadding;
 
             AssetDatabase.CreateAsset(data, path);
-            Debug.Log($"[MineSystemSetup] Создан '{path}'");
+            Debug.Log($"[MineSystemSetup] Created '{path}'");
             return data;
         }
     }

@@ -1,14 +1,14 @@
 // ============================================================
 //  VoxelVertexColor.shader
-//  WebGL / Яндекс Игры — совместимый шейдер.
+//  WebGL / Yandex Games compatible shader.
 //
-//  Поддерживает: URP (Unity 6) + Built-in RP.
-//  Unity автоматически выбирает нужный SubShader.
-//  HLSL → кросс-компилируется Unity в GLSL ES для WebGL.
+//  Supports: URP (Unity 2020+) + Built-in RP.
+//  Unity automatically picks the appropriate SubShader.
+//  HLSL is cross-compiled by Unity into GLSL ES for WebGL.
 //
-//  Vertex Colors: каждый тип блока = свой цвет в вершинах.
-//  Освещение: простой Lambert (одна операция dot) — быстро на мобильных.
-//  Тени: только отбрасывание (Shadow Caster), без дорогих shadow maps на приём.
+//  Vertex Colors: each block type has its own color in vertices.
+//  Lighting: simple Lambert (single dot operation) — fast on mobile.
+//  Shadows: Shadow Caster only (no expensive shadow maps reception).
 // ============================================================
 
 Shader "SimpleVoxelSystem/VoxelVertexColor"
@@ -20,7 +20,7 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // SubShader A: Universal Render Pipeline (URP) — Unity 2020+ / Unity 6
+    // SubShader A: Universal Render Pipeline (URP) — Unity 2020+
     // ──────────────────────────────────────────────────────────────────────
     SubShader
     {
@@ -41,8 +41,8 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
             #pragma vertex   VoxelVert
             #pragma fragment VoxelFrag
 
-            // WebGL не поддерживает instancing, но multi_compile_instancing
-            // безопасен для включения — просто не используется.
+            // WebGL doesn't support instancing, but multi_compile_instancing
+            // is safe to include — it just won't be used.
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -53,15 +53,15 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
                 float _ColorBoost;
             CBUFFER_END
 
-            // Входные данные от CPU (из нашего меша)
+            // Input data from CPU (mesh attributes)
             struct VoxelAttributes
             {
                 float4 posOS   : POSITION;
                 float3 normOS  : NORMAL;
-                float4 vcolor  : COLOR;      // ← наш vertex color (тип блока)
+                float4 vcolor  : COLOR;      // ← vertex color (block type)
             };
 
-            // Данные между vertex и fragment stage
+            // Interpolated data between vertex and fragment stage
             struct VoxelVaryings
             {
                 float4 posCS   : SV_POSITION;
@@ -86,19 +86,19 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
 
             half4 VoxelFrag(VoxelVaryings IN) : SV_Target
             {
-                // Получаем главный направленный свет (Direction Light)
+                // Get main directional light
                 Light mainLight = GetMainLight();
 
-                // Lambert: угол между нормалью и направлением света
+                // Lambert: angle between normal and light direction
                 float  NdotL = saturate(dot(normalize(IN.normWS), mainLight.direction));
 
-                // Итоговая яркость = ambient + diffuse
+                // Final brightness = ambient + diffuse
                 float  lighting = _Ambient + (1.0 - _Ambient) * NdotL;
 
-                // Финальный цвет = vertex color × яркость × цвет света
+                // Final color = vertex color x brightness x light color
                 half3  col = saturate(IN.vcolor.rgb * _ColorBoost) * lighting * mainLight.color.rgb;
 
-                // Добавляем туман (если включён в настройках сцены)
+                // Apply fog (if enabled in scene settings)
                 col = MixFog(col, IN.fog);
 
                 return half4(col, 1.0);
@@ -106,9 +106,9 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
             ENDHLSL
         }
 
-        // ── Shadow Caster Pass (без конфликта имён) ───────────────────────
-        // Нужен чтобы объект ОТБРАСЫВАЛ тень. Написан вручную — без Include
-        // ShadowCasterPass.hlsl, чтобы избежать конфликта struct Attributes.
+        // ── Shadow Caster Pass ──────────────────────────────────────────────
+        // Allows the object to CAST shadows. Manual implementation to avoid
+        // naming conflicts with Attribute structures in ShadowCasterPass.hlsl.
         Pass
         {
             Name "ShadowCaster"
@@ -116,18 +116,17 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
 
             ZWrite On
             ZTest  LEqual
-            ColorMask 0         // не пишем цвет — только глубину
+            ColorMask 0         // don't write color — only depth
 
             HLSLPROGRAM
             #pragma vertex   ShadowVert
             #pragma fragment ShadowFrag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            // Core.hlsl даёт TransformObjectToWorld и TransformWorldToHClip.
-            // ShadowCasterPass.hlsl не включаем — он конфликтует с ручными структурами ниже.
+            
             float3 _LightDirection;
 
-            // Входная структура для shadow (минимальная)
+            // Minimal input structure for shadows
             struct ShadowIn
             {
                 float4 posOS   : POSITION;
@@ -145,7 +144,7 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
                 ShadowOut OUT;
                 float3 posWS = TransformObjectToWorld(IN.posOS.xyz);
                 float3 normWS = TransformObjectToWorldNormal(IN.normOS);
-                // Manual normal bias (portable across URP variants / platforms).
+                // Manual normal bias for cross-platform portability.
                 posWS += normWS * 0.005;
                 OUT.posCS = TransformWorldToHClip(posWS);
                 return OUT;
@@ -158,7 +157,7 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
 
     // ──────────────────────────────────────────────────────────────────────
     // SubShader B: Built-in Render Pipeline
-    // (используется, если URP не установлен)
+    // (fallback for projects without URP installed)
     // ──────────────────────────────────────────────────────────────────────
     SubShader
     {
@@ -217,6 +216,6 @@ Shader "SimpleVoxelSystem/VoxelVertexColor"
         }
     }
 
-    // Если оба SubShader не подошли — минимальный Diffuse (всегда работает)
+    // Minimal Diffuse fallback if both SubShaders fail.
     Fallback "Diffuse"
 }

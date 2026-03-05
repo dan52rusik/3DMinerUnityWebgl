@@ -4,18 +4,18 @@ const PC_STEPS = [
   {
     id: "pc1",
     icon: "🖥️",
-    label: "Карточка управления",
-    desc: "Показывается в верхней части экрана:\nWASD — движение\nПробел — прыжок\nЛКМ — копать",
-    condition: "Автоматически при первом запуске на ПК",
-    dismiss: "Нажал клавишу или кликнул мышью → исчезает",
+    label: "Control Card",
+    desc: "Displayed at the top of the screen:\nWASD — move\nSpace — jump\nLMB — dig",
+    condition: "Automatically on first launch on PC",
+    dismiss: "Key pressed or mouse clicked → disappears",
     color: "#3b6fd4",
   },
   {
     id: "pc2",
     icon: "✅",
-    label: "Готово",
-    desc: "PlayerPrefs сохраняет флаг. При следующем запуске обучение не появится.",
-    condition: "Через 1.5 сек после первого ввода или через 10 сек",
+    label: "Done",
+    desc: "PlayerPrefs saves the flag. Tutorial won't appear on next launch.",
+    condition: "1.5s after first input or after 10s",
     dismiss: "",
     color: "#2ea043",
   },
@@ -25,27 +25,27 @@ const MOB_STEPS = [
   {
     id: "m1",
     icon: "🕹️",
-    label: "Затемнение + джойстик",
-    desc: "Экран темнеет (α 72%). Золотая рамка подсвечивает джойстик. Стрелка ▼ пульсирует.\n\n\"Это джойстик движения. Подвигай его, чтобы идти вперёд.\"",
-    condition: "Первый запуск на мобильном",
-    dismiss: "Игрок двигает джойстик 0.25 сек →",
+    label: "Overlay + Joystick",
+    desc: "Screen dims (α 72%). Golden frame highlights the joystick. Arrow ▼ pulses.\n\n\"This is the movement joystick. Move it to walk forward.\"",
+    condition: "First launch on mobile",
+    dismiss: "Player moves joystick for 0.25s →",
     color: "#d4821b",
   },
   {
     id: "m2",
     icon: "🎮",
-    label: "Обзор кнопок",
-    desc: "Затемнение снижается (α 62%). Карточка с описанием:\nMINE — копать\nJUMP — прыжок\nACT — взаимодействие\nRUN — бег\nMINIONS — меню миньонов",
-    condition: "После шага 1",
-    dismiss: "Тап/клик в любом месте →",
+    label: "Button Overview",
+    desc: "Dimming level reduced (α 62%). Info card:\nMINE — dig\nJUMP — jump\nACT — interact\nRUN — run\nMINIONS — minions menu",
+    condition: "After Step 1",
+    dismiss: "Tap/click anywhere →",
     color: "#d4821b",
   },
   {
     id: "m3",
     icon: "🏝️",
-    label: "Создай остров",
-    desc: "Затемнение (α 55%). Рамка на кнопке Create Island.\n\"Нажми кнопку Create Island. До этого все остальные действия заблокированы.\"\n\n🔒 Движение, копание и шопы — заблокированы!",
-    condition: "После тапа на шаге 2",
+    label: "Create Island",
+    desc: "Dimming (α 55%). Frame on Create Island button.\n\"Click the Create Island button. All other actions are blocked until then.\"\n\n🔒 Movement, digging, and shops are blocked!",
+    condition: "After tap on Step 2",
     dismiss: "WellGen.IsIslandGenerated == true →",
     color: "#c0392b",
     blocked: true,
@@ -53,36 +53,36 @@ const MOB_STEPS = [
   {
     id: "m4",
     icon: "⛏️",
-    label: "Исследуй остров",
-    desc: "Затемнение убрано. Рамка на кнопке \"To Lobby\".\n\n\"Вот и твой остров, мой дорогой шахтер! Исследуй его. Когда насладишься видами — возвращайся обратно в лобби.\"",
-    condition: "Игрок появился на острове",
+    label: "Explore Island",
+    desc: "Dimming removed. Frame on \"To Lobby\" button.\n\n\"Here is your island, my dear miner! Explore it. When you've enjoyed the views, head back to the lobby.\"",
+    condition: "Player spawned on island",
     dismiss: "WellGen.IsInLobbyMode == true →",
     color: "#1a7f64",
   },
   {
     id: "m5",
     icon: "🛒",
-    label: "Купи шахту",
-    desc: "Карточка в верхней части. Анимированный луч от игрока к триггеру магазина шахт.\n\n\"Для начала приобрети свою первую шахту. Луч указывает на магазин шахт.\"",
-    condition: "Игрок вернулся в лобби",
+    label: "Buy Mine",
+    desc: "Card at the top. Animated line from player to the Mine Shop trigger.\n\n\"To start, purchase your first mine. The line points to the Mine Shop.\"",
+    condition: "Player returned to lobby",
     dismiss: "MineMarket.IsPlacementMode == true →",
     color: "#1a7f64",
   },
   {
     id: "m6",
     icon: "📍",
-    label: "Размести шахту",
-    desc: "Рамка на кнопке \"To Island\".\n\n\"Отлично! Возвращайся на свой остров и размести купленную шахту.\"",
-    condition: "Шахта куплена",
+    label: "Place Mine",
+    desc: "Frame on \"To Island\" button.\n\n\"Great! Go back to your island and place the purchased mine.\"",
+    condition: "Mine purchased",
     dismiss: "Mine placed + not in lobby →",
     color: "#1a7f64",
   },
   {
     id: "m7",
     icon: "🏆",
-    label: "Обучение завершено",
-    desc: "PlayerPrefs сохраняет флаг. UI скрывается. Больше не появится.",
-    condition: "Шахта размещена",
+    label: "Tutorial Completed",
+    desc: "PlayerPrefs saves the flag. UI hidden. Won't appear again.",
+    condition: "Mine placed",
     dismiss: "",
     color: "#2ea043",
   },
@@ -132,7 +132,7 @@ function StepCard({ step, index, total, isActive, onClick }) {
                   fontWeight: 700,
                 }}
               >
-                БЛОКИРОВКА ВВОДА
+                INPUT LOCKED
               </span>
             )}
           </div>
@@ -169,7 +169,7 @@ function StepCard({ step, index, total, isActive, onClick }) {
                 color: "#8892aa",
               }}
             >
-              <span style={{ color: "#5b8dee" }}>▶ Условие начала: </span>
+              <span style={{ color: "#5b8dee" }}>▶ Start condition: </span>
               {step.condition}
             </div>
           )}
@@ -184,7 +184,7 @@ function StepCard({ step, index, total, isActive, onClick }) {
                 color: "#8892aa",
               }}
             >
-              <span style={{ color: "#56d99b" }}>→ Переход: </span>
+              <span style={{ color: "#56d99b" }}>→ Transition: </span>
               {step.dismiss}
             </div>
           )}
@@ -225,10 +225,10 @@ export default function App() {
               letterSpacing: 0.5,
             }}
           >
-            🗺️ OnboardingTutorial — Карта шагов
+            🗺️ OnboardingTutorial — Step Map
           </h1>
           <p style={{ color: "#6b7280", fontSize: 13, margin: "4px 0 0" }}>
-            Нажми на любой шаг, чтобы увидеть детали
+            Click any step to see details
           </p>
         </div>
 
@@ -260,7 +260,7 @@ export default function App() {
                 transition: "all 0.15s",
               }}
             >
-              {t === "pc" ? "🖥️  ПК" : "📱  Мобильный"}
+              {t === "pc" ? "🖥️  PC" : "📱  Mobile"}
             </button>
           ))}
         </div>
@@ -284,11 +284,11 @@ export default function App() {
               color: "#9aa3b8",
             }}
           >
-            {steps.length} шагов
+            {steps.length} steps
           </span>
           {tab === "mobile" && (
             <span style={{ color: "#c0392b", fontWeight: 600 }}>
-              🔒 Шаг 3 блокирует весь ввод игрока
+              🔒 Step 3 blocks all player input
             </span>
           )}
         </div>
@@ -321,23 +321,23 @@ export default function App() {
           }}
         >
           <div style={{ fontWeight: 700, color: "#9aa3b8", marginBottom: 4 }}>
-            Как работает блокировка ввода
+            How Input Blocking Works
           </div>
           <div>
-            <span style={{ color: "#e74c3c" }}>PlayerPickaxe</span> — проверяет{" "}
-            <code style={{ color: "#56d99b" }}>OnboardingTutorial.IsGameplayInputBlocked</code> в{" "}
-            <code>Update()</code> и <code>TryMineGridTarget()</code>
+            <span style={{ color: "#e74c3c" }}>PlayerPickaxe</span> — checks{" "}
+            <code style={{ color: "#56d99b" }}>OnboardingTutorial.IsGameplayInputBlocked</code> in{" "}
+            <code>Update()</code> and <code>TryMineGridTarget()</code>
           </div>
           <div>
-            <span style={{ color: "#e74c3c" }}>PlayerCharacterController</span> — та же проверка
-            перед движением и прыжком
+            <span style={{ color: "#e74c3c" }}>PlayerCharacterController</span> — same check
+            before movement and jumping
           </div>
           <div>
-            <span style={{ color: "#e74c3c" }}>ShopZone</span> — вызывает{" "}
+            <span style={{ color: "#e74c3c" }}>ShopZone</span> — calls{" "}
             <code style={{ color: "#56d99b" }}>OnboardingTutorial.IsShopInteractionBlocked()</code>
           </div>
           <div style={{ marginTop: 8, color: "#5b8dee" }}>
-            Флаг сбрасывается автоматически при переходе из шага MobCreateIsland.
+            Flag is reset automatically when transitioning from MobCreateIsland step.
           </div>
         </div>
       </div>

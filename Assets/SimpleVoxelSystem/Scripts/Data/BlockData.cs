@@ -9,10 +9,10 @@ namespace SimpleVoxelSystem.Data
     public class BlockData 
     {
         public BlockType type;
-        public int maxHealth; // Сколько ударов нужно
-        public int reward;    // Сколько монет/ресурсов дает
-        public int xpReward;  // Сколько опыта за добычу
-        public int requiredMiningLevel; // Какой уровень нужен для копки
-        public Color blockColor; // Цвет или ссылка на материал
+        public int maxHealth; // Hits required
+        public int reward;    // Coins/resources reward
+        public int xpReward;  // XP reward for mining
+        public int requiredMiningLevel; // Required level for mining
+        public Color blockColor; // Color or material reference
     }
 }

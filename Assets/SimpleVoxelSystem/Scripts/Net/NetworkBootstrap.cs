@@ -60,8 +60,8 @@ namespace SimpleVoxelSystem.Net
 
             if (networkManager.IsListening)
             {
-                // Дожидаемся фактического подключения к серверу (рукопожатие NGO),
-                // чтобы безопасно получить LocalClient.
+                // Wait for the actual server connection (NGO handshake),
+                // to safely get LocalClient.
                 if (networkManager.IsConnectedClient)
                 {
                     if (!offlineHiddenForNetwork &&
@@ -92,8 +92,8 @@ namespace SimpleVoxelSystem.Net
             autoStart = AutoStartMode.Disabled;
             yield break;
 #else
-            // Ждем 1 кадр, чтобы WellGenerator.Start() успел сгенерировать остров 
-            // и переместить оффлайн-игрока в правильную позицию спавна (в центр).
+            // Wait 1 frame for WellGenerator.Start() to generate the island 
+            // and move the offline player to the correct spawn position (center).
             yield return null;
 
             EnsureNetworkStack();
@@ -125,7 +125,7 @@ namespace SimpleVoxelSystem.Net
 
         void OnApplicationQuit()
         {
-            // Мы вызываем Shutdown только тут, чтобы не дергать его многократно при выходе.
+            // We call Shutdown only here to avoid calling it multiple times on exit.
             Shutdown();
         }
 
@@ -227,7 +227,7 @@ namespace SimpleVoxelSystem.Net
             if (networkManager.NetworkConfig.NetworkTransport != transport)
                 networkManager.NetworkConfig.NetworkTransport = transport;
 
-            // Устанавливаем уровень логов на Error, чтобы убрать спам из консоли
+            // Set log level to Error to remove spam from the console
             networkManager.LogLevel = LogLevel.Error;
 
             SubscribeNetworkCallbacks();

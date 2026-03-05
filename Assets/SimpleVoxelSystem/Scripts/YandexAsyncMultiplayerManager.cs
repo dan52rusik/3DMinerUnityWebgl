@@ -697,7 +697,7 @@ namespace SimpleVoxelSystem
         private string BuildGhostHeader(GhostAvatar ghost)
         {
             if (ghost == null)
-                return "Игрок";
+                return "Player";
 
             string id = !string.IsNullOrWhiteSpace(ghost.playerId) ? ghost.playerId : ghost.id;
             string shortId = ShortId(id);
@@ -705,7 +705,7 @@ namespace SimpleVoxelSystem
             if (!ghost.isGuest && !string.IsNullOrWhiteSpace(ghost.playerName) && !string.Equals(ghost.playerName, "Player", StringComparison.OrdinalIgnoreCase))
                 return $"{ghost.playerName} [{shortId}]";
 
-            return $"Новый игрок [{shortId}]";
+            return $"New player [{shortId}]";
         }
 
         private static bool IsGuestIdentity(string playerId, string playerName)

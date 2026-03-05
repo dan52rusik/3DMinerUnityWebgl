@@ -4,22 +4,22 @@ using System.Collections.Generic;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Управляет магазином шахт:
-    ///   — список доступных классов шахт (MineShopData)
-    ///   — покупка → создаёт MineInstance и запускает режим размещения
-    ///   — размещение → вызывает WellGenerator.GenerateMine()
-    ///   — продажа истощённой шахты → WellGenerator.DemolishMine() + деньги
+    /// Manages the mine shop:
+    ///   — list of available mine classes (MineShopData)
+    ///   — purchase → creates MineInstance and starts placement mode
+    ///   — placement → calls WellGenerator.GenerateMine()
+    ///   — selling depleted mine → WellGenerator.DemolishMine() + money
     ///
-    /// Подключите этот компонент к тому же GameObject, что и WellGenerator.
-    /// В инспекторе назначьте список availableMines.
+    /// Attach this component to the same GameObject as WellGenerator.
+    /// Assign the availableMines list in the inspector.
     /// </summary>
     public class MineMarket : MonoBehaviour
     {
-        [Header("Магазин шахт")]
+        [Header("Mine Shop")]
         public List<MineShopData> availableMines;
 
-        [Header("Режим размещения")]
-        [Tooltip("Полупрозрачный куб-превью (опциональный)")]
+        [Header("Placement Mode")]
+        [Tooltip("Semi-transparent preview cube (optional)")]
         public GameObject placementPreviewPrefab;
         public Color previewColor = new Color(0f, 1f, 0.5f, 0.3f);
         public bool verboseLogs = false;
@@ -27,14 +27,14 @@ namespace SimpleVoxelSystem
         // ─── Runtime ────────────────────────────────────────────────────────
         public bool IsPlacementMode { get; private set; }
 
-        [Header("Ссылки")]
+        [Header("References")]
         public WellGenerator WellGen { get; private set; }
-        private MineInstance    pendingMine;       // шахта, ожидающая размещения
-        private GameObject      previewInstance;   // призрак-превью
-        private MobileTouchControls mobileControls; // кэшируется в Awake
-        private bool            wasOnIslandPlacing; // для отслеживания перехода
+        private MineInstance    pendingMine;       // mine pending placement
+        private GameObject      previewInstance;   // preview ghost
+        private MobileTouchControls mobileControls; // cached in Awake
+        private bool            wasOnIslandPlacing; // for tracking transition
 
-        // Событие для UI
+        // Events for UI
         public event System.Action<MineInstance> OnMinePlaced;
         public event System.Action<MineInstance> OnMineSold;
         public event System.Action              OnPlacementCancelled;
@@ -54,8 +54,8 @@ namespace SimpleVoxelSystem
         }
 
         /// <summary>
-        /// Создаёт MineShopUI в сцене если его ещё нет.
-        /// Ищет существующий Canvas — добавляет туда; если Canvas нет — создаёт пустой GO.
+        /// Creates MineShopUI in the scene if it doesn't already exist.
+        /// Searches for an existing Canvas; adds it there; if no Canvas exists, creates a separate GO.
         /// </summary>
         void EnsureShopUI()
         {
@@ -68,17 +68,17 @@ namespace SimpleVoxelSystem
             else
             {
                 host = new GameObject("MineShopUI_Host");
-                if (verboseLogs) Debug.Log("[MineMarket] Canvas не найден, создан отдельный GO для MineShopUI.");
+                if (verboseLogs) Debug.Log("[MineMarket] Canvas not found, created separate GO for MineShopUI.");
             }
 
             var shopUI = host.AddComponent<MineShopUI>();
             shopUI.mineMarket = this;
-            if (verboseLogs) Debug.Log("[MineMarket] MineShopUI автоздан на «" + host.name + "».");
+            if (verboseLogs) Debug.Log("[MineMarket] MineShopUI auto-created on \"" + host.name + "\".");
         }
 
         /// <summary>
-        /// Создаёт дефолтный набор шахт в рантайме если список пуст или не назначен.
-        /// Позволяет обойтись без редакторского сетапа (Tools → Mine System → Setup Scene).
+        /// Creates a default set of mines at runtime if the list is empty or not assigned.
+        /// Allows bypassing the editor setup (Tools → Mine System → Setup Scene).
         /// </summary>
         void CreateDefaultMinesIfEmpty()
         {
@@ -86,10 +86,10 @@ namespace SimpleVoxelSystem
 
             availableMines = new List<MineShopData>();
 
-            // Бронзовая
+            // Bronze
             var bronze = ScriptableObject.CreateInstance<MineShopData>();
-            bronze.displayName  = "Бронзовая шахта";
-            bronze.description  = "Небольшая, преимущественно земля и камень.";
+            bronze.displayName  = "Bronze Mine";
+            bronze.description  = "Small, mostly dirt and stone.";
             bronze.labelColor   = new Color(0.80f, 0.50f, 0.20f);
             bronze.buyPrice     = EconomyTuning.BronzeMinePrice;
             bronze.sellBackRatio= EconomyTuning.BronzeMineSellBackRatio;
@@ -102,10 +102,10 @@ namespace SimpleVoxelSystem
             };
             availableMines.Add(bronze);
 
-            // Серебряная
+            // Silver
             var silver = ScriptableObject.CreateInstance<MineShopData>();
-            silver.displayName  = "Серебряная шахта";
-            silver.description  = "Средняя. Железо и немного золота в глубине.";
+            silver.displayName  = "Silver Mine";
+            silver.description  = "Medium. Iron and some gold at depth.";
             silver.labelColor   = new Color(0.70f, 0.70f, 0.80f);
             silver.buyPrice     = EconomyTuning.SilverMinePrice;
             silver.sellBackRatio= EconomyTuning.SilverMineSellBackRatio;
@@ -119,10 +119,10 @@ namespace SimpleVoxelSystem
             };
             availableMines.Add(silver);
 
-            // Золотая
+            // Gold
             var gold = ScriptableObject.CreateInstance<MineShopData>();
-            gold.displayName  = "Золотая шахта";
-            gold.description  = "Глубокая. Много железа и золота.";
+            gold.displayName  = "Gold Mine";
+            gold.description  = "Deep. Lots of iron and gold.";
             gold.labelColor   = new Color(1.00f, 0.84f, 0.10f);
             gold.buyPrice     = EconomyTuning.GoldMinePrice;
             gold.sellBackRatio= EconomyTuning.GoldMineSellBackRatio;
@@ -136,7 +136,7 @@ namespace SimpleVoxelSystem
             };
             availableMines.Add(gold);
 
-            if (verboseLogs) Debug.Log("[MineMarket] Созданы дефолтные шахты (3 вида).");
+            if (verboseLogs) Debug.Log("[MineMarket] Default mines created (3 types).");
         }
 
         void Update()
@@ -145,7 +145,7 @@ namespace SimpleVoxelSystem
             if (mobileControls == null)
                 mobileControls = MobileTouchControls.Instance;
 
-            // Если шахта не куплена — ничего не делаем
+            // If mine not purchased — do nothing
             if (pendingMine == null)
             {
                 if (IsPlacementMode) { IsPlacementMode = false; ShowPreview(false); }
@@ -156,11 +156,11 @@ namespace SimpleVoxelSystem
 
             IsPlacementMode = true;
 
-            // Но призрака показываем только на Острове
+            // But only show the ghost on the Island
             bool onIsland = WellGen != null && !WellGen.IsInLobbyMode;
             ShowPreview(onIsland);
 
-            // Показываем / скрываем мобильную кнопку PLACE
+            // Show / hide mobile PLACE button
             UpdatePlacementButton(onIsland);
             wasOnIslandPlacing = onIsland;
 
@@ -168,21 +168,21 @@ namespace SimpleVoxelSystem
             {
                 UpdatePlacementPreview();
 
-                // Левый клик = подтвердить размещение
+                // Left click = confirm placement
                 if (IsConfirmPressed())
                 {
                     ConfirmPlacement();
                 }
             }
 
-            // Отменить покупку (Escape)
+            // Cancel purchase (Escape)
             if (IsCancelPressed())
             {
                 CancelPlacement();
             }
         }
 
-        // Включает / выключает кнопку PLACE на мобильном
+        // Enables / disables PLACE button on mobile
         private void UpdatePlacementButton(bool visible)
         {
             mobileControls?.SetPlacementModeVisible(visible);
@@ -214,7 +214,7 @@ namespace SimpleVoxelSystem
                 }
                 else
                 {
-                    // Если не попали в остров — скрываем превью (чтобы не висело в воздухе)
+                    // If not hit the island — hide preview (so it doesn't hang in air)
                     SetPreviewVisibility(false);
                 }
             }
@@ -252,7 +252,7 @@ namespace SimpleVoxelSystem
         public bool TryBuyMine(MineShopData data)
         {
             if (data == null) return false;
-            if (GlobalEconomy.Money < data.buyPrice) { if (verboseLogs) Debug.Log("[MineMarket] Мало денег."); return false; }
+            if (GlobalEconomy.Money < data.buyPrice) { if (verboseLogs) Debug.Log("[MineMarket] Not enough money."); return false; }
 
             // Notify persistence BEFORE deducting so it can snapshot the pre-purchase
             // state and won't overwrite with a stale load arriving moments later.
@@ -260,7 +260,7 @@ namespace SimpleVoxelSystem
             if (persistence != null)
                 persistence.NotifyEconomyTouched();
 
-            // Синхронизация через сервер
+            // Server sync
             var networkAvatar = GetLocalNetworkAvatar();
             if (networkAvatar != null && networkAvatar.IsSpawned)
             {
@@ -275,7 +275,7 @@ namespace SimpleVoxelSystem
             pendingMine = new MineInstance(data, depth, 0);
             AsyncGameplayEvents.PublishBuyMine(data.displayName, depth, -data.buyPrice);
 
-            if (verboseLogs) Debug.Log($"[MineMarket] Куплена '{data.displayName}'. Режим установки ВКЛЮЧЕН.");
+            if (verboseLogs) Debug.Log($"[MineMarket] Bought '{data.displayName}'. Installation mode ON.");
             IsPlacementMode = true; 
             return true;
         }
@@ -311,7 +311,7 @@ namespace SimpleVoxelSystem
             int gx = Mathf.RoundToInt(localPos.x);
             int gz = Mathf.RoundToInt(localPos.z);
 
-            if (verboseLogs) Debug.Log($"[MineMarket] Установка шахты в сетку: {gx}, {gz}");
+            if (verboseLogs) Debug.Log($"[MineMarket] Installing mine to grid: {gx}, {gz}");
             WellGen.GenerateMineAt(pendingMine, gx, gz);
             AsyncGameplayEvents.PublishPlaceMine(pendingMine.shopData != null ? pendingMine.shopData.displayName : string.Empty, gx, gz);
             OnMinePlaced?.Invoke(pendingMine);
@@ -346,7 +346,7 @@ namespace SimpleVoxelSystem
                 foreach (var c in previewInstance.GetComponentsInChildren<Collider>()) c.enabled = false;
                 
                 MeshRenderer mr = previewInstance.GetComponent<MeshRenderer>();
-                // Пробуем несколько шейдеров, чтобы избежать розового цвета (Magenta)
+                // Try several shaders to avoid pink color (Magenta)
                 Shader s = Shader.Find("Universal Render Pipeline/Lit");
                 if (s == null) s = Shader.Find("Standard");
                 if (s == null) s = Shader.Find("Sprites/Default");
@@ -354,7 +354,7 @@ namespace SimpleVoxelSystem
                 Material mat = new Material(s);
                 mat.color = new Color(0, 1, 0.4f, 0.4f);
                 
-                // Настройка прозрачности для Standard/Lit
+                // Transparency setup for Standard/Lit
                 if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 3); // Transparent
                 mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);

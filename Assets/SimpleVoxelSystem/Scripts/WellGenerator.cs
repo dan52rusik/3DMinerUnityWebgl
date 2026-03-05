@@ -6,47 +6,47 @@ using SimpleVoxelSystem.Data;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Генератор острова. Заполняет VoxelIsland данными без отдельных блок-объектов.
-    /// Поддерживает два независимых мира: Лобби и Личный Остров.
+    /// Island generator. Fills VoxelIsland with data without separate block objects.
+    /// Supports two independent worlds: Lobby and Private Island.
     /// </summary>
         [RequireComponent(typeof(VoxelIsland))]
     public class WellGenerator : MonoBehaviour
     {
-        [Header("Размер колодца")]
+        [Header("Well Size")]
         public int wellWidth = 5;
         public int wellLength = 5;
         public int wellDepth = 10;
 
-        [Header("Паддинг земли вокруг колодца")]
+        [Header("Ground Padding around the Well")]
         public int padding = 5;
 
-        [Header("Лобби (спавн-зона)")] 
-        [Tooltip("Ширина (X) плоской лобби-платформы в блоках.")]
+        [Header("Lobby (spawn zone)")] 
+        [Tooltip("Width (X) of flat lobby platform in blocks.")]
         public int lobbyWidth  = 50;
-        [Tooltip("Длина (Z) плоской лобби-платформы в блоках.")]
+        [Tooltip("Length (Z) of flat lobby platform in blocks.")]
         public int lobbyLength = 50;
-        [Tooltip("Сколько слоёв можно построить НАД полом. Пол располагается на gridY=lobbyBuildAbove, выше — gridY=0..lobbyBuildAbove-1.")]
+        [Tooltip("How many layers can be built ABOVE the floor. Floor is at gridY=lobbyBuildAbove, above is gridY=0..lobbyBuildAbove-1.")]
         public int lobbyBuildAbove = 8;
 
         [Header("Lobby Streaming")]
-        [Tooltip("Лобби всегда остается в сцене. При переходе на остров скрывается только визуально по дистанции.")]
+        [Tooltip("Lobby always stays in the scene. When switching to the island, it is only visually hidden by distance.")]
         public bool keepLobbyAlwaysLoaded = true;
-        [Tooltip("Если игрок дальше этой дистанции от центра лобби, лобби можно не рендерить.")]
+        [Tooltip("If player is further than this distance from lobby center, lobby can stop rendering.")]
         public float lobbyRenderDistance = 100f;
-        [Tooltip("Выключать ли коллайдер лобби, когда лобби скрыто по дистанции.")]
+        [Tooltip("Whether to disable lobby collider when lobby is hidden by distance.")]
         public bool disableLobbyColliderWhenFar = true;
 
         [Header("Player Spawn")]
         public GameObject playerPrefab;
         public Transform playerToPlace;
         public float playerSpawnHeight = 1.05f;
-        [Tooltip("При установке шахты не телепортировать игрока в центр шахты.")]
+        [Tooltip("Don't teleport player to the center of the mine when placing it.")]
         public bool keepPlayerPositionWhenPlacingMine = true;
-        [Tooltip("При возврате из лобби на остров возвращать игрока в последнюю позицию на острове.")]
+        [Tooltip("When returning from lobby to island, return player to their last position on the island.")]
         public bool returnToLastIslandPosition = true;
 
         [Header("Fall Recovery")]
-        [Tooltip("Если игрок падает слишком низко, вернуть его в безопасную точку текущего мира.")]
+        [Tooltip("If player falls too low, return them to a safe point of the current world.")]
         public bool respawnOnFall = true;
         [Min(4f)] public float fallRespawnExtraDepth = 60f;
         [Min(0.1f)] public float fallRespawnCooldown = 1.0f;
@@ -71,7 +71,7 @@ namespace SimpleVoxelSystem
         public bool IsIslandGenerated => playerIsland != null;
 
         public event System.Action OnFlatPlotReady;
-        public event Action<bool> OnWorldSwitch; // true=лобби, false=шахта
+        public event Action<bool> OnWorldSwitch; // true=lobby, false=mine
 
         // ─── Internal State ──────────────────────────────────────────────────
         private VoxelIsland lobbyIsland;
@@ -222,7 +222,7 @@ namespace SimpleVoxelSystem
 
         public void GeneratePlotExtension(int offsetX, int offsetZ, int width, int length)
         {
-            Debug.Log($"[WellGenerator] Покупка участка +[{offsetX},{offsetZ}] size {width}x{length}");
+            Debug.Log($"[WellGenerator] Purchased plot +[{offsetX},{offsetZ}] size {width}x{length}");
         }
 
         // ─── Mining Proxy API ───────────────────────────────────────────────
@@ -407,14 +407,14 @@ namespace SimpleVoxelSystem
             float extra = Mathf.Max(4f, fallRespawnExtraDepth);
             if (ActiveIsland == null) return -100f;
 
-            // Если мы на острове, то разрешаем копать до самого дна острова (TotalY) + запас.
-            // На острове TotalY = 40 (8 билд + 32 копание), так что дно на -40.
+            // If we are on the island, we allow digging to the very bottom of the island (TotalY) + buffer.
+            // On the island TotalY = 40 (8 build + 32 digging), so the bottom is at -40.
             if (!IsInLobbyMode)
             {
                 return ActiveIsland.transform.position.y - ActiveIsland.TotalY - extra;
             }
 
-            // В лобби ограничиваем уровнем пола.
+            // In the lobby, we limit by the floor level.
             float lobbyFloorYWorld = (lobbyIsland != null) ? lobbyIsland.transform.position.y - LobbyFloorY : -LobbyFloorY;
             return lobbyFloorYWorld - extra;
         }

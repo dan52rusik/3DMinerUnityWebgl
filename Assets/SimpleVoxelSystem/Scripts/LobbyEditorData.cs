@@ -20,7 +20,7 @@ namespace SimpleVoxelSystem
     [System.Serializable]
     public class ChunkSaveData
     {
-        public int chunkX, chunkZ;   // координаты чанка в чанковом пространстве
+        public int chunkX, chunkZ;   // chunk coordinates in chunk space
         public List<LobbyVoxelEntry> entries = new List<LobbyVoxelEntry>();
     }
 

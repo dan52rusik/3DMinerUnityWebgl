@@ -6,13 +6,13 @@ using UnityEngine.InputSystem;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Простая флай-камера для теста сцены.
-    /// Управление:
-    /// - RMB зажать: вращение мышью
-    /// - WASD: движение
-    /// - Q/E: вниз/вверх
-    /// - Shift: ускорение
-    /// - Mouse Wheel: изменить базовую скорость
+    /// Simple fly-camera for scene testing.
+    /// Controls:
+    /// - Hold RMB: mouse rotation
+    /// - WASD: movement
+    /// - Q/E: down/up
+    /// - Shift: speed up
+    /// - Mouse Wheel: change base speed
     /// </summary>
     public class FlyCamera : MonoBehaviour
     {

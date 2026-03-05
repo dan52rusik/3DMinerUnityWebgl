@@ -42,14 +42,14 @@ namespace SimpleVoxelSystem
                 GlobalEconomy.Money -= playerStrengthCost;
                 playerPickaxe.playerStrength++;
                 
-                // Увеличиваем стоимость следующего апгрейда
+                // Increase the cost of the next upgrade
                 playerStrengthCost = Mathf.RoundToInt(playerStrengthCost * EconomyTuning.PlayerUpgradeCostMultiplier);
                 
-                Debug.Log($"Сила персонажа улучшена! Бонус: +{playerPickaxe.playerStrength}. Остаток денег: {GlobalEconomy.Money}");
+                Debug.Log($"Player strength upgraded! Bonus: +{playerPickaxe.playerStrength}. Remaining money: {GlobalEconomy.Money}");
             }
             else
             {
-                Debug.Log($"Не хватает денег для улучшения силы. Нужно {playerStrengthCost}");
+                Debug.Log($"Not enough money to upgrade strength. Need {playerStrengthCost}");
             }
         }
 
@@ -60,14 +60,14 @@ namespace SimpleVoxelSystem
                 GlobalEconomy.Money -= backpackCapacityCost;
                 playerPickaxe.maxBackpackCapacity += EconomyTuning.BackpackCapacityPerUpgrade;
                 
-                // Увеличиваем стоимость
+                // Increase the cost
                 backpackCapacityCost = Mathf.RoundToInt(backpackCapacityCost * EconomyTuning.PlayerUpgradeCostMultiplier);
                 
-                Debug.Log($"Рюкзак улучшен! Вместимость: {playerPickaxe.maxBackpackCapacity}. Остаток денег: {GlobalEconomy.Money}");
+                Debug.Log($"Backpack upgraded! Capacity: {playerPickaxe.maxBackpackCapacity}. Remaining money: {GlobalEconomy.Money}");
             }
             else
             {
-                Debug.Log($"Не хватает денег для улучшения рюкзака. Нужно {backpackCapacityCost}");
+                Debug.Log($"Not enough money to upgrade backpack. Need {backpackCapacityCost}");
             }
         }
     }

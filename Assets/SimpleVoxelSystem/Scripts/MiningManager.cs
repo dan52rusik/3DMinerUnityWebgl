@@ -6,8 +6,8 @@ using SimpleVoxelSystem.Data;
 namespace SimpleVoxelSystem
 {
     /// <summary>
-    /// Компонент для управления логикой добычи ресурсов и шахтами.
-    /// Отделен от WellGenerator для упрощения поддержки.
+    /// Component for managing resource mining logic and mines.
+    /// Separated from WellGenerator for easier maintenance.
     /// </summary>
     public class MiningManager : MonoBehaviour
     {
@@ -168,7 +168,7 @@ namespace SimpleVoxelSystem
                         if (clearedDepth >= maxDepth) 
                         {
                             Destroy(elev.gameObject);
-                            Debug.Log($"[MiningManager] Лифт разрушен: удалена последняя опора.");
+                            Debug.Log($"[MiningManager] Elevator destroyed: last support removed.");
                         }
                     }
                 }
