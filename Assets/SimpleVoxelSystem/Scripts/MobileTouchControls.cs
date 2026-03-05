@@ -271,6 +271,7 @@ namespace SimpleVoxelSystem
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 3000;
+            canvas.pixelPerfect = true;
             canvasGo.AddComponent<GraphicRaycaster>();
 
             var scaler = canvasGo.AddComponent<CanvasScaler>();

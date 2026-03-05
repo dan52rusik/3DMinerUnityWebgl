@@ -25,18 +25,19 @@ namespace SimpleVoxelSystem
             Canvas canvas = cGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 4000;
+            canvas.pixelPerfect = true;
             cGo.AddComponent<GraphicRaycaster>();
             
             CanvasScaler cs = cGo.AddComponent<CanvasScaler>();
             cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            cs.referenceResolution = new Vector2(1920, 1080);
-            cs.matchWidthOrHeight = 1f;
+            cs.referenceResolution = new Vector2(1600f, 900f);
+            cs.matchWidthOrHeight = 0.5f;
 
             overlay = RuntimeUIFactory.MakePanel("MinionShopOverlay", canvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000, 10000), new Color(0, 0, 0, 0.6f));
             shopPanel = RuntimeUIFactory.MakePanel("MinionShopPanel", canvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400, 300));
             RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.55f);
             
-            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "MINION SHOP", 20, TextAnchor.UpperCenter, new Vector2(0, -15));
+            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "MINION SHOP", 22, TextAnchor.UpperCenter, new Vector2(0, -15));
 
             Button closeBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseBtn", "X",
                 new Color(0.78f, 0.22f, 0.22f, 0.95f),
@@ -67,7 +68,7 @@ namespace SimpleVoxelSystem
             Image img = item.AddComponent<Image>();
             img.color = new Color(1, 1, 1, 0.05f);
 
-            RuntimeUIFactory.MakeLabel(item.transform, "Info", $"{name}\n{desc}\nPrice: ${price}", 13, TextAnchor.MiddleLeft, new Vector2(10, 0), new Vector2(-100, 0));
+            RuntimeUIFactory.MakeLabel(item.transform, "Info", $"{name}\n{desc}\nPrice: ${price}", 14, TextAnchor.MiddleLeft, new Vector2(10, 0), new Vector2(-100, 0));
             
             Button btn = RuntimeUIFactory.MakeBtn(item.transform, "BuyBtn", "BUY", pos: new Vector2(130, 0), size: new Vector2(80, 40));
             btn.onClick.AddListener(() => TryBuyMinion(price));

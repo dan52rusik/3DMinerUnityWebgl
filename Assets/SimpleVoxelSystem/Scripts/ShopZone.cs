@@ -44,6 +44,7 @@ namespace SimpleVoxelSystem
         private static readonly Color ColDelete = new Color(1.00f, 0.20f, 0.20f, 0.42f);
 
         // One prompt for the entire scene
+        private static Canvas     promptCanvas;
         private static GameObject promptPanel;
         private static Text       promptText;
         private static ShopZone   currentZone;
@@ -338,11 +339,32 @@ namespace SimpleVoxelSystem
         void EnsurePromptUI()
         {
             if (promptPanel != null && promptPanel.gameObject != null) return;
-            var canvas = FindFirstObjectByType<Canvas>();
-            if (canvas == null) return;
 
-            promptPanel = RuntimeUIFactory.MakePanel("ShopZonePrompt", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -150f), new Vector2(370f, 48f), new Color(0.05f, 0.05f, 0.12f, 0.90f));
-            promptText = RuntimeUIFactory.MakeLabel(promptPanel.transform, "Label", "Press [B] to open", 16, TextAnchor.MiddleCenter);
+            if (promptCanvas == null)
+            {
+                GameObject cGo = new GameObject("ShopPromptCanvas");
+                promptCanvas = cGo.AddComponent<Canvas>();
+                promptCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                promptCanvas.sortingOrder = 3900; // Below shop windows (4000), above base HUD.
+                promptCanvas.pixelPerfect = true;
+                cGo.AddComponent<GraphicRaycaster>();
+
+                CanvasScaler cs = cGo.AddComponent<CanvasScaler>();
+                cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                cs.referenceResolution = new Vector2(1600f, 900f);
+                cs.matchWidthOrHeight = 0.5f;
+            }
+
+            promptPanel = RuntimeUIFactory.MakePanel("ShopZonePrompt", promptCanvas.transform,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -155f), new Vector2(480f, 64f),
+                new Color(0.05f, 0.05f, 0.12f, 0.92f));
+            promptText = RuntimeUIFactory.MakeLabel(promptPanel.transform, "Label",
+                "Press [B] to open", 18, TextAnchor.MiddleCenter, bold: true);
+
+            Outline outline = promptText.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.75f);
+            outline.effectDistance = new Vector2(1.2f, -1.2f);
 
             promptPanel.SetActive(false);
         }

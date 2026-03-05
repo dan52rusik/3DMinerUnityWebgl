@@ -117,6 +117,7 @@ namespace SimpleVoxelSystem
                     rootCanvas = cGo.AddComponent<Canvas>();
                     rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
                     rootCanvas.sortingOrder = 4000; // Above mobile controls (3000)
+                    rootCanvas.pixelPerfect = true;
                     cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                     cGo.AddComponent<GraphicRaycaster>();
                 }

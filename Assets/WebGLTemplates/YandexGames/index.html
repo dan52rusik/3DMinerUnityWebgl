@@ -92,9 +92,12 @@
             return false;
         }());
 
+        // Keep WebGL output crisp on HiDPI displays while avoiding extreme GPU load.
+        const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+        config.devicePixelRatio = dpr;
+        config.matchWebGLToCanvasSize = true;
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
             container.className = "unity-mobile";
-            //config.devicePixelRatio = 1;
         }
 
         // The background image when loading the game. When building a build, the code changes depending on the project settings.

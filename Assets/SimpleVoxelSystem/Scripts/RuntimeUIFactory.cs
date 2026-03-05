@@ -242,6 +242,16 @@ namespace SimpleVoxelSystem
             if (rt == null)
                 return;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // In WebGL, additional per-panel localScale on top of CanvasScaler
+            // makes legacy UI.Text look blurry. Keep 1:1 panel scale there.
+            RuntimeUIPanelAutoScale webglScaler = panel.GetComponent<RuntimeUIPanelAutoScale>();
+            if (webglScaler != null)
+                Object.Destroy(webglScaler);
+            rt.localScale = Vector3.one;
+            return;
+#endif
+
             RuntimeUIPanelAutoScale scaler = panel.GetComponent<RuntimeUIPanelAutoScale>();
             if (scaler == null)
                 scaler = panel.AddComponent<RuntimeUIPanelAutoScale>();
@@ -302,6 +312,10 @@ namespace SimpleVoxelSystem
 
             float scale = Mathf.Min(allowedW / panelW, allowedH / panelH, 1f);
             scale = Mathf.Clamp(scale, minScale, 1f);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Very low panel scaling in WebGL makes legacy Text noticeably blurry.
+            scale = Mathf.Max(scale, 0.72f);
+#endif
 
             rt.localScale = new Vector3(scale, scale, 1f);
             lastScreenSize = new Vector2(Screen.width, Screen.height);

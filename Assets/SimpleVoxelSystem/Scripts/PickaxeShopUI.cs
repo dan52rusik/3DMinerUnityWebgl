@@ -100,12 +100,13 @@ namespace SimpleVoxelSystem
             rootCanvas = pGo.AddComponent<Canvas>();
             rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
             rootCanvas.sortingOrder = 4000;
+            rootCanvas.pixelPerfect = true;
             pGo.AddComponent<GraphicRaycaster>();
             
             CanvasScaler ps = pGo.AddComponent<CanvasScaler>();
             ps.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            ps.referenceResolution = new Vector2(1920, 1080);
-            ps.matchWidthOrHeight = 1f;
+            ps.referenceResolution = new Vector2(1600f, 900f);
+            ps.matchWidthOrHeight = 0.5f;
 
 
 
@@ -113,8 +114,8 @@ namespace SimpleVoxelSystem
             shopPanel = RuntimeUIFactory.MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(420f, 520f), ColPanel);
             RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.52f);
 
-            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "PICKAXE SHOP", 20, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
-            levelText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "LevelInfo", "Mining level: 1 (0 XP)", 14, TextAnchor.UpperCenter);
+            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "PICKAXE SHOP", 22, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
+            levelText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "LevelInfo", "Mining level: 1 (0 XP)", 16, TextAnchor.UpperCenter);
             levelText.rectTransform.anchoredPosition = new Vector2(0f, -45f);
 
             Button closeBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseBtn", "X",
@@ -172,7 +173,7 @@ namespace SimpleVoxelSystem
                     $"Power: {Mathf.Max(1, data.miningPower)}    Req Lv: {Mathf.Max(1, data.requiredMiningLevel)}    " +
                     $"Price: ${data.buyPrice}    [{BuildStateLabel(index)}]";
 
-                Text tInfo = RuntimeUIFactory.MakeLabel(item.transform, "Info", summary, 13, TextAnchor.UpperLeft, new Vector2(10f, 6f), new Vector2(-10f, -6f), color: ColText);
+                Text tInfo = RuntimeUIFactory.MakeLabel(item.transform, "Info", summary, 14, TextAnchor.UpperLeft, new Vector2(10f, 6f), new Vector2(-10f, -6f), color: ColText);
                 tInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
                 tInfo.verticalOverflow = VerticalWrapMode.Truncate;
 

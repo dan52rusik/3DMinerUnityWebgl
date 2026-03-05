@@ -121,9 +121,10 @@ namespace SimpleVoxelSystem
             rootCanvas = cGo.AddComponent<Canvas>();
             rootCanvas.renderMode   = RenderMode.ScreenSpaceOverlay;
             rootCanvas.sortingOrder = 4000;   // ABOVE mobile controls (3000), BELOW tutorial (7000)
+            rootCanvas.pixelPerfect = true;
             var cs = cGo.AddComponent<CanvasScaler>();
             cs.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            cs.referenceResolution = new Vector2(1920f, 1080f);
+            cs.referenceResolution = new Vector2(1600f, 900f);
             cs.matchWidthOrHeight  = 0.5f;
             cGo.AddComponent<GraphicRaycaster>();
 
@@ -146,11 +147,11 @@ namespace SimpleVoxelSystem
                 color: ColHUD);
 
             moneyText = RuntimeUIFactory.MakeLabel(hud.transform, "MoneyText",
-                "$ 0  |  Lv. 1", 16, TextAnchor.MiddleLeft,
+                "$ 0  |  Lv. 1", 18, TextAnchor.MiddleLeft,
                 new Vector2(10, 32), new Vector2(-10, 0));
 
             statusLabel = RuntimeUIFactory.MakeLabel(hud.transform, "StatusLabel",
-                "", 13, TextAnchor.MiddleLeft,
+                "", 14, TextAnchor.MiddleLeft,
                 new Vector2(10, 0), new Vector2(-10, -34));
             statusLabel.color = new Color(1f, 1f, 0.7f, 1f); // Soft beige
 
@@ -228,7 +229,7 @@ namespace SimpleVoxelSystem
 
             // Title
             RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopTitle",
-                "MINE SHOP", 20, TextAnchor.UpperCenter,
+                "MINE SHOP", 22, TextAnchor.UpperCenter,
                 new Vector2(0, -12), new Vector2(0, 0), bold: true);
 
             Button closeShopBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseShopBtn", "X",
@@ -239,7 +240,7 @@ namespace SimpleVoxelSystem
 
             // Subtitle with money
             panelMoneyText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopMoney",
-                "Balance: $0  |  [B]/[X] close", 12, TextAnchor.UpperCenter,
+                "Balance: $0  |  [B]/[X] close", 14, TextAnchor.UpperCenter,
                 new Vector2(0, -42), new Vector2(0, -22), bold: false);
 
             // Horizontal Separator
@@ -318,23 +319,23 @@ namespace SimpleVoxelSystem
 
             // Name
             RuntimeUIFactory.MakeLabel(go.transform, "Name",
-                $"<b>{data.displayName}</b>", 15, TextAnchor.UpperLeft,
+                $"<b>{data.displayName}</b>", 17, TextAnchor.UpperLeft,
                 new Vector2(14, -6), new Vector2(-12, -6));
 
             // Depth
             RuntimeUIFactory.MakeLabel(go.transform, "Depth",
-                $"🕳 Depth: {data.depthMin}-{data.depthMax} layers.", 12, TextAnchor.UpperLeft,
+                $"🕳 Depth: {data.depthMin}-{data.depthMax} layers.", 13, TextAnchor.UpperLeft,
                 new Vector2(14, -28), new Vector2(-12, -28), color: new Color(0.75f, 0.85f, 1f, 1f));
 
             // Composition
             string comp = BuildCompositionLine(data);
             RuntimeUIFactory.MakeLabel(go.transform, "Comp",
-                comp, 11, TextAnchor.UpperLeft,
+                comp, 12, TextAnchor.UpperLeft,
                 new Vector2(14, -46), new Vector2(-12, -46), color: new Color(0.8f, 0.8f, 0.8f, 1f));
 
             // Price on right
             Text priceT = RuntimeUIFactory.MakeLabel(go.transform, "Price",
-                $"$ {data.buyPrice}", 15, TextAnchor.MiddleRight,
+                $"$ {data.buyPrice}", 17, TextAnchor.MiddleRight,
                 new Vector2(0, 0), new Vector2(-12, 0), bold: true, color: new Color(1f, 0.88f, 0.25f, 1f));
 
             MineShopData cap = data;

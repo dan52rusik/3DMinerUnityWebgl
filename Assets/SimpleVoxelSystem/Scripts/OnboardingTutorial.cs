@@ -324,7 +324,8 @@ namespace SimpleVoxelSystem
                     ShowCard("UPGRADE EQUIPMENT",
                         "Want to dig faster and reach rare ores?\n" +
                         "Go to the pickaxe shop and upgrade your gear.",
-                        tapHint: false);
+                        tapHint: false,
+                        cardY: 300f);
                     SetDim(0f);
                     SetHighlight(null);
                     SetBeam(true, ShopZoneType.Pickaxe);
@@ -336,7 +337,8 @@ namespace SimpleVoxelSystem
                         "If you want to automate your mining —\n" +
                         "come here and hire your first minion worker!\n\n" +
                         "Press any key / tap to close.",
-                        tapHint: true);
+                        tapHint: true,
+                        cardY: 290f);
                     SetDim(0f);
                     SetHighlight(null);
                     SetBeam(true, ShopZoneType.Minion);
@@ -472,10 +474,20 @@ namespace SimpleVoxelSystem
         // UI helpers
         // ═════════════════════════════════════════════════════════════════════
 
-        void ShowCard(string title, string body, bool tapHint)
+        void ShowCard(string title, string body, bool tapHint, float cardY = 220f)
         {
             if (canvas != null) canvas.enabled = true;
-            if (card != null)   card.SetActive(true);
+            if (card != null)
+            {
+                var rt = card.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    Vector2 p = rt.anchoredPosition;
+                    p.y = cardY;
+                    rt.anchoredPosition = p;
+                }
+                card.SetActive(true);
+            }
             if (cardTitle != null)   cardTitle.text   = title;
             if (cardBody != null)    cardBody.text     = body;
             if (cardTapHint != null)
