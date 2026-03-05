@@ -320,13 +320,26 @@ namespace SimpleVoxelSystem
                 if (v && currentZone != null && !anyShopOpen)
                 {
                     string keyStr = currentZone.GetOpenKeyDisplay().ToString();
+                    string mobileAction = currentZone.GetMobileActionLabel();
                     string shopName = "Mine Shop";
                     if (currentZone.zoneType == ShopZoneType.Pickaxe) shopName = "Pickaxe Shop";
                     else if (currentZone.zoneType == ShopZoneType.Minion) shopName = "Minion Shop";
                     else if (currentZone.zoneType == ShopZoneType.Sell) shopName = "Sell Point";
-                    promptText.text = mobileActive
-                        ? $"Tap <color=#FFD700><b>[ACT]</b></color> to open {shopName}"
-                        : $"Press <color=#FFD700><b>[{keyStr}]</b></color> to open {shopName}";
+
+                    string mobilePrompt;
+                    string desktopPrompt;
+                    if (currentZone.zoneType == ShopZoneType.Sell)
+                    {
+                        mobilePrompt = $"Tap <color=#FFD700><b>[{mobileAction}]</b></color> to sell resources";
+                        desktopPrompt = $"Press <color=#FFD700><b>[{keyStr}]</b></color> to sell resources";
+                    }
+                    else
+                    {
+                        mobilePrompt = $"Tap <color=#FFD700><b>[{mobileAction}]</b></color> to open {shopName}";
+                        desktopPrompt = $"Press <color=#FFD700><b>[{keyStr}]</b></color> to open {shopName}";
+                    }
+
+                    promptText.text = mobileActive ? mobilePrompt : desktopPrompt;
                     promptPanel.SetActive(true);
                 }
                 else
