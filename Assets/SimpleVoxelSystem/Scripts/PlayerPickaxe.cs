@@ -74,6 +74,9 @@ namespace SimpleVoxelSystem
             if (OnboardingTutorial.IsGameplayInputBlocked)
                 return;
 
+            if (GameUIWindow.IsAnyWindowActive())
+                return;
+
             if (!IsMinePressedDown())
                 return;
 
@@ -90,7 +93,7 @@ namespace SimpleVoxelSystem
 
         public bool TryMineGridTarget(int gx, int gy, int gz, VoxelIsland islandOverride = null)
         {
-            if (OnboardingTutorial.IsGameplayInputBlocked)
+            if (OnboardingTutorial.IsGameplayInputBlocked || GameUIWindow.IsAnyWindowActive())
                 return false;
 
             if (currentBackpackLoad >= maxBackpackCapacity)

@@ -142,7 +142,11 @@ namespace SimpleVoxelSystem
 
         public void RefreshUI(bool isEditMode, EditorToolMode toolMode, BlockType selectedBlockType)
         {
-            if (editorPanel != null) editorPanel.SetActive(isEditMode);
+            if (editorPanel != null) 
+            {
+                editorPanel.SetActive(isEditMode);
+                GameUIWindow.SetWindowActive(editorPanel, isEditMode);
+            }
             if (toggleBtn != null)
             {
                 var img = toggleBtn.GetComponent<Image>();
@@ -184,6 +188,8 @@ namespace SimpleVoxelSystem
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(320f, 260f),
                 new Color(0.08f, 0.08f, 0.14f, 0.97f));
+            
+            GameUIWindow.SetWindowActive(dialogPanel, true);
 
             string title = "MINE SHOP";
             if (type == ShopZoneType.Pickaxe) title = "PICKAXE SHOP";
@@ -220,7 +226,12 @@ namespace SimpleVoxelSystem
 
         public void CloseDialog()
         {
-            if (dialogPanel != null) { GameObject.Destroy(dialogPanel); dialogPanel = null; }
+            if (dialogPanel != null) 
+            { 
+                GameUIWindow.SetWindowActive(dialogPanel, false);
+                GameObject.Destroy(dialogPanel); 
+                dialogPanel = null; 
+            }
         }
     }
 

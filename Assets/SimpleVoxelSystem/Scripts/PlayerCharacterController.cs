@@ -350,7 +350,7 @@ namespace SimpleVoxelSystem
 
         Vector2 ReadMoveInput()
         {
-            if (OnboardingTutorial.IsGameplayInputBlocked)
+            if (OnboardingTutorial.IsGameplayInputBlocked || GameUIWindow.IsAnyWindowActive())
                 return Vector2.zero;
 
             if (mobileControls != null && mobileControls.IsActive)
@@ -376,6 +376,9 @@ namespace SimpleVoxelSystem
 
         Vector2 ReadLookDelta()
         {
+            if (GameUIWindow.IsAnyWindowActive())
+                return Vector2.zero;
+
             if (mobileControls != null && mobileControls.IsActive)
                 return mobileControls.LookDelta;
 
@@ -407,7 +410,7 @@ namespace SimpleVoxelSystem
 
         bool WasJumpPressed()
         {
-            if (OnboardingTutorial.IsGameplayInputBlocked)
+            if (OnboardingTutorial.IsGameplayInputBlocked || GameUIWindow.IsAnyWindowActive())
                 return false;
 
             if (mobileControls != null && mobileControls.IsActive)

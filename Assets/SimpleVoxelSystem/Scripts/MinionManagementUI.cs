@@ -104,7 +104,10 @@ namespace SimpleVoxelSystem
                 color: new Color(0.78f, 0.22f, 0.22f, 0.95f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
-            closeBtn.onClick.AddListener(() => panel.SetActive(false));
+            closeBtn.onClick.AddListener(() => {
+                panel.SetActive(false);
+                GameUIWindow.SetWindowActive(panel, false);
+            });
 
             panel.SetActive(false);
 
@@ -122,10 +125,16 @@ namespace SimpleVoxelSystem
                 color: new Color(0.78f, 0.22f, 0.22f, 0.95f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
-            closeOverviewTopBtn.onClick.AddListener(() => overviewPanel.SetActive(false));
+            closeOverviewTopBtn.onClick.AddListener(() => {
+                overviewPanel.SetActive(false);
+                GameUIWindow.SetWindowActive(overviewPanel, false);
+            });
             
             Button closeOverviewBtn = RuntimeUIFactory.MakeBtn(overviewPanel.transform, "CloseOverview", "CLOSE", pos: new Vector2(0, -200), size: new Vector2(100, 40));
-            closeOverviewBtn.onClick.AddListener(() => overviewPanel.SetActive(false));
+            closeOverviewBtn.onClick.AddListener(() => {
+                overviewPanel.SetActive(false);
+                GameUIWindow.SetWindowActive(overviewPanel, false);
+            });
             
             overviewPanel.SetActive(false);
         }
@@ -177,14 +186,30 @@ namespace SimpleVoxelSystem
         {
             if (isOverviewMode)
             {
-                panel.SetActive(false);
-                overviewPanel.SetActive(true);
+                if (panel != null) 
+                {
+                    panel.SetActive(false);
+                    GameUIWindow.SetWindowActive(panel, false);
+                }
+                if (overviewPanel != null)
+                {
+                    overviewPanel.SetActive(true);
+                    GameUIWindow.SetWindowActive(overviewPanel, true);
+                }
                 RefreshOverviewList();
             }
             else
             {
-                overviewPanel.SetActive(false);
-                panel.SetActive(true);
+                if (overviewPanel != null)
+                {
+                    overviewPanel.SetActive(false);
+                    GameUIWindow.SetWindowActive(overviewPanel, false);
+                }
+                if (panel != null)
+                {
+                    panel.SetActive(true);
+                    GameUIWindow.SetWindowActive(panel, true);
+                }
             }
         }
 

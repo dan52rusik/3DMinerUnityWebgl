@@ -204,7 +204,11 @@ namespace SimpleVoxelSystem
             EnsureUIBuilt();
             if (visible && buttonsDirty)
                 BuildButtons();
-            if (shopPanel != null) shopPanel.SetActive(visible);
+            if (shopPanel != null)
+            {
+                shopPanel.SetActive(visible);
+                GameUIWindow.SetWindowActive(shopPanel, visible);
+            }
             if (overlay != null) overlay.SetActive(visible);
         }
 

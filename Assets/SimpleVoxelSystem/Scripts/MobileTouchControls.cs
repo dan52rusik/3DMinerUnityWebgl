@@ -289,15 +289,17 @@ namespace SimpleVoxelSystem
         {
             RectTransform area = CreateRect("MoveArea", parent, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 28f), new Vector2(300f, 300f));
             var areaImage = area.gameObject.AddComponent<Image>();
-            areaImage.color = new Color(0f, 0f, 0f, 0.08f);
+            areaImage.color = new Color(0f, 0f, 0f, 0.05f); // Substrate area
 
             RectTransform bg = CreateRect("MoveBG", area, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-90f, -90f), new Vector2(180f, 180f));
             var bgImg = bg.gameObject.AddComponent<Image>();
-            bgImg.color = new Color(1f, 1f, 1f, 0.18f);
+            bgImg.color = new Color(1f, 1f, 1f, 0.12f);
+            bg.gameObject.AddComponent<Outline>().effectColor = new Color(1, 1, 1, 0.2f);
 
             RectTransform knob = CreateRect("MoveKnob", bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-44f, -44f), new Vector2(88f, 88f));
             var knobImg = knob.gameObject.AddComponent<Image>();
-            knobImg.color = new Color(1f, 1f, 1f, 0.5f);
+            knobImg.color = new Color(1f, 1f, 1f, 0.45f);
+            knob.gameObject.AddComponent<Outline>().effectColor = new Color(1, 1, 1, 0.5f);
 
             joystick = area.gameObject.AddComponent<TouchJoystick>();
             joystick.background = bg;
@@ -316,23 +318,25 @@ namespace SimpleVoxelSystem
 
         private void BuildButtons(Transform parent)
         {
-            mineButton = CreateTapButton(parent, "MineButton", "MINE", new Vector2(1f, 0f), new Vector2(24f, 26f), new Vector2(128f, 112f), new Color(0.95f, 0.45f, 0.2f, 0.88f), 26);
-            jumpButton = CreateTapButton(parent, "JumpButton", "JUMP", new Vector2(1f, 0f), new Vector2(24f, 148f), new Vector2(108f, 92f), new Color(0.2f, 0.62f, 0.95f, 0.86f), 22);
-            interactButton = CreateTapButton(parent, "InteractButton", DefaultInteractLabel, new Vector2(1f, 0f), new Vector2(146f, 148f), new Vector2(118f, 92f), new Color(0.98f, 0.78f, 0.18f, 0.9f), 24);
-            runButton = CreateHoldButton(parent, "RunButton", "RUN", new Vector2(1f, 0f), new Vector2(146f, 26f), new Vector2(108f, 92f), new Color(0.2f, 0.82f, 0.42f, 0.82f), 22);
-            removeButton = CreateHoldButton(parent, "RemoveButton", "DEL", new Vector2(1f, 1f), new Vector2(24f, 182f), new Vector2(92f, 72f), new Color(0.95f, 0.2f, 0.2f, 0.82f), 20);
-            zoomInButton = CreateHoldButton(parent, "ZoomInButton", "+", new Vector2(1f, 1f), new Vector2(24f, 102f), new Vector2(72f, 60f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
-            zoomOutButton = CreateHoldButton(parent, "ZoomOutButton", "-", new Vector2(1f, 1f), new Vector2(24f, 36f), new Vector2(72f, 60f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
-            minionMenuButton = CreateTapButton(parent, "MinionsButton", "MINIONS", new Vector2(0f, 1f), new Vector2(24f, 24f), new Vector2(160f, 62f), new Color(0.22f, 0.34f, 0.56f, 0.88f), 18);
+            // --- ACTION CLUSTER (Bottom Right) ---
+            // Column 1 (Closest to right edge)
+            mineButton       = CreateTapButton(parent, "MineButton", "MINE", new Vector2(1f, 0f), new Vector2(30f,  30f), new Vector2(160f, 160f), new Color(0.95f, 0.45f, 0.2f, 0.88f), 28);
+            jumpButton       = CreateTapButton(parent, "JumpButton", "JUMP", new Vector2(1f, 0f), new Vector2(30f, 210f), new Vector2(110f, 110f), new Color(0.2f, 0.62f, 0.95f, 0.86f), 22);
+            
+            // Column 2 (Inner column)
+            runButton        = CreateHoldButton(parent, "RunButton", "RUN",  new Vector2(1f, 0f), new Vector2(210f, 30f), new Vector2(110f, 110f), new Color(0.2f, 0.82f, 0.42f, 0.82f), 22);
+            interactButton   = CreateTapButton(parent, "InteractButton", DefaultInteractLabel, new Vector2(1f, 0f), new Vector2(210f, 160f), new Vector2(110f, 110f), new Color(0.98f, 0.78f, 0.18f, 0.9f), 22);
+            minionMenuButton = CreateTapButton(parent, "MinionsButton", "MINIONS", new Vector2(1f, 0f), new Vector2(210f, 290f), new Vector2(110f, 110f), new Color(0.22f, 0.34f, 0.56f, 0.88f), 18);
 
-            // ── PLACE button — shown only during mine placement mode ──────────
-            // Centered at the bottom of the screen, large and hard to miss.
-            placeMineButton = CreateTapButton(parent, "PlaceMineButton", "✔  PLACE HERE",
-                new Vector2(0.5f, 0f),          // anchor: bottom center
-                new Vector2(0f, 28f),            // offset from anchor edge
-                new Vector2(340f, 96f),          // size
-                new Color(0.1f, 0.75f, 0.2f, 0.95f), 28);
-            placeMineButton.gameObject.SetActive(false); // hidden by default
+            // --- UTILITY CLUSTER (Top Right) ---
+            removeButton     = CreateHoldButton(parent, "RemoveButton", "DEL", new Vector2(1f, 1f), new Vector2(30f, 20f),  new Vector2(80f, 80f), new Color(0.95f, 0.2f, 0.2f, 0.82f), 20);
+            zoomInButton     = CreateHoldButton(parent, "ZoomInButton", "+",   new Vector2(1f, 1f), new Vector2(30f, 110f), new Vector2(80f, 80f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
+            zoomOutButton    = CreateHoldButton(parent, "ZoomOutButton", "-",  new Vector2(1f, 1f), new Vector2(30f, 200f), new Vector2(80f, 80f), new Color(0.75f, 0.75f, 0.9f, 0.82f), 30);
+
+            // --- SPECIAL (Bottom Center) ---
+            placeMineButton  = CreateTapButton(parent, "PlaceMineButton", "✔  PLACE HERE",
+                new Vector2(0.5f, 0f), new Vector2(0f, 28f), new Vector2(380f, 110f), new Color(0.1f, 0.75f, 0.2f, 0.95f), 30);
+            placeMineButton.gameObject.SetActive(false);
 
             if (interactButton != null)
                 interactButtonLabel = interactButton.GetComponentInChildren<Text>();
@@ -366,6 +370,12 @@ namespace SimpleVoxelSystem
             Vector2 pos = new Vector2(anchor.x == 1f ? -anchoredFromEdge.x : anchoredFromEdge.x, anchor.y == 1f ? -anchoredFromEdge.y : anchoredFromEdge.y);
             GameObject go = RuntimeUIFactory.MakePanel(name, parent, anchor, anchor, pos, size, color);
             RuntimeUIFactory.MakeLabel(go.transform, "Label", text, fontSize, TextAnchor.MiddleCenter, color: Color.white);
+            
+            // Premium look
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0, 0, 0, 0.35f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            
             return go.AddComponent<TouchTapButton>();
         }
 
@@ -374,6 +384,12 @@ namespace SimpleVoxelSystem
             Vector2 pos = new Vector2(anchor.x == 1f ? -anchoredFromEdge.x : anchoredFromEdge.x, anchor.y == 1f ? -anchoredFromEdge.y : anchoredFromEdge.y);
             GameObject go = RuntimeUIFactory.MakePanel(name, parent, anchor, anchor, pos, size, color);
             RuntimeUIFactory.MakeLabel(go.transform, "Label", text, fontSize, TextAnchor.MiddleCenter, color: Color.white);
+            
+            // Premium look
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0, 0, 0, 0.35f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
             return go.AddComponent<TouchHoldButton>();
         }
 

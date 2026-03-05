@@ -489,7 +489,11 @@ namespace SimpleVoxelSystem
 
         public void SetPanelVisible(bool v)
         {
-            if (shopPanel != null)  shopPanel.SetActive(v);
+            if (shopPanel != null) 
+            {
+                shopPanel.SetActive(v);
+                GameUIWindow.SetWindowActive(shopPanel, v);
+            }
             if (_overlay  != null)  _overlay.SetActive(v);
             // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ ÑÑ‚Ñ€Ð¾ÐºÑƒ Ð±Ð°Ð»Ð°Ð½ÑÐ° Ð² Ð¿Ð°Ð½ÐµÐ»Ð¸
             if (v) UpdatePanelMoneyLabel();

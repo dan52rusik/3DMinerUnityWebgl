@@ -147,7 +147,11 @@ namespace SimpleVoxelSystem
         public void SetPanelVisible(bool v)
         {
             if (shopPanel == null && v) BuildUI();
-            if (shopPanel != null) shopPanel.SetActive(v);
+            if (shopPanel != null) 
+            {
+                shopPanel.SetActive(v);
+                GameUIWindow.SetWindowActive(shopPanel, v);
+            }
             if (overlay != null) overlay.SetActive(v);
         }
     }

@@ -47,6 +47,10 @@ namespace SimpleVoxelSystem
             {
                 leftPanel.SetActive(shouldShow);
                 rightPanel.SetActive(shouldShow);
+                
+                // Track as UI windows
+                GameUIWindow.SetWindowActive(leftPanel, shouldShow);
+                GameUIWindow.SetWindowActive(rightPanel, shouldShow);
             }
 
             if (shouldShow)
