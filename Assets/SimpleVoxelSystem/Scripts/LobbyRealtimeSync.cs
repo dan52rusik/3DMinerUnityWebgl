@@ -26,8 +26,7 @@ namespace SimpleVoxelSystem
         public bool UseAuthoritativeServerState => enableSync && !string.IsNullOrWhiteSpace(ResolveEndpoint());
 
         private const string EndpointPrefKey = "svs_sync_endpoint";
-        private const string ClientIdPrefKey = "svs_sync_client_id";
-        private const string ClientNamePrefKey = "svs_sync_client_name";
+        // ClientIdPrefKey/ClientNamePrefKey оставлены для миграции данных через PlayerIdentity
 
         private LobbyEditor lobbyEditor;
         private WellGenerator wellGenerator;
@@ -157,7 +156,7 @@ namespace SimpleVoxelSystem
             EnqueueOp(new OpPacket
             {
                 opId = NewOpId(),
-                from = clientId,
+                from = PlayerIdentity.PlayerId, // FIX #7: единый ID
                 kind = "place",
                 x = pos.x,
                 y = pos.y,
@@ -175,7 +174,7 @@ namespace SimpleVoxelSystem
             EnqueueOp(new OpPacket
             {
                 opId = NewOpId(),
-                from = clientId,
+                from = PlayerIdentity.PlayerId, // FIX #7: единый ID
                 kind = "remove",
                 x = pos.x,
                 y = pos.y,
@@ -467,8 +466,8 @@ namespace SimpleVoxelSystem
                 if (op == null || string.IsNullOrWhiteSpace(op.opId))
                     continue;
 
-                // FIX #12: сначала фильтруем свои операции, потом добавляем в HashSet
-                if (!string.IsNullOrWhiteSpace(op.from) && op.from == clientId)
+                // FIX #12 + #7: фильтруем свои операции по единому PlayerIdentity.PlayerId
+                if (!string.IsNullOrWhiteSpace(op.from) && op.from == PlayerIdentity.PlayerId)
                     continue;
 
                 // FIX #4: ограничиваем размер seenOpIds — удаляем старые записи при превышении лимита
@@ -504,7 +503,7 @@ namespace SimpleVoxelSystem
                 PlayerStatePacket p = players[i];
                 if (p == null || string.IsNullOrWhiteSpace(p.clientId))
                     continue;
-                if (p.clientId == clientId)
+                if (p.clientId == PlayerIdentity.PlayerId) // FIX #7: единый ID
                     continue;
                 if (!p.inLobby || !localInLobby)
                     continue;

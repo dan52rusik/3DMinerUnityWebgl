@@ -166,12 +166,7 @@ namespace SimpleVoxelSystem
         private static extern void LobbySync_RequestIdentity(string gameObjectName, string callbackMethod);
 #endif
 
-        private const string AsyncPlayerIdPrefKey = "svs_async_player_id";
-        private const string AsyncPlayerNamePrefKey = "svs_async_player_name";
-
-        private string localPlayerId = string.Empty;
-        private string localPlayerName = "Player";
-        private bool localIsGuest = true;
+        // AsyncPlayerIdPrefKey/AsyncPlayerNamePrefKey оставлены только для миграции старых сохранений через PlayerIdentity
         private bool identityRequested;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -189,7 +184,7 @@ namespace SimpleVoxelSystem
         {
             YG2.onGetSDKData += OnSdkReady;
             AsyncGameplayEvents.OnEvent += OnLocalGameplayEvent;
-            EnsureLocalIdentity();
+            // FIX #7: идентификация управляется через PlayerIdentity
             RequestIdentityFromWeb();
         }
 
@@ -729,21 +724,6 @@ namespace SimpleVoxelSystem
             return id.Substring(0, 4) + "..." + id.Substring(id.Length - 4);
         }
 
-        private void EnsureLocalIdentity()
-        {
-            localPlayerId = PlayerPrefs.GetString(AsyncPlayerIdPrefKey, string.Empty);
-            localPlayerName = PlayerPrefs.GetString(AsyncPlayerNamePrefKey, "Player");
-
-            if (string.IsNullOrWhiteSpace(localPlayerId))
-            {
-                localPlayerId = "guest_" + Guid.NewGuid().ToString("N");
-                localPlayerName = "Player";
-                SaveLocalIdentityPrefs();
-            }
-
-            localIsGuest = IsGuestIdentity(localPlayerId, localPlayerName);
-        }
-
         private void RequestIdentityFromWeb()
         {
             if (identityRequested)
@@ -757,18 +737,9 @@ namespace SimpleVoxelSystem
             }
             catch
             {
-                // fallback identity from prefs/guest remains active
+                // fallback: PlayerIdentity использует гостевой ID автоматически
             }
 #endif
-        }
-
-        private void SaveLocalIdentityPrefs()
-        {
-            if (!string.IsNullOrWhiteSpace(localPlayerId))
-                PlayerPrefs.SetString(AsyncPlayerIdPrefKey, localPlayerId);
-            if (!string.IsNullOrWhiteSpace(localPlayerName))
-                PlayerPrefs.SetString(AsyncPlayerNamePrefKey, localPlayerName);
-            PlayerPrefs.Save();
         }
     }
 }
