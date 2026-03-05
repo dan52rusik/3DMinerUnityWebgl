@@ -116,6 +116,7 @@ namespace SimpleVoxelSystem
                     var cGo = new GameObject("LobbyEditorCanvas");
                     rootCanvas = cGo.AddComponent<Canvas>();
                     rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                    rootCanvas.sortingOrder = 4000; // Above mobile controls (3000)
                     cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                     cGo.AddComponent<GraphicRaycaster>();
                 }

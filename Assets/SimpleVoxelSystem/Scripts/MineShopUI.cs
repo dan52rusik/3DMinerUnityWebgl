@@ -120,7 +120,7 @@ namespace SimpleVoxelSystem
             DontDestroyOnLoad(cGo);
             rootCanvas = cGo.AddComponent<Canvas>();
             rootCanvas.renderMode   = RenderMode.ScreenSpaceOverlay;
-            rootCanvas.sortingOrder = 100;   // below tutorial (7000), above scene
+            rootCanvas.sortingOrder = 4000;   // ABOVE mobile controls (3000), BELOW tutorial (7000)
             var cs = cGo.AddComponent<CanvasScaler>();
             cs.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             cs.referenceResolution = new Vector2(1920f, 1080f);

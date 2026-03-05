@@ -60,8 +60,17 @@ namespace SimpleVoxelSystem
 
         private void CreateUI()
         {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas == null) return;
+            // Create dedicated UpgradeHUDCanvas at layer 4000
+            GameObject cGo = new GameObject("UpgradeHUDCanvas");
+            Canvas canvas = cGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 4000;
+            cGo.AddComponent<GraphicRaycaster>();
+            
+            CanvasScaler cs = cGo.AddComponent<CanvasScaler>();
+            cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            cs.referenceResolution = new Vector2(1920, 1080);
+            cs.matchWidthOrHeight = 1f;
 
             if (playerPickaxe == null)
                 playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();

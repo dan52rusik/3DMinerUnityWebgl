@@ -66,8 +66,17 @@ namespace SimpleVoxelSystem
 
         private void BuildUI()
         {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas == null) return;
+            // Create dedicated MinionManagementCanvas at layer 4000
+            GameObject cGo = new GameObject("MinionManagementCanvas");
+            Canvas canvas = cGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 4000;
+            cGo.AddComponent<GraphicRaycaster>();
+            
+            CanvasScaler cs = cGo.AddComponent<CanvasScaler>();
+            cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            cs.referenceResolution = new Vector2(1920, 1080);
+            cs.matchWidthOrHeight = 1f;
 
             panel = RuntimeUIFactory.MakePanel("MinionManagePanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 250));
             RuntimeUIFactory.EnableAdaptivePanelScale(panel, 0.94f, 0.90f, 0.60f);

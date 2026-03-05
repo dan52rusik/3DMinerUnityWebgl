@@ -20,8 +20,17 @@ namespace SimpleVoxelSystem
 
         private void BuildUI()
         {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas == null) return;
+            // Create dedicated canvas at layer 4000
+            GameObject cGo = new GameObject("MinionShopCanvas");
+            Canvas canvas = cGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 4000;
+            cGo.AddComponent<GraphicRaycaster>();
+            
+            CanvasScaler cs = cGo.AddComponent<CanvasScaler>();
+            cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            cs.referenceResolution = new Vector2(1920, 1080);
+            cs.matchWidthOrHeight = 1f;
 
             overlay = RuntimeUIFactory.MakePanel("MinionShopOverlay", canvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000, 10000), new Color(0, 0, 0, 0.6f));
             shopPanel = RuntimeUIFactory.MakePanel("MinionShopPanel", canvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400, 300));

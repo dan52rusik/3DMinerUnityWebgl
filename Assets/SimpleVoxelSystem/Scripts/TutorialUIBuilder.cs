@@ -88,7 +88,7 @@ namespace SimpleVoxelSystem
             // ── Info card (screen-centre) ─────────────────────────────────────
             refs.Card = MakePanel("TutCard", cGo.transform,
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 0f), new Vector2(880f, 210f),
+                new Vector2(0f, 220f), new Vector2(880f, 210f),
                 new Color(0.04f, 0.06f, 0.12f, 0.95f));
             var cardRt = refs.Card.GetComponent<RectTransform>();
             cardRt.pivot = new Vector2(0.5f, 0.5f);         // centre pivot → card is centred

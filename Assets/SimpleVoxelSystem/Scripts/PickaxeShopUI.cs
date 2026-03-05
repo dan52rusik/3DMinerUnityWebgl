@@ -95,15 +95,19 @@ namespace SimpleVoxelSystem
 
         private void BuildUI()
         {
-            rootCanvas = FindFirstObjectByType<Canvas>();
-            if (rootCanvas == null)
-            {
-                GameObject cGo = new GameObject("PickaxeShopCanvas");
-                rootCanvas = cGo.AddComponent<Canvas>();
-                rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                cGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                cGo.AddComponent<GraphicRaycaster>();
-            }
+            // Create dedicated PickaxeShopCanvas at layer 4000
+            GameObject pGo = new GameObject("PickaxeShopCanvas");
+            rootCanvas = pGo.AddComponent<Canvas>();
+            rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            rootCanvas.sortingOrder = 4000;
+            pGo.AddComponent<GraphicRaycaster>();
+            
+            CanvasScaler ps = pGo.AddComponent<CanvasScaler>();
+            ps.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            ps.referenceResolution = new Vector2(1920, 1080);
+            ps.matchWidthOrHeight = 1f;
+
+
 
             overlay = RuntimeUIFactory.MakePanel("PickaxeOverlay", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(10000f, 10000f), new Color(0f, 0f, 0f, 0.6f));
             shopPanel = RuntimeUIFactory.MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(420f, 520f), ColPanel);

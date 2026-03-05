@@ -471,7 +471,7 @@ MonoBehaviour:
   backpackFullLogCooldown: 1.5
   currentPickaxe: {fileID: 0}
   currentBackpackLoad: 0
-  maxBackpackCapacity: 1000
+  maxBackpackCapacity: 10
   totalValueInBackpack: 0
   dirtCount: 0
   stoneCount: 0
