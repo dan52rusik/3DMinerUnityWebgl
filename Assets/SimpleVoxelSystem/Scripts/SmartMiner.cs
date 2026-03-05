@@ -16,7 +16,7 @@ namespace SimpleVoxelSystem
         [Header("Mouse Targeting")]
         public float maxMineDistance = 7f;
         public float maxTargetDistance = 60f;
-        public bool autoMoveToFarTargets = true;
+        public bool autoMoveToFarTargets = false; // Legacy option: kept for compatibility, auto-move is disabled.
         public float autoMoveStopDistance = 1.6f;
 
         [Header("Highlight")]
@@ -77,16 +77,9 @@ namespace SimpleVoxelSystem
                 return;
 
             FindTargetBlock();
-            HandleQueuedAutoMine();
 
             if (!hasTarget)
                 return;
-
-            if (WasMinePressedDown())
-            {
-                PlayerPickaxe.NotifyMineAttempt();
-                TryStartAutoMoveToTarget();
-            }
 
             bool mineInput = autoMine || IsMineHeld();
             if (!mineInput)
@@ -94,8 +87,10 @@ namespace SimpleVoxelSystem
 
             if (currentTargetDistance > maxMineDistance)
             {
-                if (autoMoveToFarTargets)
-                    TryStartAutoMoveToTarget();
+                queuedAutoMine = false;
+                queuedTargetIsland = null;
+                if (playerController != null)
+                    playerController.CancelAutoMove();
                 return;
             }
 
