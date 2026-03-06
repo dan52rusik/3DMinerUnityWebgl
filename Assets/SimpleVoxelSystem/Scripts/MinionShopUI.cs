@@ -10,12 +10,23 @@ namespace SimpleVoxelSystem
         private GameObject shopPanel;
         private GameObject overlay;
         private Transform container;
+        private Text titleText;
 
         public bool IsVisible => shopPanel != null && shopPanel.activeSelf;
 
         private void Start()
         {
             BuildUI();
+        }
+
+        private void OnEnable()
+        {
+            Loc.OnLanguageChanged += RefreshLocalization;
+        }
+
+        private void OnDisable()
+        {
+            Loc.OnLanguageChanged -= RefreshLocalization;
         }
 
         private void BuildUI()
@@ -37,7 +48,7 @@ namespace SimpleVoxelSystem
             shopPanel = RuntimeUIFactory.MakePanel("MinionShopPanel", canvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(400, 300));
             RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.55f);
             
-            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "MINION SHOP", 22, TextAnchor.UpperCenter, new Vector2(0, -15));
+            titleText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", Loc.T("minion_shop_title"), 22, TextAnchor.UpperCenter, new Vector2(0, -15));
 
             Button closeBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseBtn", "X",
                 new Color(0.78f, 0.22f, 0.22f, 0.95f),
@@ -47,10 +58,21 @@ namespace SimpleVoxelSystem
             
             container = RuntimeUIFactory.MakeScrollContainer(shopPanel.transform, new Vector2(10, 10), new Vector2(-10, -50));
             
-            CreateShopItem("Standard Minion", "A small helper to mine for you.", EconomyTuning.MinionPurchasePrice);
+            RebuildShopItems();
 
             shopPanel.SetActive(false);
             overlay.SetActive(false);
+        }
+
+        private void RebuildShopItems()
+        {
+            if (container == null)
+                return;
+
+            for (int i = container.childCount - 1; i >= 0; i--)
+                Destroy(container.GetChild(i).gameObject);
+
+            CreateShopItem(Loc.T("minion_standard_name"), Loc.T("minion_standard_desc"), EconomyTuning.MinionPurchasePrice);
         }
 
         private void CreateShopItem(string name, string desc, int price)
@@ -68,9 +90,9 @@ namespace SimpleVoxelSystem
             Image img = item.AddComponent<Image>();
             img.color = new Color(1, 1, 1, 0.05f);
 
-            RuntimeUIFactory.MakeLabel(item.transform, "Info", $"{name}\n{desc}\nPrice: ${price}", 14, TextAnchor.MiddleLeft, new Vector2(10, 0), new Vector2(-100, 0));
+            RuntimeUIFactory.MakeLabel(item.transform, "Info", $"{name}\n{desc}\n{Loc.T("stats_price")}: ${price}", 14, TextAnchor.MiddleLeft, new Vector2(10, 0), new Vector2(-100, 0));
             
-            Button btn = RuntimeUIFactory.MakeBtn(item.transform, "BuyBtn", "BUY", pos: new Vector2(130, 0), size: new Vector2(80, 40));
+            Button btn = RuntimeUIFactory.MakeBtn(item.transform, "BuyBtn", Loc.T("btn_buy"), pos: new Vector2(130, 0), size: new Vector2(80, 40));
             btn.onClick.AddListener(() => TryBuyMinion(price));
         }
 
@@ -154,6 +176,14 @@ namespace SimpleVoxelSystem
                 GameUIWindow.SetWindowActive(shopPanel, v);
             }
             if (overlay != null) overlay.SetActive(v);
+        }
+
+        private void RefreshLocalization()
+        {
+            if (titleText != null)
+                titleText.text = Loc.T("minion_shop_title");
+
+            RebuildShopItems();
         }
     }
 }

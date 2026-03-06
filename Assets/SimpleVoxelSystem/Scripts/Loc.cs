@@ -80,9 +80,12 @@ namespace SimpleVoxelSystem
 
             // ── Миньоны ──────────────────────────────────────────────────────
             Add("minion_shop",      ru: "Миньоны",       en: "Minions",      tr: "Minyonlar");
+            Add("minion_shop_title",ru: "МАГАЗИН МИНЬОНОВ", en: "MINION SHOP", tr: "MINYON DUKKANI");
             Add("hire_minion",      ru: "Нанять миньона", en: "Hire Minion", tr: "Minyon kirala");
             Add("minion_strength",  ru: "Сила миньона",  en: "Minion Strength", tr: "Minyon Gücü");
             Add("minion_capacity",  ru: "Вместимость",   en: "Capacity",     tr: "Kapasite");
+            Add("minion_standard_name", ru: "Стандартный миньон", en: "Standard Minion", tr: "Standart Minyon");
+            Add("minion_standard_desc", ru: "Небольшой помощник, который копает за тебя.", en: "A small helper to mine for you.", tr: "Senin yerine kazacak kucuk bir yardimci.");
 
             // ── Остров / Мир ─────────────────────────────────────────────────
             Add("create_island",    ru: "Создать остров", en: "Create Island", tr: "Ada Oluştur");
