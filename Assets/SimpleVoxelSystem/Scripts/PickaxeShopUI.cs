@@ -209,8 +209,11 @@ namespace SimpleVoxelSystem
         {
             EnsureUIBuilt();
             if (shopPanel == null || overlay == null) return;
-            if (buttonsDirty)
-                BuildButtons();
+            
+            // Ensure translations are up-to-date
+            RebuildRuntimePickaxes();
+            BuildButtons();
+            
             bool next = !shopPanel.activeSelf;
             SetPanelVisible(next);
         }
@@ -385,7 +388,7 @@ namespace SimpleVoxelSystem
         {
             return Loc.Tf(
                 "mining_level_format",
-                Loc.T("lv_short"),
+                Loc.T("mining_level_label"),
                 GlobalEconomy.MiningLevel,
                 GlobalEconomy.MiningXP,
                 Loc.T("xp_short"));

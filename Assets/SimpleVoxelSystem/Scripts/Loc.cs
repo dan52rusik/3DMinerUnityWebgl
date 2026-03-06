@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using YG;
 
@@ -19,6 +20,11 @@ namespace SimpleVoxelSystem
     /// </summary>
     public static class Loc
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern IntPtr SVS_GetYandexSdkLanguage();
+#endif
+
         // ── Поддерживаемые языки ─────────────────────────────────────────────
         public const string LangRu = "ru";
         public const string LangEn = "en";
@@ -129,6 +135,7 @@ namespace SimpleVoxelSystem
 
             // ── Характеристики и статусы ─────────────────────────────────────
             Add("pickaxe_shop_title", ru: "МАГАЗИН КИРОК", en: "PICKAXE SHOP", tr: "KAZMA DÜKKANI");
+            Add("mining_level_label", ru: "Уровень копания", en: "Mining Level", tr: "Madencilik Seviyesi");
             Add("mining_level_format",ru: "{0}: {1} ({2} {3})", en: "{0}: {1} ({2} {3})", tr: "{0}: {1} ({2} {3})");
             Add("lv_short",         ru: "Ур.",           en: "Lv.",           tr: "Sv.");
             Add("xp_short",         ru: "ОП",           en: "XP",           tr: "TP");
@@ -387,6 +394,10 @@ namespace SimpleVoxelSystem
         {
             try
             {
+                string webglLang = TryGetYG2LangFromWebGLBridge();
+                if (!string.IsNullOrWhiteSpace(webglLang))
+                    return webglLang.ToLowerInvariant().Trim();
+
                 string lang = TryGetYG2LangByReflection();
                 if (!string.IsNullOrWhiteSpace(lang))
                     return lang.ToLowerInvariant().Trim();
@@ -428,6 +439,34 @@ namespace SimpleVoxelSystem
 #endif
 
             return null;
+        }
+
+        private static string TryGetYG2LangFromWebGLBridge()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            try
+            {
+                IntPtr langPtr = SVS_GetYandexSdkLanguage();
+                if (langPtr == IntPtr.Zero)
+                    return null;
+
+                string lang = Marshal.PtrToStringAnsi(langPtr);
+                if (string.IsNullOrWhiteSpace(lang))
+                    return null;
+
+                int dashIndex = lang.IndexOf('-');
+                if (dashIndex > 0)
+                    lang = lang.Substring(0, dashIndex);
+
+                return lang;
+            }
+            catch
+            {
+                return null;
+            }
+#else
+            return null;
+#endif
         }
 
         private static object ReadObjectMember(object instance, Type type, string memberName)
