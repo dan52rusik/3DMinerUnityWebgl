@@ -8,17 +8,47 @@ namespace SimpleVoxelSystem
         // FIX #15: свойства с событиями вместо голых полей — реактивный подход без поллинга
 
         public static event Action<int> OnMoneyChanged;
+        public static event Action<int> OnBestMoneyChanged;
         public static event Action<int> OnXPChanged;
         public static event Action<int> OnLevelChanged;
 
         private static int _money    = EconomyTuning.StartMoney;
+        private static int _bestMoney = EconomyTuning.StartMoney;
         private static int _miningXP = EconomyTuning.StartMiningXP;
         private static int _miningLevel = EconomyTuning.StartMiningLevel;
 
         public static int Money
         {
             get => _money;
-            set { if (_money == value) return; _money = value; OnMoneyChanged?.Invoke(_money); }
+            set
+            {
+                if (_money == value)
+                    return;
+
+                _money = value;
+
+                if (_money > _bestMoney)
+                {
+                    _bestMoney = _money;
+                    OnBestMoneyChanged?.Invoke(_bestMoney);
+                }
+
+                OnMoneyChanged?.Invoke(_money);
+            }
+        }
+
+        public static int BestMoney
+        {
+            get => _bestMoney;
+            set
+            {
+                int normalized = Mathf.Max(EconomyTuning.StartMoney, value);
+                if (_bestMoney == normalized)
+                    return;
+
+                _bestMoney = normalized;
+                OnBestMoneyChanged?.Invoke(_bestMoney);
+            }
         }
 
         public static int MiningXP

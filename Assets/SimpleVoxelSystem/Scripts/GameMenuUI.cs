@@ -40,6 +40,10 @@ namespace SimpleVoxelSystem
         private Button    _menuBtn;
         private bool      _isOpen;
         private Coroutine _anim;
+        private Text      _accountLabel;
+        private Text      _playerNameValue;
+        private Text      _bestMoneyValue;
+        private Text      _authButtonLabel;
 
         // Flag button references для обновления выделения
         private FlagBtn[] _flagBtns;
@@ -78,11 +82,15 @@ namespace SimpleVoxelSystem
         private void OnEnable()
         {
             Loc.OnLanguageChanged += OnLangChanged;
+            PlayerIdentity.OnIdentityChanged += RefreshAccountSection;
+            GlobalEconomy.OnBestMoneyChanged += OnBestMoneyChanged;
         }
 
         private void OnDisable()
         {
             Loc.OnLanguageChanged -= OnLangChanged;
+            PlayerIdentity.OnIdentityChanged -= RefreshAccountSection;
+            GlobalEconomy.OnBestMoneyChanged -= OnBestMoneyChanged;
         }
 
         private void OnLangChanged()
@@ -92,6 +100,9 @@ namespace SimpleVoxelSystem
                 _menuBtnLabel.text = "\u2630  " + Loc.T("settings");
             if (_langLabel != null)
                 _langLabel.text = Loc.T("language") + ":";
+            if (_accountLabel != null)
+                _accountLabel.text = Loc.T("account") + ":";
+            RefreshAccountSection();
         }
 
 
@@ -192,6 +203,8 @@ namespace SimpleVoxelSystem
 
             // ── Секция языка ──────────────────────────────────────────────────
             BuildLanguageSection(panelGo.transform);
+            BuildDivider(panelGo.transform);
+            BuildAccountSection(panelGo.transform);
 
             // Скрыта изначально
             panelGo.SetActive(false);
@@ -297,6 +310,67 @@ namespace SimpleVoxelSystem
             _flagBtns[2] = BuildFlagBtn(row.transform, Loc.LangTr);
 
             RefreshFlagButtons();
+        }
+
+        private void BuildAccountSection(Transform parent)
+        {
+            var section = new GameObject("AccountSection");
+            section.transform.SetParent(parent, false);
+            section.AddComponent<RectTransform>();
+            var sectionImage = section.AddComponent<Image>();
+            sectionImage.color = LangSectionBg;
+            RoundCorners(sectionImage);
+
+            var sectionLayout = section.AddComponent<VerticalLayoutGroup>();
+            sectionLayout.padding = new RectOffset(12, 12, 10, 12);
+            sectionLayout.spacing = 8f;
+            sectionLayout.childAlignment = TextAnchor.UpperLeft;
+            sectionLayout.childControlWidth = true;
+            sectionLayout.childControlHeight = true;
+            sectionLayout.childForceExpandWidth = true;
+            sectionLayout.childForceExpandHeight = false;
+
+            var sectionFit = section.AddComponent<ContentSizeFitter>();
+            sectionFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            _accountLabel = CreateText(section.transform, "AccountLabel", Loc.T("account") + ":");
+            _accountLabel.fontSize = 15;
+            _accountLabel.fontStyle = FontStyle.Bold;
+            _accountLabel.color = new Color(0.82f, 0.86f, 0.95f, 0.95f);
+            _accountLabel.alignment = TextAnchor.MiddleLeft;
+            var titleLayout = _accountLabel.GetComponent<LayoutElement>();
+            titleLayout.preferredHeight = 22f;
+            titleLayout.minHeight = 22f;
+
+            _playerNameValue = CreateText(section.transform, "PlayerNameValue", string.Empty);
+            _playerNameValue.fontSize = 14;
+            _playerNameValue.color = new Color(0.96f, 0.97f, 1f, 1f);
+            _playerNameValue.alignment = TextAnchor.MiddleLeft;
+            var playerLayout = _playerNameValue.GetComponent<LayoutElement>();
+            playerLayout.preferredHeight = 22f;
+            playerLayout.minHeight = 22f;
+
+            _bestMoneyValue = CreateText(section.transform, "BestMoneyValue", string.Empty);
+            _bestMoneyValue.fontSize = 14;
+            _bestMoneyValue.color = new Color(0.96f, 0.97f, 1f, 1f);
+            _bestMoneyValue.alignment = TextAnchor.MiddleLeft;
+            var bestLayout = _bestMoneyValue.GetComponent<LayoutElement>();
+            bestLayout.preferredHeight = 22f;
+            bestLayout.minHeight = 22f;
+
+            var authButton = RuntimeUIFactory.MakeBtn(section.transform, "AuthButton", Loc.T("auth_sign_in"),
+                color: new Color(0.20f, 0.46f, 0.87f, 1f), size: new Vector2(0f, 34f));
+            var authLayout = authButton.gameObject.GetComponent<LayoutElement>();
+            if (authLayout == null)
+                authLayout = authButton.gameObject.AddComponent<LayoutElement>();
+            authLayout.preferredHeight = 34f;
+            authLayout.minHeight = 34f;
+            authLayout.preferredWidth = 0f;
+
+            _authButtonLabel = authButton.GetComponentInChildren<Text>();
+            authButton.onClick.AddListener(AuthorizationIdentitySync.TryOpenAuthDialog);
+
+            RefreshAccountSection();
         }
 
         // ── Одна кнопка-флаг ────────────────────────────────────────────────
@@ -720,6 +794,29 @@ namespace SimpleVoxelSystem
         // ═════════════════════════════════════════════════════════════════════
         // Builder helpers
         // ═════════════════════════════════════════════════════════════════════
+
+        private void OnBestMoneyChanged(int _)
+        {
+            RefreshAccountSection();
+        }
+
+        private void RefreshAccountSection()
+        {
+            if (_playerNameValue != null)
+            {
+                string playerName = PlayerIdentity.IsGuest ? Loc.T("guest_player") : PlayerIdentity.PlayerName;
+                if (string.IsNullOrWhiteSpace(playerName))
+                    playerName = Loc.T("guest_player");
+
+                _playerNameValue.text = $"{Loc.T("player_name_label")}: {playerName}";
+            }
+
+            if (_bestMoneyValue != null)
+                _bestMoneyValue.text = $"{Loc.T("best_money_label")}: ${GlobalEconomy.BestMoney}";
+
+            if (_authButtonLabel != null)
+                _authButtonLabel.text = PlayerIdentity.IsGuest ? Loc.T("auth_sign_in") : Loc.T("auth_connected");
+        }
 
         private static Image CreateImage(Transform parent, string name)
         {

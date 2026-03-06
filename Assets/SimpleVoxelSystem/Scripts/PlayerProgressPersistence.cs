@@ -21,6 +21,7 @@ namespace SimpleVoxelSystem
         {
             public int version = 1;
             public int money;
+            public int bestMoneyBalance;
             public int miningXP;
             public int miningLevel;
 
@@ -346,6 +347,8 @@ namespace SimpleVoxelSystem
                           $"Saved money={save.money}, delta={deltaFromStart}, result={GlobalEconomy.Money}");
             }
 
+            GlobalEconomy.BestMoney = Mathf.Max(save.bestMoneyBalance, GlobalEconomy.Money);
+
             PlayerPickaxe pp = FindFirstObjectByType<PlayerPickaxe>();
             if (pp != null)
             {
@@ -549,6 +552,7 @@ namespace SimpleVoxelSystem
                 wellGenerator.ResetPlayerWorldForNewProgress();
 
             GlobalEconomy.Money = ResetMoneyValue;
+            GlobalEconomy.BestMoney = ResetMoneyValue;
             GlobalEconomy.MiningXP = ResetXpValue;
             GlobalEconomy.MiningLevel = ResetLevelValue;
 
@@ -596,6 +600,7 @@ namespace SimpleVoxelSystem
             ProgressSaveData reset = new ProgressSaveData
             {
                 money = ResetMoneyValue,
+                bestMoneyBalance = ResetMoneyValue,
                 miningXP = ResetXpValue,
                 miningLevel = ResetLevelValue,
                 hasPrivateIsland = false,
@@ -615,6 +620,7 @@ namespace SimpleVoxelSystem
             ProgressSaveData save = new ProgressSaveData
             {
                 money = GlobalEconomy.Money,
+                bestMoneyBalance = GlobalEconomy.BestMoney,
                 miningXP = GlobalEconomy.MiningXP,
                 miningLevel = GlobalEconomy.MiningLevel,
                 hasPrivateIsland = wellGenerator.IsIslandGenerated,

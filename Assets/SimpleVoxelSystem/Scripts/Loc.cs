@@ -128,6 +128,12 @@ namespace SimpleVoxelSystem
             // ── Настройки / Язык ─────────────────────────────────────────────
             Add("settings",         ru: "Настройки",     en: "Settings",     tr: "Ayarlar");
             Add("language",         ru: "Язык",          en: "Language",     tr: "Dil");
+            Add("account",          ru: "Аккаунт",       en: "Account",      tr: "Hesap");
+            Add("player_name_label",ru: "Игрок",         en: "Player",       tr: "Oyuncu");
+            Add("best_money_label", ru: "Лучший баланс", en: "Best Balance", tr: "En Iyi Bakiye");
+            Add("auth_sign_in",     ru: "Войти",         en: "Sign In",      tr: "Giris Yap");
+            Add("auth_connected",   ru: "Подключено",    en: "Connected",    tr: "Baglandi");
+            Add("guest_player",     ru: "Гость",         en: "Guest",        tr: "Misafir");
 
             // ── Ресурсы / Блоки ──────────────────────────────────────────────
             Add("block_dirt",       ru: "Земля",         en: "Dirt",         tr: "Toprak");
