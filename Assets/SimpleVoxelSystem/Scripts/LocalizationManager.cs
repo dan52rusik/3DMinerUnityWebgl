@@ -15,6 +15,7 @@ namespace SimpleVoxelSystem
         [Header("Fallback Language (Editor / non-Yandex builds)")]
         [Tooltip("Язык по умолчанию если YG2.lang недоступен")]
         public string fallbackLanguage = Loc.LangRu;
+        private float _nextPlatformLangPollTime;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -47,6 +48,15 @@ namespace SimpleVoxelSystem
         {
             // SDK загружен — перечитываем язык (если игрок не выбирал вручную)
             Loc.Initialize();
+        }
+
+        private void Update()
+        {
+            if (Time.unscaledTime < _nextPlatformLangPollTime)
+                return;
+
+            _nextPlatformLangPollTime = Time.unscaledTime + 0.5f;
+            Loc.RefreshFromPlatformLanguageIfAuto();
         }
     }
 

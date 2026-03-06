@@ -29,6 +29,7 @@ namespace SimpleVoxelSystem
         // ── Текущий язык ─────────────────────────────────────────────────────
         private static string _currentLang = LangRu;
         public static string CurrentLanguage => _currentLang;
+        public static bool HasManualOverride => PlayerPrefs.HasKey(LangPrefKey);
 
         /// <summary>Срабатывает при смене языка. Подпишитесь чтобы обновить UI.</summary>
         public static event Action OnLanguageChanged;
@@ -333,6 +334,28 @@ namespace SimpleVoxelSystem
         {
             PlayerPrefs.DeleteKey(LangPrefKey);
             Initialize();
+            OnLanguageChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Re-reads platform language only when the player has not chosen a language manually.
+        /// Useful for SDK mock tools that switch language after the game has already started.
+        /// </summary>
+        public static void RefreshFromPlatformLanguageIfAuto()
+        {
+            if (HasManualOverride)
+                return;
+
+            string platformLang = GetYandexLang();
+            if (!IsSupported(platformLang))
+                return;
+
+            platformLang = platformLang.ToLowerInvariant().Trim();
+            if (_currentLang == platformLang)
+                return;
+
+            _currentLang = platformLang;
+            Debug.Log($"[Loc] Platform language changed to: {platformLang}");
             OnLanguageChanged?.Invoke();
         }
 
