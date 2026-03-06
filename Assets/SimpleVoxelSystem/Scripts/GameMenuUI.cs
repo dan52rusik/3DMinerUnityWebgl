@@ -432,44 +432,15 @@ namespace SimpleVoxelSystem
 
             if (lang == Loc.LangTr)
             {
-                // Красный фон
-                MakeStretchRect(root.transform, "Field", new Color(0.86f, 0.08f, 0.09f));
-
-                Color trRed  = new Color(0.86f, 0.08f, 0.09f);
-                float r      = h; // размер для пропорций
-
-                // Белый большой круг (внешний диск полумесяца) — Text ●
-                var moonW = CreateText(root.transform, "MoonW", "\u25cf");
-                moonW.fontSize  = Mathf.RoundToInt(r * 0.84f);
-                moonW.color     = Color.white;
-                moonW.alignment = TextAnchor.MiddleCenter;
-                var mwRt = moonW.GetComponent<RectTransform>();
-                mwRt.anchorMin = mwRt.anchorMax = new Vector2(0.32f, 0.50f);
-                mwRt.pivot     = new Vector2(0.5f, 0.5f);
-                mwRt.anchoredPosition = Vector2.zero;
-                mwRt.sizeDelta = new Vector2(r, r);
-
-                // Красный круг — крупный, смещён сильнее → тонкий изящный полумесяц
-                var moonR = CreateText(root.transform, "MoonR", "\u25cf");
-                moonR.fontSize  = Mathf.RoundToInt(r * 0.78f);
-                moonR.color     = trRed;
-                moonR.alignment = TextAnchor.MiddleCenter;
-                var mrRt = moonR.GetComponent<RectTransform>();
-                mrRt.anchorMin = mrRt.anchorMax = new Vector2(0.32f, 0.50f);
-                mrRt.pivot     = new Vector2(0.5f, 0.5f);
-                mrRt.anchoredPosition = new Vector2(r * 0.22f, 0f);
-                mrRt.sizeDelta = new Vector2(r * 0.86f, r * 0.86f);
-
-                // Белая звезда — Text ★
-                var star = CreateText(root.transform, "Star", "\u2605");
-                star.fontSize  = Mathf.RoundToInt(r * 0.40f);
-                star.color     = Color.white;
-                star.alignment = TextAnchor.MiddleCenter;
-                var sRt = star.GetComponent<RectTransform>();
-                sRt.anchorMin = sRt.anchorMax = new Vector2(0.63f, 0.50f);
-                sRt.pivot     = new Vector2(0.5f, 0.5f);
-                sRt.anchoredPosition = Vector2.zero;
-                sRt.sizeDelta = new Vector2(r * 0.44f, r * 0.44f);
+                var go = new GameObject("TurkeyFlag");
+                go.transform.SetParent(root.transform, false);
+                var img = go.AddComponent<Image>();
+                img.sprite = BuildTurkeyFlagSprite(Mathf.RoundToInt(w), Mathf.RoundToInt(h));
+                img.preserveAspect = false;
+                var rt = go.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = rt.offsetMax = Vector2.zero;
                 return;
             }
 
@@ -536,6 +507,110 @@ namespace SimpleVoxelSystem
                 rt.anchoredPosition = new Vector2(0f, -stripeH * i);
                 rt.sizeDelta = new Vector2(0f, stripeH);
             }
+        }
+
+        private static Sprite BuildTurkeyFlagSprite(int width, int height)
+        {
+            Color red = new Color(0.89f, 0.04f, 0.10f, 1f);
+            var pixels = new Color[width * height];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = red;
+
+            float cy = (height - 1) * 0.5f;
+            float outerCx = width * 0.38f;
+            float innerCx = width * 0.44f;
+            float outerR = height * 0.30f;
+            float innerR = height * 0.24f;
+
+            FillCircle(pixels, width, height, outerCx, cy, outerR, Color.white);
+            FillCircle(pixels, width, height, innerCx, cy, innerR, red);
+
+            Vector2 starCenter = new Vector2(width * 0.60f, cy);
+            Vector2[] star = BuildStarPoints(starCenter, height * 0.15f, height * 0.06f);
+            FillPolygon(pixels, width, height, star, Color.white);
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        private static void FillCircle(Color[] pixels, int width, int height, float cx, float cy, float radius, Color color)
+        {
+            float radiusSq = radius * radius;
+            int minX = Mathf.Max(0, Mathf.FloorToInt(cx - radius));
+            int maxX = Mathf.Min(width - 1, Mathf.CeilToInt(cx + radius));
+            int minY = Mathf.Max(0, Mathf.FloorToInt(cy - radius));
+            int maxY = Mathf.Min(height - 1, Mathf.CeilToInt(cy + radius));
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    float dx = x - cx;
+                    float dy = y - cy;
+                    if (dx * dx + dy * dy <= radiusSq)
+                        pixels[y * width + x] = color;
+                }
+            }
+        }
+
+        private static Vector2[] BuildStarPoints(Vector2 center, float outerRadius, float innerRadius)
+        {
+            var points = new Vector2[10];
+            for (int i = 0; i < points.Length; i++)
+            {
+                float angle = Mathf.Deg2Rad * (-90f + i * 36f);
+                float radius = (i % 2 == 0) ? outerRadius : innerRadius;
+                points[i] = new Vector2(
+                    center.x + Mathf.Cos(angle) * radius,
+                    center.y + Mathf.Sin(angle) * radius);
+            }
+            return points;
+        }
+
+        private static void FillPolygon(Color[] pixels, int width, int height, Vector2[] polygon, Color color)
+        {
+            float minXf = polygon[0].x;
+            float maxXf = polygon[0].x;
+            float minYf = polygon[0].y;
+            float maxYf = polygon[0].y;
+            for (int i = 1; i < polygon.Length; i++)
+            {
+                minXf = Mathf.Min(minXf, polygon[i].x);
+                maxXf = Mathf.Max(maxXf, polygon[i].x);
+                minYf = Mathf.Min(minYf, polygon[i].y);
+                maxYf = Mathf.Max(maxYf, polygon[i].y);
+            }
+
+            int minX = Mathf.Max(0, Mathf.FloorToInt(minXf));
+            int maxX = Mathf.Min(width - 1, Mathf.CeilToInt(maxXf));
+            int minY = Mathf.Max(0, Mathf.FloorToInt(minYf));
+            int maxY = Mathf.Min(height - 1, Mathf.CeilToInt(maxYf));
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    if (IsPointInPolygon(new Vector2(x + 0.5f, y + 0.5f), polygon))
+                        pixels[y * width + x] = color;
+                }
+            }
+        }
+
+        private static bool IsPointInPolygon(Vector2 point, Vector2[] polygon)
+        {
+            bool inside = false;
+            for (int i = 0, j = polygon.Length - 1; i < polygon.Length; j = i++)
+            {
+                bool intersects =
+                    ((polygon[i].y > point.y) != (polygon[j].y > point.y)) &&
+                    (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / ((polygon[j].y - polygon[i].y) + Mathf.Epsilon) + polygon[i].x);
+                if (intersects) inside = !inside;
+            }
+            return inside;
         }
 
         // ═════════════════════════════════════════════════════════════════════
