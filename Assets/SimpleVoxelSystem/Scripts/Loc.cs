@@ -290,14 +290,75 @@ namespace SimpleVoxelSystem
         {
             try
             {
-#if UNITY_WEBGL && !UNITY_EDITOR
-                string lang = YG2.lang;
+                string lang = TryGetYG2LangByReflection();
                 if (!string.IsNullOrWhiteSpace(lang))
                     return lang.ToLowerInvariant().Trim();
-#endif
             }
             catch { /* SDK может быть не инициализирован */ }
-            return LangRu;
+
+            switch (Application.systemLanguage)
+            {
+                case SystemLanguage.Russian:
+                    return LangRu;
+                case SystemLanguage.Turkish:
+                    return LangTr;
+                default:
+                    return LangEn;
+            }
+        }
+
+        private static string TryGetYG2LangByReflection()
+        {
+            Type yg2Type = typeof(YG2);
+
+            string direct = ReadStringMember(null, yg2Type, "lang")
+                ?? ReadStringMember(null, yg2Type, "language");
+            if (!string.IsNullOrWhiteSpace(direct))
+                return direct;
+
+            object envir = ReadObjectMember(null, yg2Type, "envir");
+            string envirLang = ReadStringMember(envir, envir?.GetType(), "language")
+                ?? ReadStringMember(envir, envir?.GetType(), "lang");
+            if (!string.IsNullOrWhiteSpace(envirLang))
+                return envirLang;
+
+#if UNITY_EDITOR
+            object info = ReadObjectMember(null, yg2Type, "infoYG");
+            object simulation = ReadObjectMember(info, info?.GetType(), "Simulation");
+            string simulationLang = ReadStringMember(simulation, simulation?.GetType(), "language");
+            if (!string.IsNullOrWhiteSpace(simulationLang))
+                return simulationLang;
+#endif
+
+            return null;
+        }
+
+        private static object ReadObjectMember(object instance, Type type, string memberName)
+        {
+            if (type == null)
+                return null;
+
+            const System.Reflection.BindingFlags Flags =
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Static |
+                System.Reflection.BindingFlags.Instance;
+
+            var prop = type.GetProperty(memberName, Flags);
+            if (prop != null)
+                return prop.GetValue(instance, null);
+
+            var field = type.GetField(memberName, Flags);
+            if (field != null)
+                return field.GetValue(instance);
+
+            return null;
+        }
+
+        private static string ReadStringMember(object instance, Type type, string memberName)
+        {
+            object value = ReadObjectMember(instance, type, memberName);
+            return value as string;
         }
     }
 }

@@ -1,3 +1,3 @@
 ﻿Build path: C:/MyGames/Yandex
-Build number: 26
+Build number: 27
 PluginYG version: 2.008
