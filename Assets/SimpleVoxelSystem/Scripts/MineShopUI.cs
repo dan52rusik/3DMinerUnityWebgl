@@ -163,8 +163,8 @@ namespace SimpleVoxelSystem
             // Cancel button (placement mode) ─────────────────────
             cancelBtn = RuntimeUIFactory.MakeBtn(rootCanvas.transform, "CancelBtn",
                 Loc.T("btn_cancel"), ColBtnCancel,
-                anchor: new Vector2(1f, 0f), pivot: new Vector2(1f, 0f),
-                pos: new Vector2(-10f, 10f), size: new Vector2(120f, 40f));
+                anchor: new Vector2(0f, 0f), pivot: new Vector2(0f, 0f),
+                pos: new Vector2(24f, 24f), size: new Vector2(160f, 70f));
             cancelBtn.onClick.AddListener(() => mineMarket.CancelPlacementPublic());
             cancelBtnText = cancelBtn.GetComponentInChildren<Text>();
             cancelBtn.gameObject.SetActive(false);
@@ -237,7 +237,7 @@ namespace SimpleVoxelSystem
                 Loc.T("mine_shop_title"), 22, TextAnchor.UpperCenter,
                 new Vector2(0, -12), new Vector2(0, 0), bold: true);
 
-            Button closeShopBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseShopBtn", Loc.T("btn_close"),
+            Button closeShopBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseShopBtn", "X",
                 new Color(0.78f, 0.22f, 0.22f, 0.95f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
                 pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
@@ -385,10 +385,10 @@ namespace SimpleVoxelSystem
             int total = l.dirtWeight + l.stoneWeight + l.ironWeight + l.goldWeight;
             if (total <= 0) return "-";
             var parts = new System.Collections.Generic.List<string>();
-            if (l.dirtWeight  > 0) parts.Add($"Dirt {l.dirtWeight  * 100 / total}%");
-            if (l.stoneWeight > 0) parts.Add($"Stone {l.stoneWeight * 100 / total}%");
-            if (l.ironWeight  > 0) parts.Add($"Iron {l.ironWeight  * 100 / total}%");
-            if (l.goldWeight  > 0) parts.Add($"Gold {l.goldWeight  * 100 / total}%");
+            if (l.dirtWeight  > 0) parts.Add($"{Loc.T("block_dirt")} {l.dirtWeight  * 100 / total}%");
+            if (l.stoneWeight > 0) parts.Add($"{Loc.T("block_stone")} {l.stoneWeight * 100 / total}%");
+            if (l.ironWeight  > 0) parts.Add($"{Loc.T("block_iron")} {l.ironWeight  * 100 / total}%");
+            if (l.goldWeight  > 0) parts.Add($"{Loc.T("block_gold")} {l.goldWeight  * 100 / total}%");
             return string.Join("  ", parts);
         }
 
@@ -424,7 +424,7 @@ namespace SimpleVoxelSystem
             bool isPlacing   = mineMarket.IsPlacementMode;
 
             if (moneyText != null)
-                moneyText.text = $"$ {GlobalEconomy.Money}  |  Lv. {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
+                moneyText.text = Loc.Tf("balance_bar_format", GlobalEconomy.Money, Loc.T("lv_short"), GlobalEconomy.MiningLevel, GlobalEconomy.MiningXP, Loc.T("xp_short"));
 
             if (createIslandBtn != null)
                 createIslandBtn.gameObject.SetActive(inLobby && !islandBuilt);
@@ -454,8 +454,8 @@ namespace SimpleVoxelSystem
 
             if (statusLabel != null)
                 statusLabel.text = isPlacing
-                    ? (inLobby ? "<color=yellow>Mine purchased.</color> Go to Island to place it."
-                               : "<color=yellow>Placement mode.</color> Choose a position with LMB.")
+                    ? (inLobby ? Loc.T("status_mine_bought")
+                               : Loc.T("status_placement"))
                     : "";
 
             if (hud != null) hud.SetActive(true);
@@ -483,7 +483,7 @@ namespace SimpleVoxelSystem
         void UpdatePanelMoneyLabel()
         {
             if (panelMoneyText != null)
-                panelMoneyText.text = $"Balance: ${GlobalEconomy.Money}  |  [B]/[X] close";
+                panelMoneyText.text = Loc.Tf("balance_header", GlobalEconomy.Money);
         }
 
         void SetStatus(string msg)

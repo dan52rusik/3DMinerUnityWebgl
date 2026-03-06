@@ -88,11 +88,11 @@ namespace SimpleVoxelSystem
             
             // Header
             GameObject headerLeft = RuntimeUIFactory.MakePanel("Header", leftPanel.transform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -15), new Vector2(0, 30), headerColor);
-            RuntimeUIFactory.MakeLabel(headerLeft.transform, "Title", "STRRENGTH", 14, TextAnchor.MiddleCenter, color: new Color(1, 0.8f, 0.2f));
+            RuntimeUIFactory.MakeLabel(headerLeft.transform, "Title", Loc.T("upgrade_str_title"), 14, TextAnchor.MiddleCenter, color: new Color(1, 0.8f, 0.2f));
 
             strengthLabel = RuntimeUIFactory.MakeLabel(leftPanel.transform, "Stats", "Bonus: +0", 13, TextAnchor.MiddleCenter, new Vector2(0, 5));
             
-            Button btnStr = RuntimeUIFactory.MakeBtn(leftPanel.transform, "BtnUpgrade", "BUY", pos: new Vector2(0, -45), size: new Vector2(140, 34));
+            Button btnStr = RuntimeUIFactory.MakeBtn(leftPanel.transform, "BtnUpgrade", Loc.T("btn_buy"), pos: new Vector2(0, -45), size: new Vector2(140, 34));
             strengthPriceText = btnStr.GetComponentInChildren<Text>();
             btnStr.onClick.AddListener(OnUpgradeStrength);
 
@@ -101,7 +101,7 @@ namespace SimpleVoxelSystem
             
             // Header
             GameObject headerRight = RuntimeUIFactory.MakePanel("Header", rightPanel.transform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -15), new Vector2(0, 30), headerColor);
-            RuntimeUIFactory.MakeLabel(headerRight.transform, "Title", "BACKPACK", 14, TextAnchor.MiddleCenter, color: new Color(0.2f, 0.8f, 1f));
+            RuntimeUIFactory.MakeLabel(headerRight.transform, "Title", Loc.T("upgrade_bp_title"), 14, TextAnchor.MiddleCenter, color: new Color(0.2f, 0.8f, 1f));
 
             backpackLabel = RuntimeUIFactory.MakeLabel(rightPanel.transform, "Stats", "Slots: 10", 13, TextAnchor.MiddleCenter, new Vector2(0, 5));
             
@@ -117,11 +117,11 @@ namespace SimpleVoxelSystem
         {
             if (playerPickaxe == null || upgradeManager == null) return;
 
-            strengthLabel.text = $"Current Bonus:\n<color=#FFD700>+{playerPickaxe.playerStrength}</color>";
-            strengthPriceText.text = $"UPGRADE: ${upgradeManager.playerStrengthCost}";
+            strengthLabel.text = Loc.Tf("upgrade_str_stats", playerPickaxe.playerStrength);
+            strengthPriceText.text = Loc.Tf("upgrade_btn_format", upgradeManager.playerStrengthCost);
 
-            backpackLabel.text = $"Current Capacity:\n<color=#00EAFF>{playerPickaxe.maxBackpackCapacity}</color>";
-            backpackPriceText.text = $"UPGRADE: ${upgradeManager.backpackCapacityCost}";
+            backpackLabel.text = Loc.Tf("upgrade_bp_stats", playerPickaxe.maxBackpackCapacity);
+            backpackPriceText.text = Loc.Tf("upgrade_btn_format", upgradeManager.backpackCapacityCost);
         }
 
         private void OnUpgradeStrength()

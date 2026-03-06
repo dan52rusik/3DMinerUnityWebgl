@@ -90,8 +90,8 @@ namespace SimpleVoxelSystem
 
             // Bronze
             var bronze = ScriptableObject.CreateInstance<MineShopData>();
-            bronze.displayName  = "Bronze Mine";
-            bronze.description  = "Small, mostly dirt and stone.";
+            bronze.displayName  = Loc.T("mine_bronze_name");
+            bronze.description  = Loc.T("mine_bronze_desc");
             bronze.labelColor   = new Color(0.80f, 0.50f, 0.20f);
             bronze.buyPrice     = EconomyTuning.BronzeMinePrice;
             bronze.sellBackRatio= EconomyTuning.BronzeMineSellBackRatio;
@@ -106,8 +106,8 @@ namespace SimpleVoxelSystem
 
             // Silver
             var silver = ScriptableObject.CreateInstance<MineShopData>();
-            silver.displayName  = "Silver Mine";
-            silver.description  = "Medium. Iron and some gold at depth.";
+            silver.displayName  = Loc.T("mine_silver_name");
+            silver.description  = Loc.T("mine_silver_desc");
             silver.labelColor   = new Color(0.70f, 0.70f, 0.80f);
             silver.buyPrice     = EconomyTuning.SilverMinePrice;
             silver.sellBackRatio= EconomyTuning.SilverMineSellBackRatio;
@@ -123,8 +123,8 @@ namespace SimpleVoxelSystem
 
             // Gold
             var gold = ScriptableObject.CreateInstance<MineShopData>();
-            gold.displayName  = "Gold Mine";
-            gold.description  = "Deep. Lots of iron and gold.";
+            gold.displayName  = Loc.T("mine_gold_name");
+            gold.description  = Loc.T("mine_gold_desc");
             gold.labelColor   = new Color(1.00f, 0.84f, 0.10f);
             gold.buyPrice     = EconomyTuning.GoldMinePrice;
             gold.sellBackRatio= EconomyTuning.GoldMineSellBackRatio;

@@ -94,7 +94,10 @@ namespace SimpleVoxelSystem
             Add("btn_mine",      ru: "КОПАТЬ",    en: "MINE",     tr: "KAZI");
             Add("btn_jump",      ru: "ПРЫЖОК",    en: "JUMP",     tr: "ZIPLA");
             Add("btn_run",       ru: "СПРИНТ",    en: "RUN",      tr: "KOŞ");
-            Add("btn_act",       ru: "АКТ",       en: "ACT",      tr: "EYLEM");
+            Add("btn_act",       ru: "ВЗАИМОД.",  en: "ACT",      tr: "EYLEM");
+            Add("btn_sell",      ru: "ПРОДАТЬ",   en: "SELL",     tr: "SAT");
+            Add("btn_mines",     ru: "ШАХТЫ",    en: "MINES",    tr: "MADENLER");
+            Add("btn_upgrades",  ru: "УЛУЧШЕНИЯ", en: "UPGRADES", tr: "YÜKSELTMELER");
             Add("btn_minions",   ru: "МИНЬОНЫ",   en: "MINIONS",  tr: "MINYONLAR");
             Add("btn_place",     ru: "ПОСТАВИТЬ", en: "PLACE",    tr: "YERLEŞTIR");
             Add("btn_del",       ru: "УДАЛИТЬ",   en: "DEL",      tr: "SİL");
@@ -113,6 +116,52 @@ namespace SimpleVoxelSystem
             // ── Настройки / Язык ─────────────────────────────────────────────
             Add("settings",         ru: "Настройки",     en: "Settings",     tr: "Ayarlar");
             Add("language",         ru: "Язык",          en: "Language",     tr: "Dil");
+
+            // ── Ресурсы / Блоки ──────────────────────────────────────────────
+            Add("block_dirt",       ru: "Земля",         en: "Dirt",         tr: "Toprak");
+            Add("block_stone",      ru: "Камень",        en: "Stone",        tr: "Taş");
+            Add("block_iron",       ru: "Железо",        en: "Iron",         tr: "Demir");
+            Add("block_gold",       ru: "Золото",        en: "Gold",         tr: "Altın");
+
+            // ── Характеристики и статусы ─────────────────────────────────────
+            Add("pickaxe_shop_title", ru: "МАГАЗИН КИРОК", en: "PICKAXE SHOP", tr: "KAZMA DÜKKANI");
+            Add("mining_level_format",ru: "{0}: {1} ({2} {3})", en: "{0}: {1} ({2} {3})", tr: "{0}: {1} ({2} {3})");
+            Add("lv_short",         ru: "Ур.",           en: "Lv.",           tr: "Seviye");
+            Add("xp_short",         ru: "ОП",           en: "XP",           tr: "TP");
+            
+            Add("stats_power",      ru: "Сила",          en: "Power",        tr: "Güç");
+            Add("stats_req_lv",     ru: "Нужен Ур.",     en: "Req Lv",       tr: "Gerekli Seviye");
+            Add("stats_price",      ru: "Цена",          en: "Price",        tr: "Fiyat");
+            Add("btn_buy",          ru: "КУПИТЬ",        en: "BUY",          tr: "SATIN AL");
+            Add("btn_owned",        ru: "КУПЛЕНО",       en: "OWNED",        tr: "SAHİP");
+            Add("btn_equipped",     ru: "ЭКИПИРОВАНО",    en: "EQUIPPED",     tr: "KUŞANILDI");
+            Add("balance_header",   ru: "Баланс: ${0}  |  [B]/[X] закрыть", en: "Balance: ${0}  |  [B]/[X] close", tr: "Bakiye: ${0}  |  [B]/[X] kapat");
+            Add("balance_bar_format",ru: "${0}  |  {1} {2} ({3} {4})", en: "${0}  |  {1} {2} ({3} {4})", tr: "${0}  |  {1} {2} ({3} {4})");
+
+            // ── Боковые панели улучшений ─────────────────────────────────────
+            Add("upgrade_str_title",  ru: "СИЛА",          en: "STRENGTH",      tr: "GÜÇ");
+            Add("upgrade_str_stats",  ru: "Текущий бонус:\n<color=#FFD700>+{0}</color>", en: "Current Bonus:\n<color=#FFD700>+{0}</color>", tr: "Mevcut Bonus:\n<color=#FFD700>+{0}</color>");
+            Add("upgrade_bp_title",   ru: "РЮКЗАК",        en: "BACKPACK",      tr: "SIRT ÇANTASI");
+            Add("upgrade_bp_stats",   ru: "Текущая ёмкость:\n<color=#00EAFF>{0}</color>", en: "Current Capacity:\n<color=#00EAFF>{0}</color>", tr: "Mevcut Kapasite:\n<color=#00EAFF>{0}</color>");
+            Add("upgrade_btn_format", ru: "УЛУЧШИТЬ: ${0}", en: "UPGRADE: ${0}", tr: "YÜKSELT: ${0}");
+
+            // ── Названия и описания шахт ─────────────────────────────────────
+            Add("mine_bronze_name", ru: "Бронзовая шахта", en: "Bronze Mine",  tr: "Bronz Maden");
+            Add("mine_bronze_desc", ru: "Небольшая, в основном земля и камень.", en: "Small, mostly dirt and stone.", tr: "Küçük, çoğunlukla toprak ve taş.");
+            Add("mine_silver_name", ru: "Серебряная шахта", en: "Silver Mine",  tr: "Gümüş Maden");
+            Add("mine_silver_desc", ru: "Средняя. Железо и немного золота на глубине.", en: "Medium. Iron and some gold at depth.", tr: "Orta. Derinlikte demir ve biraz altın.");
+            Add("mine_gold_name",   ru: "Золотая шахта",   en: "Gold Mine",    tr: "Altın Maden");
+            Add("mine_gold_desc",   ru: "Глубокая. Много железа и золота.", en: "Deep. Lots of iron and gold.", tr: "Derin. Çok fazla demir ve altın.");
+
+            // ── Названия и описания кирок ────────────────────────────────────
+            Add("pickaxe_stone_name",  ru: "Каменная кирка",   en: "Stone Pickaxe",  tr: "Taş Kazma");
+            Add("pickaxe_stone_desc",  ru: "Быстрее стандартной.", en: "Faster than default.", tr: "Varsayılandan daha hızlı.");
+            Add("pickaxe_iron_name",   ru: "Железная кирка",   en: "Iron Pickaxe",   tr: "Demir Kazma");
+            Add("pickaxe_iron_desc",   ru: "Хорошее улучшение для добычи.", en: "Solid upgrade for mining.", tr: "Madencilik için sağlam bir yükseltme.");
+            Add("pickaxe_gold_name",   ru: "Золотая кирка",    en: "Gold Pickaxe",   tr: "Altın Kazma");
+            Add("pickaxe_gold_desc",   ru: "Очень быстрая, но дорогая.", en: "Very fast but expensive.", tr: "Çok hızlı ama pahalı.");
+            Add("pickaxe_diamond_name",ru: "Алмазная кирка",   en: "Diamond Pickaxe",tr: "Elmas Kazma");
+            Add("pickaxe_diamond_desc",ru: "Кирка высшего уровня.",     en: "Top tier pickaxe.", tr: "En üst seviye kazma.");
             Add("lang_ru",          ru: "Русский",       en: "Russian",      tr: "Rusça");
             Add("lang_en",          ru: "Английский",    en: "English",      tr: "İngilizce");
             Add("lang_tr",          ru: "Турецкий",      en: "Turkish",      tr: "Türkçe");
@@ -185,6 +234,17 @@ namespace SimpleVoxelSystem
                 ru: "Нажми кнопку Создать Остров.\nДо этого все остальные действия заблокированы.",
                 en: "Press the Create Island button.\nUntil then, all other actions are blocked.",
                 tr: "Ada Oluştur butonuna bas.\nO zamana kadar diğer tüm eylemler bloklanır.");
+
+            // ── Подсказки зон магазина ────────────────────────────────────────
+            Add("sell_point",           ru: "Точка продажи",    en: "Sell Point",       tr: "Satış Noktası");
+            Add("zone_tap_open",        ru: "Тап <color=#FFD700><b>[{0}]</b></color> чтобы открыть {1}",  en: "Tap <color=#FFD700><b>[{0}]</b></color> to open {1}",    tr: "<color=#FFD700><b>[{0}]</b></color>'a dokun, {1} aç");
+            Add("zone_press_open",      ru: "Нажми <color=#FFD700><b>[{0}]</b></color> чтобы открыть {1}",en: "Press <color=#FFD700><b>[{0}]</b></color> to open {1}",  tr: "<color=#FFD700><b>[{0}]</b></color> tuşuna bas, {1} aç");
+            Add("zone_tap_sell",        ru: "Тап <color=#FFD700><b>[{0}]</b></color> чтобы продать ресурсы",    en: "Tap <color=#FFD700><b>[{0}]</b></color> to sell resources",    tr: "<color=#FFD700><b>[{0}]</b></color>'a dokun, kaynakları sat");
+            Add("zone_press_sell",      ru: "Нажми <color=#FFD700><b>[{0}]</b></color> чтобы продать ресурсы",  en: "Press <color=#FFD700><b>[{0}]</b></color> to sell resources",  tr: "<color=#FFD700><b>[{0}]</b></color> tuşuna bas, kaynakları sat");
+
+            // ── Статусы размещения ──────────────────────────────────────────
+            Add("status_mine_bought",   ru: "<color=yellow>Шахта куплена.</color> Иди на Остров чтобы поставить её.", en: "<color=yellow>Mine purchased.</color> Go to Island to place it.");
+            Add("status_placement",     ru: "<color=yellow>Режим размещения.</color> Выбери место и нажми ПОСТАВИТЬ.", en: "<color=yellow>Placement mode.</color> Choose position and press PLACE.");
         }
 
         // ── Инициализация ────────────────────────────────────────────────────

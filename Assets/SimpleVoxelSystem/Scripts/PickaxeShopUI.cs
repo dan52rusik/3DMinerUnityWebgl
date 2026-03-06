@@ -61,10 +61,10 @@ namespace SimpleVoxelSystem
 
             availablePickaxes = new List<PickaxeData>
             {
-                CreateData("Stone Pickaxe", "Faster than default.", EconomyTuning.StonePickaxePrice, EconomyTuning.StonePickaxePower, EconomyTuning.StonePickaxeRequiredLevel, new Color(0.5f, 0.5f, 0.5f)),
-                CreateData("Iron Pickaxe", "Solid upgrade for mining.", EconomyTuning.IronPickaxePrice, EconomyTuning.IronPickaxePower, EconomyTuning.IronPickaxeRequiredLevel, new Color(0.8f, 0.8f, 0.8f)),
-                CreateData("Gold Pickaxe", "Very fast but expensive.", EconomyTuning.GoldPickaxePrice, EconomyTuning.GoldPickaxePower, EconomyTuning.GoldPickaxeRequiredLevel, new Color(1f, 0.9f, 0f)),
-                CreateData("Diamond Pickaxe", "Top tier pickaxe.", EconomyTuning.DiamondPickaxePrice, EconomyTuning.DiamondPickaxePower, EconomyTuning.DiamondPickaxeRequiredLevel, new Color(0.3f, 0.9f, 1f))
+                CreateData(Loc.T("pickaxe_stone_name"), Loc.T("pickaxe_stone_desc"), EconomyTuning.StonePickaxePrice, EconomyTuning.StonePickaxePower, EconomyTuning.StonePickaxeRequiredLevel, new Color(0.5f, 0.5f, 0.5f)),
+                CreateData(Loc.T("pickaxe_iron_name"), Loc.T("pickaxe_iron_desc"), EconomyTuning.IronPickaxePrice, EconomyTuning.IronPickaxePower, EconomyTuning.IronPickaxeRequiredLevel, new Color(0.8f, 0.8f, 0.8f)),
+                CreateData(Loc.T("pickaxe_gold_name"), Loc.T("pickaxe_gold_desc"), EconomyTuning.GoldPickaxePrice, EconomyTuning.GoldPickaxePower, EconomyTuning.GoldPickaxeRequiredLevel, new Color(1f, 0.9f, 0f)),
+                CreateData(Loc.T("pickaxe_diamond_name"), Loc.T("pickaxe_diamond_desc"), EconomyTuning.DiamondPickaxePrice, EconomyTuning.DiamondPickaxePower, EconomyTuning.DiamondPickaxeRequiredLevel, new Color(0.3f, 0.9f, 1f))
             };
         }
 
@@ -114,8 +114,8 @@ namespace SimpleVoxelSystem
             shopPanel = RuntimeUIFactory.MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(420f, 520f), ColPanel);
             RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.52f);
 
-            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", "PICKAXE SHOP", 22, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
-            levelText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "LevelInfo", "Mining level: 1 (0 XP)", 16, TextAnchor.UpperCenter);
+            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", Loc.T("pickaxe_shop_title"), 22, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
+            levelText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "LevelInfo", Loc.Tf("mining_level_format", GlobalEconomy.MiningLevel, GlobalEconomy.MiningXP), 16, TextAnchor.UpperCenter);
             levelText.rectTransform.anchoredPosition = new Vector2(0f, -45f);
 
             Button closeBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseBtn", "X",
@@ -170,8 +170,8 @@ namespace SimpleVoxelSystem
                 string summary =
                     $"{safeName}\n" +
                     $"{safeDesc}\n" +
-                    $"Power: {Mathf.Max(1, data.miningPower)}    Req Lv: {Mathf.Max(1, data.requiredMiningLevel)}    " +
-                    $"Price: ${data.buyPrice}    [{BuildStateLabel(index)}]";
+                    $"{Loc.T("stats_power")}: {Mathf.Max(1, data.miningPower)}    {Loc.T("stats_req_lv")}: {Mathf.Max(1, data.requiredMiningLevel)}    " +
+                    $"{Loc.T("stats_price")}: ${data.buyPrice}    [{BuildStateLabel(index)}]";
 
                 Text tInfo = RuntimeUIFactory.MakeLabel(item.transform, "Info", summary, 14, TextAnchor.UpperLeft, new Vector2(10f, 6f), new Vector2(-10f, -6f), color: ColText);
                 tInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -187,7 +187,7 @@ namespace SimpleVoxelSystem
         private void Update()
         {
             if (shopPanel != null && shopPanel.activeSelf && levelText != null)
-                levelText.text = $"Mining level: {GlobalEconomy.MiningLevel} ({GlobalEconomy.MiningXP} XP)";
+                levelText.text = Loc.Tf("mining_level_format", GlobalEconomy.MiningLevel, GlobalEconomy.MiningXP);
         }
 
         public void Toggle()
@@ -286,9 +286,9 @@ namespace SimpleVoxelSystem
         {
             PickaxeData equipped = playerPickaxe != null ? playerPickaxe.currentPickaxe : null;
             bool isEquipped = equipped != null && index >= 0 && index < availablePickaxes.Count && availablePickaxes[index] == equipped;
-            if (isEquipped) return "EQUIPPED";
-            if (ownedPickaxeIndices.Contains(index)) return "OWNED";
-            return "BUY";
+            if (isEquipped) return Loc.T("btn_equipped");
+            if (ownedPickaxeIndices.Contains(index)) return Loc.T("btn_owned");
+            return Loc.T("btn_buy");
         }
 
         private void LoadPickaxeState()

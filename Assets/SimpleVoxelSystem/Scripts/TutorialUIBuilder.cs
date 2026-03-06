@@ -100,18 +100,18 @@ namespace SimpleVoxelSystem
             outline.effectDistance = new Vector2(2f, 2f);
 
             refs.CardTitle = MakeLabel(refs.Card.transform, "Title",
-                "", 22, TextAnchor.LowerRight,
-                new Vector2(0, 8), new Vector2(-16, 8), bold: true,
+                "", 22, TextAnchor.UpperLeft,
+                new Vector2(28, -50), new Vector2(-28, -12), bold: true,
                 color: new Color(0.55f, 0.72f, 1f, 0.85f));
 
             refs.CardBody = MakeLabel(refs.Card.transform, "Body",
                 "", 20, TextAnchor.UpperLeft,
-                new Vector2(28, -12), new Vector2(-28, -26),
+                new Vector2(28, 12), new Vector2(-28, -52),
                 color: new Color(0.88f, 0.93f, 1f));
 
             refs.CardTapHint = MakeLabel(refs.Card.transform, "TapHint",
-                "", 17, TextAnchor.LowerRight,
-                new Vector2(28, 8), new Vector2(-28, 8),
+                "", 17, TextAnchor.UpperRight,
+                new Vector2(28, -42), new Vector2(-28, -12),
                 color: new Color(1f, 0.88f, 0.35f));
             refs.CardTapHint.gameObject.SetActive(false);
 
@@ -139,7 +139,7 @@ namespace SimpleVoxelSystem
             arrowRt.sizeDelta        = new Vector2(80, 36);
             arrowRt.anchorMin        = arrowRt.anchorMax = new Vector2(0.5f, 0.5f);
             refs.ArrowLabel          = arrowGo.AddComponent<Text>();
-            refs.ArrowLabel.text     = "â–¼";
+            refs.ArrowLabel.text     = "\u25BC";
             refs.ArrowLabel.fontSize = 32;
             refs.ArrowLabel.alignment    = TextAnchor.MiddleCenter;
             refs.ArrowLabel.color        = new Color(1f, 0.9f, 0.15f, 1f);

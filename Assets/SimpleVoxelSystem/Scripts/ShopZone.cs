@@ -256,10 +256,10 @@ namespace SimpleVoxelSystem
 
         private string GetMobileActionLabel()
         {
-            if (zoneType == ShopZoneType.Pickaxe) return "PICK";
-            if (zoneType == ShopZoneType.Minion) return "MINION";
-            if (zoneType == ShopZoneType.Sell) return "SELL";
-            return "MINE";
+            if (zoneType == ShopZoneType.Pickaxe) return Loc.T("btn_upgrades");
+            if (zoneType == ShopZoneType.Minion)  return Loc.T("btn_minions");
+            if (zoneType == ShopZoneType.Sell)    return Loc.T("btn_sell");
+            return Loc.T("btn_mines");
         }
 
         bool IsKeyPressed()
@@ -311,22 +311,24 @@ namespace SimpleVoxelSystem
                 {
                     string keyStr = currentZone.GetOpenKeyDisplay().ToString();
                     string mobileAction = currentZone.GetMobileActionLabel();
-                    string shopName = "Mine Shop";
-                    if (currentZone.zoneType == ShopZoneType.Pickaxe) shopName = "Pickaxe Shop";
-                    else if (currentZone.zoneType == ShopZoneType.Minion) shopName = "Minion Shop";
-                    else if (currentZone.zoneType == ShopZoneType.Sell) shopName = "Sell Point";
+
+                    string shopName;
+                    if (currentZone.zoneType == ShopZoneType.Pickaxe)      shopName = Loc.T("pickaxe_shop");
+                    else if (currentZone.zoneType == ShopZoneType.Minion)  shopName = Loc.T("minion_shop");
+                    else if (currentZone.zoneType == ShopZoneType.Sell)    shopName = Loc.T("sell_point");
+                    else                                                    shopName = Loc.T("mine_shop");
 
                     string mobilePrompt;
                     string desktopPrompt;
                     if (currentZone.zoneType == ShopZoneType.Sell)
                     {
-                        mobilePrompt = $"Tap <color=#FFD700><b>[{mobileAction}]</b></color> to sell resources";
-                        desktopPrompt = $"Press <color=#FFD700><b>[{keyStr}]</b></color> to sell resources";
+                        mobilePrompt  = Loc.Tf("zone_tap_sell",   mobileAction);
+                        desktopPrompt = Loc.Tf("zone_press_sell",  keyStr);
                     }
                     else
                     {
-                        mobilePrompt = $"Tap <color=#FFD700><b>[{mobileAction}]</b></color> to open {shopName}";
-                        desktopPrompt = $"Press <color=#FFD700><b>[{keyStr}]</b></color> to open {shopName}";
+                        mobilePrompt  = Loc.Tf("zone_tap_open",   mobileAction, shopName);
+                        desktopPrompt = Loc.Tf("zone_press_open",  keyStr,       shopName);
                     }
 
                     promptText.text = mobileActive ? mobilePrompt : desktopPrompt;

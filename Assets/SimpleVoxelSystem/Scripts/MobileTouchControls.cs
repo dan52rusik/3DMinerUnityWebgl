@@ -367,7 +367,7 @@ namespace SimpleVoxelSystem
             zoomOutButton    = CreateHoldButton(parent, "ZoomOutButton","-",                new Vector2(1f, 1f), new Vector2(20f * m, 218f * m), new Vector2(64f * m, 64f * m),   new Color(0.75f, 0.75f, 0.9f, 0.68f), Mathf.RoundToInt(24f * m));
 
             placeMineButton  = CreateTapButton(parent, "PlaceMineButton", Loc.T("btn_place"),
-                new Vector2(1f, 0f), new Vector2(24f * m, 430f * m), new Vector2(150f * m, 74f * m), new Color(0.1f, 0.75f, 0.2f, 0.72f), Mathf.RoundToInt(22f * m));
+                new Vector2(0.5f, 0f), new Vector2(0f, 24f * m), new Vector2(260f * m, 90f * m), new Color(0.1f, 0.75f, 0.2f, 0.9f), Mathf.RoundToInt(28f * m));
             placeMineButton.gameObject.SetActive(false);
 
             if (interactButton    != null) interactButtonLabel    = interactButton.GetComponentInChildren<Text>();
@@ -462,9 +462,9 @@ namespace SimpleVoxelSystem
         private void ApplyInteractHintState()
         {
             if (interactButton != null)
-                interactButton.gameObject.SetActive(interactHintRequested ? interactHintVisibleRequested : true);
+                interactButton.gameObject.SetActive(interactHintRequested && interactHintVisibleRequested);
 
-            // Используем переводимый лейбл ACT
+            // Используем переводимый лейбл ACT в качестве текста по умолчанию (хотя кнопка будет скрыта)
             string actLabel = LocalizedActLabel;
             if (interactButtonLabel != null)
                 interactButtonLabel.text = interactHintRequested ? interactHintText : actLabel;
