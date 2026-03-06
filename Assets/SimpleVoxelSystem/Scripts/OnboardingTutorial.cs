@@ -128,7 +128,7 @@ namespace SimpleVoxelSystem
 
         void Start()
         {
-            Loc.Initialize(); // убеждаемся что локализация инициализирована
+            // Loc.Initialize() не вызываем — LocalizationManager уже сделал это
             ui = TutorialUIBuilder.Build(transform);
             DetermineFlow();
         }

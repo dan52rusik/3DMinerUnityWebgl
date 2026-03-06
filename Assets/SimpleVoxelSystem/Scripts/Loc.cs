@@ -190,8 +190,8 @@ namespace SimpleVoxelSystem
         // ── Инициализация ────────────────────────────────────────────────────
 
         /// <summary>
-        /// Вызывать при старте игры (например из Awake/Start любого MonoBehaviour).
-        /// Определяет язык из YG2.lang или PlayerPrefs.
+        /// Определяет язык из PlayerPrefs или YG2.lang и уведомляет все подписчики.
+        /// Вызывается только из LocalizationManager — единственного владельца инициализации.
         /// </summary>
         public static void Initialize()
         {
@@ -199,17 +199,19 @@ namespace SimpleVoxelSystem
 
             if (!string.IsNullOrWhiteSpace(saved) && IsSupported(saved))
             {
-                // Игрок ранее выбрал язык вручную — уважаем его выбор
                 _currentLang = saved.ToLowerInvariant();
             }
             else
             {
-                // Берём из Яндекса
                 string yandexLang = GetYandexLang();
                 _currentLang = IsSupported(yandexLang) ? yandexLang : LangRu;
             }
 
             Debug.Log($"[Loc] Language initialized: {_currentLang}");
+
+            // Всегда уведомляем подписчиков — независимо от того, совпадает язык или нет.
+            // Это гарантирует что UI построенный ДО Initialize() обновит свои тексты.
+            OnLanguageChanged?.Invoke();
         }
 
         // ── API ──────────────────────────────────────────────────────────────

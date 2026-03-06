@@ -69,8 +69,10 @@ namespace SimpleVoxelSystem
 
         private void Start()
         {
-            Loc.Initialize();
+            // Loc.Initialize() НЕ вызываем — это делает LocalizationManager
             BuildUI();
+            // Явно применяем текущий язык после построения меню
+            OnLangChanged();
         }
 
         private void OnEnable()
@@ -325,6 +327,11 @@ namespace SimpleVoxelSystem
             frameRt.anchoredPosition = new Vector2(0f, -8f);
             frameRt.sizeDelta = new Vector2(62f, 34f);
 
+            // Mask — обрезает всё что выходит за границу флага (нужно для диагоналей UK)
+            frameImage.color = new Color(1f, 1f, 1f, 1f); // mask требует непрозрачный Image
+            var mask = flagFrame.AddComponent<Mask>();
+            mask.showMaskGraphic = false; // скрыть саму рамку, показать только содержимое
+
             // Строим флаг внутри рамки.
             BuildFlagStripes(flagFrame.transform, lang, 58f, 30f);
 
@@ -390,6 +397,7 @@ namespace SimpleVoxelSystem
 
             if (lang == Loc.LangRu)
             {
+                // Белый / Синий / Красный — горизонтальные полосы
                 BuildHorizontalFlag(root.transform, h, new[]
                 {
                     new Color(1.00f, 1.00f, 1.00f),
@@ -401,23 +409,118 @@ namespace SimpleVoxelSystem
 
             if (lang == Loc.LangEn)
             {
-                BuildSolidRect(root.transform, "Field", new Color(0.02f, 0.16f, 0.55f), Vector2.zero, Vector2.zero);
-                BuildCross(root.transform, Color.white, 10f, 10f);
-                BuildCross(root.transform, new Color(0.80f, 0.08f, 0.08f), 5f, 5f);
+                // 1. Тёмно-синий фон
+                MakeStretchRect(root.transform, "Field", new Color(0.02f, 0.16f, 0.55f));
+
+                // 2. Белый диагональный X (крест Святого Андрея + Святого Патрика, широкий)
+                MakeRotatedRect(root.transform, "DiagW1", Color.white,  45f, new Vector2(w * 2f, h * 0.30f));
+                MakeRotatedRect(root.transform, "DiagW2", Color.white, -45f, new Vector2(w * 2f, h * 0.30f));
+
+                // 3. Красный диагональный X (крест Святого Патрика, узкий)
+                MakeRotatedRect(root.transform, "DiagR1", new Color(0.78f, 0.06f, 0.14f),  45f, new Vector2(w * 2f, h * 0.13f));
+                MakeRotatedRect(root.transform, "DiagR2", new Color(0.78f, 0.06f, 0.14f), -45f, new Vector2(w * 2f, h * 0.13f));
+
+                // 4. Белый прямой крест (крест Святого Георгия, широкий)
+                MakeStretchRect(root.transform, "CrossV_W", Color.white, anchorMinX: 0.40f, anchorMaxX: 0.60f);
+                MakeStretchRect(root.transform, "CrossH_W", Color.white, anchorMinY: 0.33f, anchorMaxY: 0.67f);
+
+                // 5. Красный прямой крест (крест Святого Георгия)
+                MakeStretchRect(root.transform, "CrossV_R", new Color(0.78f, 0.06f, 0.14f), anchorMinX: 0.445f, anchorMaxX: 0.555f);
+                MakeStretchRect(root.transform, "CrossH_R", new Color(0.78f, 0.06f, 0.14f), anchorMinY: 0.405f, anchorMaxY: 0.595f);
                 return;
             }
 
             if (lang == Loc.LangTr)
             {
-                BuildSolidRect(root.transform, "Field", new Color(0.86f, 0.08f, 0.09f), Vector2.zero, Vector2.zero);
-                BuildTurkishMoonAndStar(root.transform);
+                // Красный фон
+                MakeStretchRect(root.transform, "Field", new Color(0.86f, 0.08f, 0.09f));
+
+                Color trRed  = new Color(0.86f, 0.08f, 0.09f);
+                float r      = h; // размер для пропорций
+
+                // Белый большой круг (внешний диск полумесяца) — Text ●
+                var moonW = CreateText(root.transform, "MoonW", "\u25cf");
+                moonW.fontSize  = Mathf.RoundToInt(r * 0.84f);
+                moonW.color     = Color.white;
+                moonW.alignment = TextAnchor.MiddleCenter;
+                var mwRt = moonW.GetComponent<RectTransform>();
+                mwRt.anchorMin = mwRt.anchorMax = new Vector2(0.32f, 0.50f);
+                mwRt.pivot     = new Vector2(0.5f, 0.5f);
+                mwRt.anchoredPosition = Vector2.zero;
+                mwRt.sizeDelta = new Vector2(r, r);
+
+                // Красный круг — крупный, смещён сильнее → тонкий изящный полумесяц
+                var moonR = CreateText(root.transform, "MoonR", "\u25cf");
+                moonR.fontSize  = Mathf.RoundToInt(r * 0.78f);
+                moonR.color     = trRed;
+                moonR.alignment = TextAnchor.MiddleCenter;
+                var mrRt = moonR.GetComponent<RectTransform>();
+                mrRt.anchorMin = mrRt.anchorMax = new Vector2(0.32f, 0.50f);
+                mrRt.pivot     = new Vector2(0.5f, 0.5f);
+                mrRt.anchoredPosition = new Vector2(r * 0.22f, 0f);
+                mrRt.sizeDelta = new Vector2(r * 0.86f, r * 0.86f);
+
+                // Белая звезда — Text ★
+                var star = CreateText(root.transform, "Star", "\u2605");
+                star.fontSize  = Mathf.RoundToInt(r * 0.40f);
+                star.color     = Color.white;
+                star.alignment = TextAnchor.MiddleCenter;
+                var sRt = star.GetComponent<RectTransform>();
+                sRt.anchorMin = sRt.anchorMax = new Vector2(0.63f, 0.50f);
+                sRt.pivot     = new Vector2(0.5f, 0.5f);
+                sRt.anchoredPosition = Vector2.zero;
+                sRt.sizeDelta = new Vector2(r * 0.44f, r * 0.44f);
                 return;
             }
 
-            BuildSolidRect(root.transform, "Field", Color.gray, Vector2.zero, Vector2.zero);
+            // Fallback
+            MakeStretchRect(root.transform, "Field", Color.gray);
         }
 
-        private void BuildHorizontalFlag(Transform parent, float height, Color[] stripes)
+        /// <summary>Повёрнутый прямоугольник (для диагональных полос флага). Центр — середина root.</summary>
+        private static void MakeRotatedRect(Transform parent, string name, Color color, float angleDeg, Vector2 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<Image>().color = color;
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot     = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = size;
+            go.transform.localEulerAngles = new Vector3(0f, 0f, angleDeg);
+        }
+
+
+        /// <summary>Прямоугольник на весь родитель (stretch). Можно ограничить по одной оси через anchor.</summary>
+        private static void MakeStretchRect(Transform parent, string name, Color color,
+            float anchorMinX = 0f, float anchorMaxX = 1f,
+            float anchorMinY = 0f, float anchorMaxY = 1f)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<Image>().color = color;
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(anchorMinX, anchorMinY);
+            rt.anchorMax = new Vector2(anchorMaxX, anchorMaxY);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>Прямоугольник фиксированного размера, якорь в заданной нормализованной точке родителя.</summary>
+        private static void MakeAnchoredRect(Transform parent, string name, Color color,
+            Vector2 anchorNorm, Vector2 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<Image>().color = color;
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = anchorNorm;
+            rt.pivot     = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = size;
+        }
+
+        private static void BuildHorizontalFlag(Transform parent, float height, Color[] stripes)
         {
             float stripeH = height / stripes.Length;
             for (int i = 0; i < stripes.Length; i++)
@@ -429,73 +532,10 @@ namespace SimpleVoxelSystem
                 var rt = stripe.GetComponent<RectTransform>();
                 rt.anchorMin = new Vector2(0f, 1f);
                 rt.anchorMax = new Vector2(1f, 1f);
-                rt.pivot = new Vector2(0.5f, 1f);
+                rt.pivot     = new Vector2(0.5f, 1f);
                 rt.anchoredPosition = new Vector2(0f, -stripeH * i);
                 rt.sizeDelta = new Vector2(0f, stripeH);
             }
-        }
-
-        private void BuildCross(Transform parent, Color color, float verticalWidth, float horizontalHeight)
-        {
-            BuildSolidRect(parent, "CrossV", color, new Vector2(0.5f, 0.5f), new Vector2(verticalWidth, 0f), stretchY: true);
-            BuildSolidRect(parent, "CrossH", color, new Vector2(0.5f, 0.5f), new Vector2(0f, horizontalHeight), stretchX: true);
-        }
-
-        private void BuildTurkishMoonAndStar(Transform parent)
-        {
-            BuildCircle(parent, "MoonOuter", new Color(0.97f, 0.97f, 0.97f), new Vector2(-10f, -2f), 12f);
-            BuildCircle(parent, "MoonInner", new Color(0.86f, 0.08f, 0.09f), new Vector2(-6f, -2f), 9f);
-
-            var star = CreateText(parent, "Star", "★");
-            star.fontSize = 13;
-            star.color = new Color(0.99f, 0.99f, 0.99f);
-            star.alignment = TextAnchor.MiddleCenter;
-            var rt = star.GetComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(8f, -2f);
-            rt.sizeDelta = new Vector2(14f, 14f);
-        }
-
-        private void BuildCircle(Transform parent, string name, Color color, Vector2 offset, float size)
-        {
-            var dot = CreateText(parent, name, "\u25cf");
-            dot.fontSize = Mathf.RoundToInt(size * 1.5f);
-            dot.color = color;
-            dot.alignment = TextAnchor.MiddleCenter;
-            var rt = dot.GetComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = offset;
-            rt.sizeDelta = new Vector2(size, size);
-        }
-
-        private void BuildSolidRect(Transform parent, string name, Color color, Vector2 pivotAnchor, Vector2 sizeDelta, bool stretchX = false, bool stretchY = false)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var img = go.AddComponent<Image>();
-            img.color = color;
-            var rt = go.GetComponent<RectTransform>();
-            if (stretchX)
-            {
-                rt.anchorMin = new Vector2(0f, pivotAnchor.y);
-                rt.anchorMax = new Vector2(1f, pivotAnchor.y);
-            }
-            else
-            {
-                rt.anchorMin = rt.anchorMax = new Vector2(pivotAnchor.x, pivotAnchor.y);
-            }
-
-            if (stretchY)
-            {
-                rt.anchorMin = new Vector2(rt.anchorMin.x, 0f);
-                rt.anchorMax = new Vector2(rt.anchorMax.x, 1f);
-            }
-
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = sizeDelta;
         }
 
         // ═════════════════════════════════════════════════════════════════════

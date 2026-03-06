@@ -130,10 +130,15 @@ namespace SimpleVoxelSystem
                 return;
 
             EnsureEventSystem();
+
+            // Подписываемся ДО BuildUI — чтобы не пропустить OnLanguageChanged
+            // если LocalizationManager.Awake() уже отстрелял его раньше нас
+            Loc.OnLanguageChanged += RefreshButtonLabels;
+
             BuildUI();
 
-            // FIX LOC: подписываемся на смену языка
-            Loc.OnLanguageChanged += RefreshButtonLabels;
+            // Принудительно применить текущий язык после построения UI
+            RefreshButtonLabels();
 
             // Initialize sticky position to center so it's not (0,0) before first touch
             StickyAimPosition = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
