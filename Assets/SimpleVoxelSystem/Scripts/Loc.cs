@@ -38,6 +38,7 @@ namespace SimpleVoxelSystem
         private static string _currentLang = LangRu;
         public static string CurrentLanguage => _currentLang;
         public static bool HasManualOverride => PlayerPrefs.HasKey(LangPrefKey);
+        private static bool _buildKeysInjected;
 
         /// <summary>Срабатывает при смене языка. Подпишитесь чтобы обновить UI.</summary>
         public static event Action OnLanguageChanged;
@@ -283,6 +284,7 @@ namespace SimpleVoxelSystem
         /// </summary>
         public static void Initialize()
         {
+            EnsureBuildLocalizationKeys();
             string saved = PlayerPrefs.GetString(LangPrefKey, string.Empty);
 
             if (!string.IsNullOrWhiteSpace(saved) && IsSupported(saved))
@@ -307,6 +309,7 @@ namespace SimpleVoxelSystem
         /// <summary>Перевести ключ на текущий язык.</summary>
         public static string T(string key)
         {
+            EnsureBuildLocalizationKeys();
             if (_strings.TryGetValue(key, out var langs))
             {
                 if (langs.TryGetValue(_currentLang, out string val) && !string.IsNullOrEmpty(val))
@@ -386,6 +389,22 @@ namespace SimpleVoxelSystem
         public static void AddString(string key, string ru = null, string en = null, string tr = null)
         {
             Add(key, ru, en, tr);
+        }
+
+        private static void EnsureBuildLocalizationKeys()
+        {
+            if (_buildKeysInjected)
+                return;
+
+            _buildKeysInjected = true;
+            Add("btn_build", ru: "СТРОИТЬ", en: "BUILD", tr: "INSA ET");
+            Add("btn_build_off", ru: "ЛОМАТЬ", en: "MINE", tr: "KAZ");
+            Add("build_inventory", ru: "Строй-инвентарь", en: "Build Inventory", tr: "Insa Envanteri");
+            Add("build_inventory_toggle", ru: "ИНВ", en: "INV", tr: "ENV");
+            Add("build_tab_hint", ru: "Tab: {0}", en: "Tab: {0}", tr: "Tab: {0}");
+            Add("build_need_block", ru: "Нужен блок: {0}", en: "Need block: {0}", tr: "Gerekli blok: {0}");
+            Add("build_island_only", ru: "Строительство доступно только на твоем острове.", en: "Building is available only on your island.", tr: "Insaat sadece kendi adanda kullanilabilir.");
+            Add("build_place_status", ru: "Построено: {0}", en: "Placed: {0}", tr: "Yerlestirildi: {0}");
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────

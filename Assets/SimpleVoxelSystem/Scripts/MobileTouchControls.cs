@@ -75,6 +75,7 @@ namespace SimpleVoxelSystem
         private Text minionMenuButtonLabel;
         private Text placeMineButtonLabel;
         private Text removeButtonLabel;
+        private bool lastBuildModeActive;
 
         private const string DefaultInteractLabel = "ACT"; // fallback если Loc не инициализирован
         private static string LocalizedActLabel => Loc.T("btn_act");
@@ -153,6 +154,8 @@ namespace SimpleVoxelSystem
         {
             if (!IsActive)
                 return;
+
+            RefreshBuildActionLabel();
 
             MoveVector = joystick != null ? joystick.Direction : Vector2.zero;
             LookDelta = lookPad != null ? lookPad.ConsumeDelta() * lookScale : Vector2.zero;
@@ -393,12 +396,24 @@ namespace SimpleVoxelSystem
         /// <summary>Обновить лейблы всех кнопок при смене языка.</summary>
         private void RefreshButtonLabels()
         {
-            if (mineButtonLabel       != null) mineButtonLabel.text       = Loc.T("btn_mine");
+            lastBuildModeActive = !PlayerBuildingSystem.IsBuildModeActiveGlobal;
+            RefreshBuildActionLabel(force: true);
             if (jumpButtonLabel       != null) jumpButtonLabel.text       = Loc.T("btn_jump");
             if (runButtonLabel        != null) runButtonLabel.text        = Loc.T("btn_run");
             if (minionMenuButtonLabel != null) minionMenuButtonLabel.text = Loc.T("btn_minions");
             if (placeMineButtonLabel  != null) placeMineButtonLabel.text  = Loc.T("btn_place");
             if (removeButtonLabel     != null) removeButtonLabel.text     = Loc.T("btn_del");
+        }
+
+        private void RefreshBuildActionLabel(bool force = false)
+        {
+            bool buildModeActive = PlayerBuildingSystem.IsBuildModeActiveGlobal;
+            if (!force && buildModeActive == lastBuildModeActive)
+                return;
+
+            lastBuildModeActive = buildModeActive;
+            if (mineButtonLabel != null)
+                mineButtonLabel.text = Loc.T(buildModeActive ? "btn_build" : "btn_mine");
         }
 
         public void SetEditorModeVisible(bool visible)

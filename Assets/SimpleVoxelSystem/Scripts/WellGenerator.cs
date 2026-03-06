@@ -68,6 +68,7 @@ namespace SimpleVoxelSystem
         public int LobbyFloorY => lobbyBuildAbove;
         public bool IsInLobbyMode { get; private set; } = true;
         public VoxelIsland ActiveIsland => IsInLobbyMode ? lobbyIsland : (playerIsland ?? lobbyIsland);
+        public VoxelIsland PrivateIsland => playerIsland;
         public bool IsIslandGenerated => playerIsland != null;
 
         public event System.Action OnFlatPlotReady;

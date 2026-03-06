@@ -15,7 +15,9 @@ namespace SimpleVoxelSystem
     public class PlayerPickaxe : MonoBehaviour
     {
         public static event Action OnMineAttempt;
+        public static event Action OnInventoryChanged;
         public static void NotifyMineAttempt() => OnMineAttempt?.Invoke();
+        public static void NotifyInventoryChanged() => OnInventoryChanged?.Invoke();
 
         [Header("Mining Setup")]
         public int pickaxePower = 1; 
@@ -67,6 +69,9 @@ namespace SimpleVoxelSystem
         void Update()
         {
             if (!enableManualRaycastMining)
+                return;
+
+            if (PlayerBuildingSystem.IsBuildModeActiveGlobal)
                 return;
 
             if (OnboardingTutorial.IsGameplayInputBlocked)
@@ -262,6 +267,8 @@ namespace SimpleVoxelSystem
             else
                 island.RemoveVoxel(gx, gy, gz);
 
+            PlayerBuildingSystem.Instance?.NotifyBlockRemovedByMining(island, key);
+
             AsyncGameplayEvents.PublishMineBlock(gx, gy, gz, data.type, xp, inLobby);
 
             // Local update
@@ -331,16 +338,7 @@ namespace SimpleVoxelSystem
 
         void CollectResources(BlockData data)
         {
-            currentBackpackLoad++;
-            totalValueInBackpack += data.reward;
-
-            switch (data.type)
-            {
-                case BlockType.Dirt: dirtCount++; break;
-                case BlockType.Stone: stoneCount++; break;
-                case BlockType.Iron: ironCount++; break;
-                case BlockType.Gold: goldCount++; break;
-            }
+            TryAddResourceBlock(data.type, ignoreCapacity: true, notify: false);
 
             if (verboseLogs)
             {
@@ -350,6 +348,8 @@ namespace SimpleVoxelSystem
                     $"[D:{dirtCount} S:{stoneCount} Fe:{ironCount} Au:{goldCount}]"
                 );
             }
+
+            NotifyInventoryChanged();
         }
 
         public void SellResources()
@@ -367,9 +367,88 @@ namespace SimpleVoxelSystem
 
         public void ClearBackpack()
         {
-            currentBackpackLoad = 0;
-            totalValueInBackpack = 0;
-            dirtCount = stoneCount = ironCount = goldCount = 0;
+            SetInventoryCounts(0, 0, 0, 0, notify: true);
+        }
+
+        public int GetBlockCount(BlockType type)
+        {
+            switch (type)
+            {
+                case BlockType.Dirt: return dirtCount;
+                case BlockType.Stone: return stoneCount;
+                case BlockType.Iron: return ironCount;
+                case BlockType.Gold: return goldCount;
+                default: return 0;
+            }
+        }
+
+        public bool TryConsumeResourceBlock(BlockType type, bool notify = true)
+        {
+            if (GetBlockCount(type) <= 0)
+                return false;
+
+            AddCount(type, -1);
+            RecalculateBackpackStateFromCounts();
+            if (notify)
+                NotifyInventoryChanged();
+            return true;
+        }
+
+        public bool TryAddResourceBlock(BlockType type, bool ignoreCapacity = false, bool notify = true)
+        {
+            if (!ignoreCapacity && currentBackpackLoad >= maxBackpackCapacity)
+                return false;
+
+            AddCount(type, 1);
+            RecalculateBackpackStateFromCounts();
+            if (notify)
+                NotifyInventoryChanged();
+            return true;
+        }
+
+        public void SetInventoryCounts(int dirt, int stone, int iron, int gold, bool notify = false)
+        {
+            dirtCount = Mathf.Max(0, dirt);
+            stoneCount = Mathf.Max(0, stone);
+            ironCount = Mathf.Max(0, iron);
+            goldCount = Mathf.Max(0, gold);
+            RecalculateBackpackStateFromCounts();
+            if (notify)
+                NotifyInventoryChanged();
+        }
+
+        private void AddCount(BlockType type, int delta)
+        {
+            switch (type)
+            {
+                case BlockType.Dirt:
+                    dirtCount = Mathf.Max(0, dirtCount + delta);
+                    break;
+                case BlockType.Stone:
+                    stoneCount = Mathf.Max(0, stoneCount + delta);
+                    break;
+                case BlockType.Iron:
+                    ironCount = Mathf.Max(0, ironCount + delta);
+                    break;
+                case BlockType.Gold:
+                    goldCount = Mathf.Max(0, goldCount + delta);
+                    break;
+            }
+        }
+
+        private void RecalculateBackpackStateFromCounts()
+        {
+            currentBackpackLoad = Mathf.Max(0, dirtCount + stoneCount + ironCount + goldCount);
+            totalValueInBackpack =
+                dirtCount * GetReward(BlockType.Dirt) +
+                stoneCount * GetReward(BlockType.Stone) +
+                ironCount * GetReward(BlockType.Iron) +
+                goldCount * GetReward(BlockType.Gold);
+        }
+
+        private int GetReward(BlockType type)
+        {
+            return Mathf.Max(0, GetBlockData(type).reward);
         }
 
         void LogBackpackFull()

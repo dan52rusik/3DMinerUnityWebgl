@@ -30,6 +30,10 @@ namespace SimpleVoxelSystem
             public int maxBackpackCapacity = 10;
             public int upgStrengthCost = 100;
             public int upgBackpackCost = 150;
+            public int dirtCount;
+            public int stoneCount;
+            public int ironCount;
+            public int goldCount;
 
             public bool hasPrivateIsland;
             public SerializableVector3 privateIslandOffset;
@@ -38,6 +42,7 @@ namespace SimpleVoxelSystem
             public bool hasMine;
             public MineSaveData mine;
             public List<MineSaveData> mines = new List<MineSaveData>();
+            public List<PlayerBuildingSystem.SavedBlockState> builtBlocks = new List<PlayerBuildingSystem.SavedBlockState>();
         }
 
         [Serializable]
@@ -142,6 +147,7 @@ namespace SimpleVoxelSystem
             GlobalEconomy.OnMoneyChanged  += OnEconomyChanged;
             GlobalEconomy.OnXPChanged     += OnEconomyChanged;
             GlobalEconomy.OnLevelChanged  += OnEconomyChanged;
+            PlayerPickaxe.OnInventoryChanged += OnInventoryChanged;
         }
 
         private void OnDisable()
@@ -150,11 +156,18 @@ namespace SimpleVoxelSystem
             GlobalEconomy.OnMoneyChanged  -= OnEconomyChanged;
             GlobalEconomy.OnXPChanged     -= OnEconomyChanged;
             GlobalEconomy.OnLevelChanged  -= OnEconomyChanged;
+            PlayerPickaxe.OnInventoryChanged -= OnInventoryChanged;
         }
 
         private void OnEconomyChanged(int _)
         {
             // срабатывает при любом изменении денег/XP/уровня — один центральный обработчик
+            if (isLoaded)
+                MarkDirty();
+        }
+
+        private void OnInventoryChanged()
+        {
             if (isLoaded)
                 MarkDirty();
         }
@@ -354,6 +367,7 @@ namespace SimpleVoxelSystem
             {
                 pp.playerStrength = Mathf.Max(0, save.playerStrength);
                 pp.maxBackpackCapacity = Mathf.Max(5, save.maxBackpackCapacity);
+                pp.SetInventoryCounts(save.dirtCount, save.stoneCount, save.ironCount, save.goldCount);
             }
             // FIX #6: кешируем после первого поиска
             cachedPickaxe = pp;
@@ -429,6 +443,10 @@ namespace SimpleVoxelSystem
             {
                 wellGenerator.RestoreMinesFromSave(null);
             }
+
+            PlayerBuildingSystem buildingSystem = FindFirstObjectByType<PlayerBuildingSystem>();
+            if (buildingSystem != null)
+                buildingSystem.RestorePlacedBlocks(save.builtBlocks);
 
             isLoaded = true;
             CaptureStateCache();
@@ -509,6 +527,12 @@ namespace SimpleVoxelSystem
         {
             dirty = true;
             nextAutosaveTime = Time.unscaledTime + AutosaveIntervalSeconds;
+        }
+
+        public void NotifyGameplayStateChanged()
+        {
+            if (isLoaded)
+                MarkDirty();
         }
 
         private void SaveNow(bool force = false)
@@ -635,6 +659,10 @@ namespace SimpleVoxelSystem
             {
                 save.playerStrength = pp.playerStrength;
                 save.maxBackpackCapacity = pp.maxBackpackCapacity;
+                save.dirtCount = pp.dirtCount;
+                save.stoneCount = pp.stoneCount;
+                save.ironCount = pp.ironCount;
+                save.goldCount = pp.goldCount;
             }
 
             UpgradeManager um = cachedUpgradeManager != null ? cachedUpgradeManager : FindFirstObjectByType<UpgradeManager>();
@@ -674,6 +702,10 @@ namespace SimpleVoxelSystem
 
             if (save.mines.Count > 0)
                 save.mine = save.mines[save.mines.Count - 1];
+
+            PlayerBuildingSystem buildingSystem = FindFirstObjectByType<PlayerBuildingSystem>();
+            if (buildingSystem != null)
+                save.builtBlocks = buildingSystem.CapturePlacedBlocks();
 
             return save;
         }
