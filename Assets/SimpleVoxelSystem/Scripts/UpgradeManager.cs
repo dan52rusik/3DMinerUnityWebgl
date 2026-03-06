@@ -37,6 +37,11 @@ namespace SimpleVoxelSystem
 
         public void UpgradePlayerStrength()
         {
+            if (playerPickaxe == null)
+                playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();
+            if (playerPickaxe == null)
+                return;
+
             if (GlobalEconomy.Money >= playerStrengthCost)
             {
                 GlobalEconomy.Money -= playerStrengthCost;
@@ -55,6 +60,11 @@ namespace SimpleVoxelSystem
 
         public void UpgradeBackpackCapacity()
         {
+            if (playerPickaxe == null)
+                playerPickaxe = FindFirstObjectByType<PlayerPickaxe>();
+            if (playerPickaxe == null)
+                return;
+
             if (GlobalEconomy.Money >= backpackCapacityCost)
             {
                 GlobalEconomy.Money -= backpackCapacityCost;

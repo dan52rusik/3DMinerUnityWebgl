@@ -17,7 +17,9 @@ namespace SimpleVoxelSystem
         private GameObject rightPanel;
 
         private Text strengthTitleText;
+        private Text strengthSubtitleText;
         private Text backpackTitleText;
+        private Text backpackSubtitleText;
         private Text strengthLabel;
         private Text backpackLabel;
         private Text strengthPriceText;
@@ -80,7 +82,7 @@ namespace SimpleVoxelSystem
             GameObject cGo = new GameObject("UpgradeHUDCanvas");
             Canvas canvas = cGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 4000;
+            canvas.sortingOrder = 4010;
             canvas.pixelPerfect = true;
             cGo.AddComponent<GraphicRaycaster>();
             
@@ -99,8 +101,9 @@ namespace SimpleVoxelSystem
             leftPanel = RuntimeUIFactory.MakePanel("StrengthUpgradePanel", canvas.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(30f, 0f), new Vector2(180f, 150f), bodyColor);
             
             // Header
-            GameObject headerLeft = RuntimeUIFactory.MakePanel("Header", leftPanel.transform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -15), new Vector2(0, 30), headerColor);
-            strengthTitleText = RuntimeUIFactory.MakeLabel(headerLeft.transform, "Title", Loc.T("upgrade_str_title"), 14, TextAnchor.MiddleCenter, color: new Color(1, 0.8f, 0.2f));
+            GameObject headerLeft = CreateHeader(leftPanel.transform, headerColor);
+            strengthTitleText = RuntimeUIFactory.MakeLabel(headerLeft.transform, "Title", Loc.T("upgrade_str_title"), 14, TextAnchor.UpperCenter, new Vector2(6, -2), new Vector2(-6, 0), color: new Color(1, 0.8f, 0.2f));
+            strengthSubtitleText = RuntimeUIFactory.MakeLabel(headerLeft.transform, "Subtitle", Loc.T("upgrade_str_subtitle"), 11, TextAnchor.LowerCenter, new Vector2(6, 0), new Vector2(-6, -2), color: new Color(1f, 1f, 1f, 0.72f));
 
             strengthLabel = RuntimeUIFactory.MakeLabel(leftPanel.transform, "Stats", "Bonus: +0", 13, TextAnchor.MiddleCenter, new Vector2(0, 5));
             
@@ -112,8 +115,9 @@ namespace SimpleVoxelSystem
             rightPanel = RuntimeUIFactory.MakePanel("BackpackUpgradePanel", canvas.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-30f, 0f), new Vector2(180f, 150f), bodyColor);
             
             // Header
-            GameObject headerRight = RuntimeUIFactory.MakePanel("Header", rightPanel.transform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -15), new Vector2(0, 30), headerColor);
-            backpackTitleText = RuntimeUIFactory.MakeLabel(headerRight.transform, "Title", Loc.T("upgrade_bp_title"), 14, TextAnchor.MiddleCenter, color: new Color(0.2f, 0.8f, 1f));
+            GameObject headerRight = CreateHeader(rightPanel.transform, headerColor);
+            backpackTitleText = RuntimeUIFactory.MakeLabel(headerRight.transform, "Title", Loc.T("upgrade_bp_title"), 14, TextAnchor.UpperCenter, new Vector2(6, -2), new Vector2(-6, 0), color: new Color(0.2f, 0.8f, 1f));
+            backpackSubtitleText = RuntimeUIFactory.MakeLabel(headerRight.transform, "Subtitle", Loc.T("upgrade_bp_subtitle"), 11, TextAnchor.LowerCenter, new Vector2(6, 0), new Vector2(-6, -2), color: new Color(1f, 1f, 1f, 0.72f));
 
             backpackLabel = RuntimeUIFactory.MakeLabel(rightPanel.transform, "Stats", "Slots: 10", 13, TextAnchor.MiddleCenter, new Vector2(0, 5));
             
@@ -150,11 +154,29 @@ namespace SimpleVoxelSystem
         {
             if (strengthTitleText != null)
                 strengthTitleText.text = Loc.T("upgrade_str_title");
+            if (strengthSubtitleText != null)
+                strengthSubtitleText.text = Loc.T("upgrade_str_subtitle");
 
             if (backpackTitleText != null)
                 backpackTitleText.text = Loc.T("upgrade_bp_title");
+            if (backpackSubtitleText != null)
+                backpackSubtitleText.text = Loc.T("upgrade_bp_subtitle");
 
             UpdateLabels();
+        }
+
+        private static GameObject CreateHeader(Transform parent, Color color)
+        {
+            var go = new GameObject("Header");
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -8f);
+            rt.sizeDelta = new Vector2(0f, 42f);
+            go.AddComponent<Image>().color = color;
+            return go;
         }
     }
 }

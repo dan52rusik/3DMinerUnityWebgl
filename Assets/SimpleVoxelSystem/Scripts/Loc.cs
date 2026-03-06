@@ -143,8 +143,10 @@ namespace SimpleVoxelSystem
 
             // ── Боковые панели улучшений ─────────────────────────────────────
             Add("upgrade_str_title",  ru: "СИЛА",          en: "STRENGTH",      tr: "GÜÇ");
+            Add("upgrade_str_subtitle", ru: "Урон по блокам", en: "Block Damage", tr: "Blok Hasari");
             Add("upgrade_str_stats",  ru: "Текущий бонус:\n<color=#FFD700>+{0}</color>", en: "Current Bonus:\n<color=#FFD700>+{0}</color>", tr: "Mevcut Bonus:\n<color=#FFD700>+{0}</color>");
             Add("upgrade_bp_title",   ru: "РЮКЗАК",        en: "BACKPACK",      tr: "SIRT ÇANTASI");
+            Add("upgrade_bp_subtitle", ru: "Лимит руды", en: "Ore Capacity", tr: "Cevher Kapasitesi");
             Add("upgrade_bp_stats",   ru: "Текущая ёмкость:\n<color=#00EAFF>{0}</color>", en: "Current Capacity:\n<color=#00EAFF>{0}</color>", tr: "Mevcut Kapasite:\n<color=#00EAFF>{0}</color>");
             Add("upgrade_btn_format", ru: "УЛУЧШИТЬ: ${0}", en: "UPGRADE: ${0}", tr: "YÜKSELT: ${0}");
 
