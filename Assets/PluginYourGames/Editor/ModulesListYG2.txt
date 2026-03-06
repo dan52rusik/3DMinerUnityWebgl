@@ -1,3 +1,4 @@
 Authorization v1.022
 Leaderboards v1.01
 Localization v1.02
+MultiplayerSessions v1.0

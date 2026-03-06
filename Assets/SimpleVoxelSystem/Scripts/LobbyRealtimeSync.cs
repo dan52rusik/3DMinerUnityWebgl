@@ -467,7 +467,7 @@ namespace SimpleVoxelSystem
                     continue;
 
                 // FIX #12 + #7: фильтруем свои операции по единому PlayerIdentity.PlayerId
-                if (!string.IsNullOrWhiteSpace(op.from) && op.from == PlayerIdentity.PlayerId)
+                if (!string.IsNullOrWhiteSpace(op.from) && PlayerIdentity.IsLocalId(op.from))
                     continue;
 
                 // FIX #4: ограничиваем размер seenOpIds — удаляем старые записи при превышении лимита
@@ -503,12 +503,12 @@ namespace SimpleVoxelSystem
                 PlayerStatePacket p = players[i];
                 if (p == null || string.IsNullOrWhiteSpace(p.clientId))
                     continue;
-                if (p.clientId == PlayerIdentity.PlayerId) // FIX #7: единый ID
+                if (PlayerIdentity.IsLocalId(p.clientId)) // FIX #7: единый ID + aliases after auth
                     continue;
                 if (!p.inLobby || !localInLobby)
                     continue;
 
-                GhostView ghost = GetOrCreateGhost(p.clientId);
+                GhostView ghost = ResolveGhost(p.clientId);
                 if (ghost == null || ghost.tr == null)
                     continue;
 
@@ -580,6 +580,46 @@ namespace SimpleVoxelSystem
             return created;
         }
 
+        private GhostView ResolveGhost(string clientId)
+        {
+            if (string.IsNullOrWhiteSpace(clientId))
+                return null;
+
+            string normalizedId = clientId.Trim();
+            if (ghosts.TryGetValue(normalizedId, out GhostView existing) && existing != null && existing.root != null)
+                return existing;
+
+            GhostView alias = FindGhostByShortId(normalizedId);
+            if (alias != null)
+            {
+                ghosts[normalizedId] = alias;
+                alias.id = normalizedId;
+                return alias;
+            }
+
+            return GetOrCreateGhost(normalizedId);
+        }
+
+        private GhostView FindGhostByShortId(string clientId)
+        {
+            string shortId = ShortId(clientId);
+            foreach (KeyValuePair<string, GhostView> entry in ghosts)
+            {
+                GhostView ghost = entry.Value;
+                if (ghost == null)
+                    continue;
+
+                string ghostId = ghost.id;
+                if (string.IsNullOrWhiteSpace(ghostId))
+                    ghostId = entry.Key;
+
+                if (string.Equals(ShortId(ghostId), shortId, StringComparison.OrdinalIgnoreCase))
+                    return ghost;
+            }
+
+            return null;
+        }
+
         private void CleanupStaleGhosts()
         {
             if (ghosts.Count == 0)
@@ -630,6 +670,18 @@ namespace SimpleVoxelSystem
         private static string NewOpId()
         {
             return Guid.NewGuid().ToString("N");
+        }
+
+        private static string ShortId(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return "unknown";
+
+            id = id.Trim();
+            if (id.Length <= 10)
+                return id;
+
+            return id.Substring(0, 4) + "..." + id.Substring(id.Length - 4);
         }
 
         private static long EpochMs()

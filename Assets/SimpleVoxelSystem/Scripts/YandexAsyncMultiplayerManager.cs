@@ -22,6 +22,11 @@ namespace SimpleVoxelSystem
         [Min(0f)] public float minStateYawDelta = 2f;
         [Min(0.1f)] public float forceStateCommitInterval = 2f;
 
+        [Header("Ghost Smoothing")]
+        [Min(1f)] public float ghostPositionLerpSpeed = 8f;
+        [Min(1f)] public float ghostRotationLerpSpeed = 10f;
+        [Min(0.25f)] public float lobbyPushIntervalSeconds = 8f;
+
         private WellGenerator wellGenerator;
         private Transform localPlayer;
 
@@ -141,6 +146,9 @@ namespace SimpleVoxelSystem
             public string playerId;
             public string playerName;
             public bool isGuest = true;
+            public Vector3 targetPosition;
+            public Quaternion targetRotation = Quaternion.identity;
+            public bool hasTargetState;
 
             public int money;
             public int xp;
@@ -214,6 +222,8 @@ namespace SimpleVoxelSystem
                 return;
             }
 
+            UpdateGhostVisuals();
+
             if (Time.unscaledTime >= nextCommitTime)
             {
                 CommitLocalState();
@@ -223,7 +233,11 @@ namespace SimpleVoxelSystem
             if (Time.unscaledTime >= nextPushTime)
             {
                 PushSession();
-                nextPushTime = Time.unscaledTime + Mathf.Max(5f, autoPushIntervalSeconds);
+                bool inLobby = wellGenerator == null || wellGenerator.IsInLobbyMode;
+                float pushInterval = inLobby
+                    ? Mathf.Max(0.25f, lobbyPushIntervalSeconds)
+                    : Mathf.Max(5f, autoPushIntervalSeconds);
+                nextPushTime = Time.unscaledTime + pushInterval;
             }
         }
 
@@ -342,7 +356,7 @@ namespace SimpleVoxelSystem
             if (batch == null || string.IsNullOrWhiteSpace(batch.opponentId) || batch.transactions == null)
                 return;
 
-            GhostAvatar ghost = GetOrCreateGhost(batch.opponentId);
+            GhostAvatar ghost = null;
             for (int i = 0; i < batch.transactions.Length; i++)
             {
                 TxItem tx = batch.transactions[i];
@@ -354,6 +368,13 @@ namespace SimpleVoxelSystem
                 catch { }
 
                 if (payload == null || string.IsNullOrWhiteSpace(payload.kind))
+                    continue;
+
+                if (PlayerIdentity.IsLocalId(payload.playerId) || PlayerIdentity.IsLocalId(batch.opponentId))
+                    continue;
+
+                ghost = ResolveGhost(batch.opponentId, payload.playerId, ghost);
+                if (ghost == null)
                     continue;
 
                 if (payload.kind == "state")
@@ -570,11 +591,96 @@ namespace SimpleVoxelSystem
                 id = opponentId,
                 gameObject = go,
                 transform = go.transform,
-                label = label
+                label = label,
+                targetPosition = go.transform.position,
+                targetRotation = go.transform.rotation
             };
 
             ghosts[opponentId] = created;
             return created;
+        }
+
+        private GhostAvatar ResolveGhost(string opponentId, string playerId, GhostAvatar currentGhost)
+        {
+            GhostAvatar ghost = currentGhost;
+            GhostAvatar byOpponentId = null;
+            GhostAvatar byPlayerId = null;
+
+            if (!string.IsNullOrWhiteSpace(opponentId))
+                ghosts.TryGetValue(opponentId, out byOpponentId);
+
+            if (!string.IsNullOrWhiteSpace(playerId))
+                ghosts.TryGetValue(playerId.Trim(), out byPlayerId);
+
+            if (ghost == null && byPlayerId != null && byPlayerId.gameObject != null)
+            {
+                ghost = byPlayerId;
+            }
+
+            if (ghost == null && byOpponentId != null && byOpponentId.gameObject != null)
+            {
+                ghost = byOpponentId;
+            }
+
+            if (ghost == null)
+                ghost = GetOrCreateGhost(opponentId);
+
+            if (byOpponentId != null && byOpponentId != ghost)
+                MergeGhosts(ghost, byOpponentId);
+
+            if (byPlayerId != null && byPlayerId != ghost)
+                MergeGhosts(ghost, byPlayerId);
+
+            RegisterGhostAlias(ghost, opponentId);
+
+            if (!string.IsNullOrWhiteSpace(playerId))
+                RegisterGhostAlias(ghost, playerId.Trim());
+
+            return ghost;
+        }
+
+        private void RegisterGhostAlias(GhostAvatar ghost, string key)
+        {
+            if (ghost == null || string.IsNullOrWhiteSpace(key))
+                return;
+
+            ghosts[key.Trim()] = ghost;
+        }
+
+        private void MergeGhosts(GhostAvatar target, GhostAvatar source)
+        {
+            if (target == null || source == null || ReferenceEquals(target, source))
+                return;
+
+            target.playerId = string.IsNullOrWhiteSpace(target.playerId) ? source.playerId : target.playerId;
+            target.playerName = string.IsNullOrWhiteSpace(target.playerName) ? source.playerName : target.playerName;
+            target.isGuest = target.isGuest && source.isGuest;
+            target.money = Mathf.Max(target.money, source.money);
+            target.xp = Mathf.Max(target.xp, source.xp);
+            target.miningLevel = Mathf.Max(target.miningLevel, source.miningLevel);
+            target.minedBlocks = Mathf.Max(target.minedBlocks, source.minedBlocks);
+            if (string.IsNullOrWhiteSpace(target.lastEvent))
+                target.lastEvent = source.lastEvent;
+
+            List<string> aliases = null;
+            foreach (KeyValuePair<string, GhostAvatar> entry in ghosts)
+            {
+                if (entry.Value != source)
+                    continue;
+
+                if (aliases == null)
+                    aliases = new List<string>();
+                aliases.Add(entry.Key);
+            }
+
+            if (aliases != null)
+            {
+                for (int i = 0; i < aliases.Count; i++)
+                    ghosts[aliases[i]] = target;
+            }
+
+            if (source.gameObject != null)
+                Destroy(source.gameObject);
         }
 
         // FIX #5: статический shared material для призраков AsyncMP — не создаём новый на каждый рендерер
@@ -626,8 +732,12 @@ namespace SimpleVoxelSystem
                 return;
 
             Vector3 targetPos = new Vector3(payload.x, payload.y, payload.z);
-            ghost.transform.position = Vector3.Lerp(ghost.transform.position, targetPos, 0.6f);
-            ghost.transform.rotation = Quaternion.Euler(0f, payload.ry, 0f);
+            ghost.targetPosition = targetPos;
+            ghost.targetRotation = Quaternion.Euler(0f, payload.ry, 0f);
+            ghost.hasTargetState = true;
+
+            if ((ghost.transform.position - targetPos).sqrMagnitude > 144f)
+                ghost.transform.position = targetPos;
         }
 
         private void ApplyGhostEvent(GhostAvatar ghost, CommitPayload payload)
@@ -676,6 +786,39 @@ namespace SimpleVoxelSystem
                 ghost.label.transform.rotation = Quaternion.LookRotation(ghost.label.transform.position - cam.transform.position);
         }
 
+        private void UpdateGhostVisuals()
+        {
+            if (ghosts.Count == 0)
+                return;
+
+            float posT = 1f - Mathf.Exp(-Mathf.Max(1f, ghostPositionLerpSpeed) * Time.unscaledDeltaTime);
+            float rotT = 1f - Mathf.Exp(-Mathf.Max(1f, ghostRotationLerpSpeed) * Time.unscaledDeltaTime);
+
+            HashSet<GhostAvatar> processed = null;
+
+            foreach (KeyValuePair<string, GhostAvatar> entry in ghosts)
+            {
+                GhostAvatar ghost = entry.Value;
+                if (ghost == null || ghost.gameObject == null || ghost.transform == null || !ghost.hasTargetState)
+                    continue;
+
+                if (processed == null)
+                    processed = new HashSet<GhostAvatar>();
+                if (!processed.Add(ghost))
+                    continue;
+
+                ghost.transform.position = Vector3.Lerp(ghost.transform.position, ghost.targetPosition, posT);
+                ghost.transform.rotation = Quaternion.Slerp(ghost.transform.rotation, ghost.targetRotation, rotT);
+
+                if (ghost.label != null)
+                {
+                    Camera cam = Camera.main;
+                    if (cam != null)
+                        ghost.label.transform.rotation = Quaternion.LookRotation(ghost.label.transform.position - cam.transform.position);
+                }
+            }
+        }
+
         private void ApplyGhostIdentityFromPayload(GhostAvatar ghost, CommitPayload payload)
         {
             if (ghost == null || payload == null)
@@ -688,7 +831,7 @@ namespace SimpleVoxelSystem
 
             string identityId = !string.IsNullOrWhiteSpace(ghost.playerId) ? ghost.playerId : ghost.id;
             string identityName = ghost.playerName;
-            ghost.isGuest = payload.isGuest || IsGuestIdentity(identityId, identityName);
+            ghost.isGuest = IsGuestIdentity(identityId, identityName);
         }
 
         private string BuildGhostHeader(GhostAvatar ghost)
@@ -707,11 +850,10 @@ namespace SimpleVoxelSystem
 
         private static bool IsGuestIdentity(string playerId, string playerName)
         {
-            bool idLooksGuest = !string.IsNullOrWhiteSpace(playerId) &&
-                                playerId.StartsWith("guest_", StringComparison.OrdinalIgnoreCase);
-            bool nameDefault = string.IsNullOrWhiteSpace(playerName) ||
-                               string.Equals(playerName, "Player", StringComparison.OrdinalIgnoreCase);
-            return idLooksGuest || nameDefault;
+            if (string.IsNullOrWhiteSpace(playerId))
+                return true;
+
+            return playerId.StartsWith("guest_", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string ShortId(string id)

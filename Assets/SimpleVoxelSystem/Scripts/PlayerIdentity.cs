@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SimpleVoxelSystem
@@ -18,6 +19,7 @@ namespace SimpleVoxelSystem
 
         private static string _playerId;
         private static string _playerName;
+        private static readonly HashSet<string> _knownLocalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public static string PlayerId
         {
@@ -40,9 +42,23 @@ namespace SimpleVoxelSystem
         }
 
         public static bool IsGuest => string.IsNullOrWhiteSpace(_playerId) ||
-                                      _playerId.StartsWith("guest_", StringComparison.OrdinalIgnoreCase) ||
-                                      string.IsNullOrWhiteSpace(_playerName) ||
-                                      string.Equals(_playerName, "Player", StringComparison.OrdinalIgnoreCase);
+                                      _playerId.StartsWith("guest_", StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsLocalId(string playerId)
+        {
+            if (string.IsNullOrWhiteSpace(playerId))
+                return false;
+
+            string normalized = playerId.Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(_playerId) &&
+                string.Equals(_playerId, normalized, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return _knownLocalIds.Contains(normalized);
+        }
 
         /// <summary>
         /// Вызывается когда SDK вернул реальные данные игрока (например, из Yandex).
@@ -51,10 +67,12 @@ namespace SimpleVoxelSystem
         public static void UpdateFromSdk(string playerId, string playerName)
         {
             bool changed = false;
+            string previousId = _playerId;
 
             if (!string.IsNullOrWhiteSpace(playerId) && playerId.Trim() != _playerId)
             {
                 _playerId = playerId.Trim();
+                TrackLocalId(_playerId);
                 changed = true;
             }
 
@@ -66,6 +84,7 @@ namespace SimpleVoxelSystem
 
             if (changed)
             {
+                TrackLocalId(previousId);
                 Save();
                 OnIdentityChanged?.Invoke();
             }
@@ -98,8 +117,21 @@ namespace SimpleVoxelSystem
             {
                 _playerId   = "guest_" + Guid.NewGuid().ToString("N");
                 _playerName = "Player";
+                TrackLocalId(_playerId);
                 Save();
             }
+            else
+            {
+                TrackLocalId(_playerId);
+            }
+        }
+
+        private static void TrackLocalId(string playerId)
+        {
+            if (string.IsNullOrWhiteSpace(playerId))
+                return;
+
+            _knownLocalIds.Add(playerId.Trim());
         }
 
         private static void Save()
