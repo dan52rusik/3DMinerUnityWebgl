@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using YG;
+using YG.Utils;
 
 namespace SimpleVoxelSystem
 {
@@ -31,6 +32,7 @@ namespace SimpleVoxelSystem
         public const string LangTr = "tr";
 
         private const string LangPrefKey = "svs_ui_language";
+        private const string YgLangPrefKey = "langYG";
 
         // ── Текущий язык ─────────────────────────────────────────────────────
         private static string _currentLang = LangRu;
@@ -326,11 +328,16 @@ namespace SimpleVoxelSystem
             if (string.IsNullOrWhiteSpace(lang)) return;
             lang = lang.ToLowerInvariant().Trim();
             if (!IsSupported(lang)) return;
+            PlayerPrefs.SetString(LangPrefKey, lang);
+            PlayerPrefs.Save();
+
+#if Localization_yg
+            YG2.SwitchLanguage(lang);
+#endif
+
             if (_currentLang == lang) return;
 
             _currentLang = lang;
-            PlayerPrefs.SetString(LangPrefKey, lang);
-            PlayerPrefs.Save();
 
             Debug.Log($"[Loc] Language changed to: {lang}");
             OnLanguageChanged?.Invoke();
@@ -340,8 +347,11 @@ namespace SimpleVoxelSystem
         public static void ResetToAuto()
         {
             PlayerPrefs.DeleteKey(LangPrefKey);
+#if Localization_yg
+            LocalStorage.DeleteKey(YgLangPrefKey);
+            YG2.GetLanguage();
+#endif
             Initialize();
-            OnLanguageChanged?.Invoke();
         }
 
         /// <summary>
@@ -394,13 +404,18 @@ namespace SimpleVoxelSystem
         {
             try
             {
+#if Localization_yg
+                if (!string.IsNullOrWhiteSpace(YG2.lang))
+                    return NormalizeLanguageCode(YG2.lang);
+#endif
+
                 string webglLang = TryGetYG2LangFromWebGLBridge();
                 if (!string.IsNullOrWhiteSpace(webglLang))
-                    return webglLang.ToLowerInvariant().Trim();
+                    return NormalizeLanguageCode(webglLang);
 
                 string lang = TryGetYG2LangByReflection();
                 if (!string.IsNullOrWhiteSpace(lang))
-                    return lang.ToLowerInvariant().Trim();
+                    return NormalizeLanguageCode(lang);
             }
             catch { /* SDK может быть не инициализирован */ }
 
@@ -495,6 +510,23 @@ namespace SimpleVoxelSystem
         {
             object value = ReadObjectMember(instance, type, memberName);
             return value as string;
+        }
+
+        private static string NormalizeLanguageCode(string lang)
+        {
+            if (string.IsNullOrWhiteSpace(lang))
+                return null;
+
+            lang = lang.ToLowerInvariant().Trim();
+
+            int dashIndex = lang.IndexOf('-');
+            if (dashIndex > 0)
+                lang = lang.Substring(0, dashIndex);
+
+            if (lang == "us" || lang == "as" || lang == "ai")
+                return LangEn;
+
+            return lang;
         }
     }
 }

@@ -4,17 +4,13 @@ using YG;
 
 namespace SimpleVoxelSystem
 {
-    /// <summary>
-    /// MonoBehaviour — инициализирует Loc при старте игры и слушает YG2.onGetSDKData
-    /// чтобы перечитать язык после полной загрузки SDK.
-    /// Добавь на любой GameObject сцены (или он создастся сам через Bootstrap).
-    /// </summary>
     [DisallowMultipleComponent]
     public class LocalizationManager : MonoBehaviour
     {
         [Header("Fallback Language (Editor / non-Yandex builds)")]
-        [Tooltip("Язык по умолчанию если YG2.lang недоступен")]
+        [Tooltip("Default language if SDK language is unavailable")]
         public string fallbackLanguage = Loc.LangRu;
+
         private float _nextPlatformLangPollTime;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -37,18 +33,32 @@ namespace SimpleVoxelSystem
         private void OnEnable()
         {
             YG2.onGetSDKData += OnSdkReady;
+#if Localization_yg
+            YG2.onSwitchLang += OnYgLanguageChanged;
+            YG2.onCorrectLang += OnYgLanguageChanged;
+#endif
         }
 
         private void OnDisable()
         {
             YG2.onGetSDKData -= OnSdkReady;
+#if Localization_yg
+            YG2.onSwitchLang -= OnYgLanguageChanged;
+            YG2.onCorrectLang -= OnYgLanguageChanged;
+#endif
         }
 
         private void OnSdkReady()
         {
-            // SDK загружен — перечитываем язык (если игрок не выбирал вручную)
             Loc.Initialize();
         }
+
+#if Localization_yg
+        private void OnYgLanguageChanged(string _)
+        {
+            Loc.RefreshFromPlatformLanguageIfAuto();
+        }
+#endif
 
         private void Update()
         {
@@ -60,21 +70,13 @@ namespace SimpleVoxelSystem
         }
     }
 
-
-    /// <summary>
-    /// Вешается на любой GameObject с компонентом Text.
-    /// Автоматически обновляет текст при смене языка.
-    ///
-    /// В поле locKey пиши ключ из Loc.cs (например "money", "sell", "mine_shop").
-    /// Опционально: formatArgs — числовые аргументы для Loc.Tf(key, args).
-    /// </summary>
     [RequireComponent(typeof(Text))]
     public class LocText : MonoBehaviour
     {
-        [Tooltip("Ключ из Loc.cs (например: money, sell, mine_shop)")]
+        [Tooltip("Key from Loc.cs")]
         public string locKey;
 
-        [Tooltip("Если ключ содержит {0},{1}... — числовые аргументы (через запятую)")]
+        [Tooltip("Optional comma-separated format args for Loc.Tf")]
         public string formatArgs;
 
         private Text _text;
@@ -114,7 +116,6 @@ namespace SimpleVoxelSystem
             }
         }
 
-        /// <summary>Сменить ключ в рантайме и сразу обновить текст.</summary>
         public void SetKey(string key)
         {
             locKey = key;
@@ -122,24 +123,18 @@ namespace SimpleVoxelSystem
         }
     }
 
-
-    /// <summary>
-    /// UI-панель переключения языка.
-    /// Создаётся кодом или вешается на Canvas-объект в сцене.
-    /// Содержит 3 кнопки: RU / EN / TR.
-    /// </summary>
     public class LanguageSwitcherUI : MonoBehaviour
     {
-        [Header("Buttons (опционально — если не назначены, создаются авто)")]
+        [Header("Buttons")]
         public Button buttonRu;
         public Button buttonEn;
         public Button buttonTr;
 
-        [Header("Визуал selected")]
-        public Color selectedColor  = new Color(0.22f, 0.78f, 0.45f);
-        public Color normalColor    = new Color(0.18f, 0.18f, 0.25f);
-        public Color selectedText   = Color.white;
-        public Color normalText     = new Color(0.7f, 0.7f, 0.7f);
+        [Header("Selected State")]
+        public Color selectedColor = new Color(0.22f, 0.78f, 0.45f);
+        public Color normalColor = new Color(0.18f, 0.18f, 0.25f);
+        public Color selectedText = Color.white;
+        public Color normalText = new Color(0.7f, 0.7f, 0.7f);
 
         private void OnEnable()
         {
@@ -169,14 +164,16 @@ namespace SimpleVoxelSystem
 
         private void ApplyButtonStyle(Button btn, string lang, string label)
         {
-            if (btn == null) return;
+            if (btn == null)
+                return;
+
             bool isSelected = Loc.CurrentLanguage == lang;
 
-            var img = btn.GetComponent<Image>();
+            Image img = btn.GetComponent<Image>();
             if (img != null)
                 img.color = isSelected ? selectedColor : normalColor;
 
-            var txt = btn.GetComponentInChildren<Text>();
+            Text txt = btn.GetComponentInChildren<Text>();
             if (txt != null)
             {
                 txt.text = label;
@@ -185,32 +182,27 @@ namespace SimpleVoxelSystem
             }
         }
 
-        // ── Статический фабричный метод — создаёт панель с нуля ─────────────
-        /// <summary>
-        /// Создаёт панель выбора языка внутри canvas и возвращает её.
-        /// anchoredPosition — позиция внутри Canvas (по умолчанию правый нижний угол).
-        /// </summary>
-        public static LanguageSwitcherUI CreateInCanvas(Canvas canvas,
-            Vector2? anchoredPosition = null)
+        public static LanguageSwitcherUI CreateInCanvas(Canvas canvas, Vector2? anchoredPosition = null)
         {
-            if (canvas == null) return null;
+            if (canvas == null)
+                return null;
 
             GameObject panel = new GameObject("LanguageSwitcher");
             panel.transform.SetParent(canvas.transform, false);
             RectTransform panelRt = panel.AddComponent<RectTransform>();
             panelRt.anchorMin = new Vector2(1f, 0f);
             panelRt.anchorMax = new Vector2(1f, 0f);
-            panelRt.pivot     = new Vector2(1f, 0f);
+            panelRt.pivot = new Vector2(1f, 0f);
             panelRt.anchoredPosition = anchoredPosition ?? new Vector2(-10f, 60f);
             panelRt.sizeDelta = new Vector2(200f, 44f);
 
             Image bgImg = panel.AddComponent<Image>();
             bgImg.color = new Color(0.08f, 0.08f, 0.14f, 0.85f);
 
-            var switcher = panel.AddComponent<LanguageSwitcherUI>();
+            LanguageSwitcherUI switcher = panel.AddComponent<LanguageSwitcherUI>();
 
             string[] langs = { Loc.LangRu, Loc.LangEn, Loc.LangTr };
-            Button[] btns  = new Button[3];
+            Button[] btns = new Button[3];
 
             for (int i = 0; i < langs.Length; i++)
             {
@@ -238,11 +230,11 @@ namespace SimpleVoxelSystem
                 trt.offsetMax = Vector2.zero;
 
                 Text txt = textGo.AddComponent<Text>();
-                txt.text      = langs[i].ToUpper();
+                txt.text = langs[i].ToUpper();
                 txt.alignment = TextAnchor.MiddleCenter;
-                txt.fontSize  = 18;
-                txt.color     = Color.white;
-                txt.font      = RuntimeUiFont.Get(); // единый шрифт для всего проекта
+                txt.fontSize = 18;
+                txt.color = Color.white;
+                txt.font = RuntimeUiFont.Get();
             }
 
             switcher.buttonRu = btns[0];
