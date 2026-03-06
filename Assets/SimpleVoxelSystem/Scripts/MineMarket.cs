@@ -268,16 +268,7 @@ namespace SimpleVoxelSystem
             if (persistence != null)
                 persistence.NotifyEconomyTouched();
 
-            // Server sync
-            var networkAvatar = GetLocalNetworkAvatar();
-            if (networkAvatar != null && networkAvatar.IsSpawned)
-            {
-                networkAvatar.AddRewardsServerRpc(-data.buyPrice, 0);
-            }
-            else
-            {
-                GlobalEconomy.Money -= data.buyPrice;
-            }
+            GlobalEconomy.Money -= data.buyPrice;
 
             int depth = data.RollDepth();
             pendingMine = new MineInstance(data, depth, 0);
@@ -293,15 +284,7 @@ namespace SimpleVoxelSystem
             if (WellGen == null || !WellGen.IsMineGenerated || WellGen.ActiveMine == null) return;
             MineInstance mine = WellGen.ActiveMine;
             
-            var networkAvatar = GetLocalNetworkAvatar();
-            if (networkAvatar != null && networkAvatar.IsSpawned)
-            {
-                networkAvatar.AddRewardsServerRpc(mine.SellPrice, 0);
-            }
-            else
-            {
-                GlobalEconomy.Money += mine.SellPrice;
-            }
+            GlobalEconomy.Money += mine.SellPrice;
 
             AsyncGameplayEvents.PublishSellMine(mine.shopData != null ? mine.shopData.displayName : string.Empty, mine.SellPrice);
             OnMineSold?.Invoke(mine);
@@ -347,17 +330,8 @@ namespace SimpleVoxelSystem
         {
             if (pendingMine != null)
             {
-                var networkAvatar = GetLocalNetworkAvatar();
-                if (networkAvatar != null && networkAvatar.IsSpawned)
-                {
-                    // FIX #2: возвращаем через сервер — тот же путь, каки при покупке
-                    networkAvatar.AddRewardsServerRpc(pendingMine.shopData.buyPrice, 0);
-                }
-                else
-                {
-                    // FIX #2: возвращаем локально, но без превышения начального баланса
-                    GlobalEconomy.Money = Mathf.Max(0, GlobalEconomy.Money + pendingMine.shopData.buyPrice);
-                }
+                // FIX #2: возвращаем локально, но без превышения начального баланса
+                GlobalEconomy.Money = Mathf.Max(0, GlobalEconomy.Money + pendingMine.shopData.buyPrice);
             }
             pendingMine = null;
             IsPlacementMode = false;
@@ -402,12 +376,7 @@ namespace SimpleVoxelSystem
             previewInstance.SetActive(true);
         }
 
-        private Net.NetPlayerAvatar GetLocalNetworkAvatar()
-        {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null) return player.GetComponent<Net.NetPlayerAvatar>();
-            return null;
-        }
+
 
         bool IsConfirmPressed()
         {

@@ -49,7 +49,6 @@ namespace SimpleVoxelSystem
         private static readonly BlockData FallbackData = new BlockData { maxHealth = 1, reward = 1, type = BlockType.Dirt, blockColor = Color.white };
         private float nextBackpackLogTime;
 
-        private Net.NetPlayerAvatar networkAvatar;
         private MobileTouchControls mobileControls;
 
         void Awake()
@@ -60,7 +59,6 @@ namespace SimpleVoxelSystem
             if (wellGenerator == null)
                 wellGenerator = FindFirstObjectByType<WellGenerator>();
 
-            networkAvatar = GetComponent<Net.NetPlayerAvatar>();
             mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
 
             RebuildDataCache();
@@ -266,17 +264,8 @@ namespace SimpleVoxelSystem
 
             AsyncGameplayEvents.PublishMineBlock(gx, gy, gz, data.type, xp, inLobby);
 
-            // SYNC: Send to server
-            if (networkAvatar != null && networkAvatar.IsSpawned)
-            {
-                networkAvatar.RequestMineBlockServerRpc(new Vector3Int(gx, gy, gz), inLobby);
-                networkAvatar.AddRewardsServerRpc(0, xp); // Money when sold, XP now
-            }
-            else
-            {
-                // Offline — just local update
-                GlobalEconomy.AddMiningXP(xp);
-            }
+            // Local update
+            GlobalEconomy.AddMiningXP(xp);
         }
 
         int GetOrCreateBlockHealth(Vector3Int key, BlockData data)
@@ -368,14 +357,7 @@ namespace SimpleVoxelSystem
             if (currentBackpackLoad <= 0)
                 return;
 
-            if (networkAvatar != null && networkAvatar.IsSpawned)
-            {
-                networkAvatar.AddRewardsServerRpc(totalValueInBackpack, 0);
-            }
-            else
-            {
-                GlobalEconomy.Money += totalValueInBackpack;
-            }
+            GlobalEconomy.Money += totalValueInBackpack;
 
             AsyncGameplayEvents.PublishSellBackpack(totalValueInBackpack);
 

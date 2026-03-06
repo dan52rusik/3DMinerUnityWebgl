@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using Unity.Netcode;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -242,15 +241,6 @@ namespace SimpleVoxelSystem
 
         static bool IsPlayer(Collider other)
         {
-            // 1. Search for NetworkObject
-            var no = other.GetComponentInParent<NetworkObject>();
-            if (no != null)
-            {
-                // If it's a network object — it must belong to the local player
-                return no.IsOwner && no.IsPlayerObject;
-            }
-
-            // 2. If no network object (single player mode) — check tags/components
             return other.CompareTag("Player")
                 || other.GetComponentInParent<PlayerPickaxe>() != null
                 || other.name.ToLower().Contains("player");

@@ -4,8 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using SimpleVoxelSystem.Data;
 using UnityEngine.EventSystems;
-using Unity.Netcode;
-using SimpleVoxelSystem.Net;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
@@ -420,14 +418,12 @@ namespace SimpleVoxelSystem
 
         void SpawnShopZoneByUI(Vector3 pos, int sx, int sy, int sz, ShopZoneType type)
         {
-            if (TryRequestNetworkSpawnShopZone(pos, sx, sy, sz, type)) return;
             SpawnShopZone(pos, sx, sy, sz, type);
             SaveShopZones();
         }
 
         void DeleteShopZone(ShopZone zone)
         {
-            if (TryRequestNetworkDeleteShopZone(zone)) return;
             if (hoveredZone == zone) hoveredZone = null;
             Destroy(zone.gameObject);
             SaveShopZones();
@@ -436,7 +432,6 @@ namespace SimpleVoxelSystem
         void PlaceBlock(Vector3Int pos)
         {
             if (island == null || island.IsSolid(pos.x, pos.y, pos.z)) return;
-            FindLocalNetworkAvatar()?.RequestPlaceBlockServerRpc(pos, (int)selectedBlockType);
             ApplyNetworkPlaceBlock(pos, selectedBlockType);
             realtimeSync?.NotifyLocalPlace(pos, selectedBlockType);
         }
@@ -444,7 +439,6 @@ namespace SimpleVoxelSystem
         void RemoveBlock(Vector3Int pos)
         {
             if (island == null || !island.IsSolid(pos.x, pos.y, pos.z)) return;
-            FindLocalNetworkAvatar()?.RequestRemoveBlockServerRpc(pos);
             ApplyNetworkRemoveBlock(pos);
             realtimeSync?.NotifyLocalRemove(pos);
         }
@@ -497,7 +491,6 @@ namespace SimpleVoxelSystem
 #endif
         }
         private Camera ResolveEditorCamera() { if (editorCamera != null && editorCamera.isActiveAndEnabled) return editorCamera; GameObject p = GameObject.FindGameObjectWithTag("Player"); if (p != null) { Camera c = p.GetComponentInChildren<Camera>(true); if (c != null && c.isActiveAndEnabled) return editorCamera = c; } return editorCamera = Camera.main; }
-        private NetPlayerAvatar FindLocalNetworkAvatar() { var nm = NetworkManager.Singleton; if (nm?.LocalClient?.PlayerObject != null) return nm.LocalClient.PlayerObject.GetComponent<NetPlayerAvatar>(); foreach (var a in FindObjectsByType<NetPlayerAvatar>(FindObjectsSortMode.None)) if (a.IsOwner) return a; return null; }
         private bool IsMobileControlsActive() => mobileControls != null && mobileControls.IsActive;
         private bool ConsumeMobileLookDoubleTap() { if (!IsMobileControlsActive() || !mobileControls.LookTapPressedThisFrame) return false; float now = Time.unscaledTime; Vector2 pos = mobileControls.AimScreenPosition; bool isDoubleTap = now - lastMobileLookTapTime <= mobileDoubleTapWindow && Vector2.Distance(pos, lastMobileLookTapPos) <= mobileDoubleTapMaxDistance; lastMobileLookTapTime = now; lastMobileLookTapPos = pos; return isDoubleTap; }
         private bool ShouldUseLocalPersistence() { if (!persistLocalLobbyLayout) return false; if (preferSharedSyncOverLocalSave && realtimeSync != null && realtimeSync.UseAuthoritativeServerState) return false; return true; }
@@ -515,9 +508,6 @@ namespace SimpleVoxelSystem
         private void TryApplyBakedShopZones() { if (!useBakedLobbyLayout) return; TextAsset asset = Resources.Load<TextAsset>(bakedShopZonesResourcePath); if (asset == null || string.IsNullOrWhiteSpace(asset.text)) return; ShopZoneSaveData data = JsonUtility.FromJson<ShopZoneSaveData>(asset.text); if (data?.zones == null) return; foreach (var e in data.zones) SpawnShopZone(new Vector3(e.worldX, e.worldY, e.worldZ), e.sizeX, e.sizeY, e.sizeZ, e.zoneType); }
 
         private void LogPersistenceModeIfNeeded() { if (!logPersistenceModeOnStart) return; string mode = (realtimeSync != null && realtimeSync.UseAuthoritativeServerState) ? "SharedSync" : (persistLocalLobbyLayout ? "LocalPersistence" : "None"); Debug.Log($"[LobbyEditor] Mode: {mode}"); }
-
-        private bool TryRequestNetworkSpawnShopZone(Vector3 pos, int sx, int sy, int sz, ShopZoneType type) { var av = FindLocalNetworkAvatar(); if (av == null) return false; av.RequestSpawnShopZoneServerRpc(pos, sx, sy, sz, (int)type); return true; }
-        private bool TryRequestNetworkDeleteShopZone(ShopZone zone) { var av = FindLocalNetworkAvatar(); if (av == null) return false; av.RequestDeleteShopZoneServerRpc(zone.transform.position, (int)zone.zoneType); return true; }
 
         private void DrawChunkDebug() { if (island == null) return; float ly = -(wellGenerator.LobbyFloorY - 1) + 0.05f; Color gridColor = new Color(0f, 0.9f, 1f, 0.9f); for (int cx = 0; cx <= island.TotalX / ChunkSize; cx++) { int gx = Mathf.Min(cx * ChunkSize, island.TotalX); Debug.DrawLine(island.transform.TransformPoint(new Vector3(gx, ly, 0)), island.transform.TransformPoint(new Vector3(gx, ly, island.TotalZ)), gridColor); } for (int cz = 0; cz <= island.TotalZ / ChunkSize; cz++) { int gz = Mathf.Min(cz * ChunkSize, island.TotalZ); Debug.DrawLine(island.transform.TransformPoint(new Vector3(0, ly, gz)), island.transform.TransformPoint(new Vector3(island.TotalX, ly, gz)), gridColor); } }
     }
