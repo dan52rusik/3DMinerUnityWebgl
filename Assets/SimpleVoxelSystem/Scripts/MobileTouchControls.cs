@@ -300,7 +300,7 @@ namespace SimpleVoxelSystem
 
             var scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = new Vector2(1600f, 900f);
             scaler.matchWidthOrHeight = 1f;
 
             var safe = CreateRect("Safe", canvasGo.transform, new Vector2(0f, 0f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
@@ -355,7 +355,7 @@ namespace SimpleVoxelSystem
             jumpButton       = CreateTapButton(parent, "JumpButton",    Loc.T("btn_jump"),    new Vector2(1f, 0f), new Vector2(340f * m, 154f * m), new Vector2(92f * m, 92f * m),   new Color(0.2f, 0.62f, 0.95f, 0.7f),  Mathf.RoundToInt(18f * m));
             runButton        = CreateHoldButton(parent, "RunButton",    Loc.T("btn_run"),     new Vector2(1f, 0f), new Vector2(340f * m, 54f * m),  new Vector2(92f * m, 92f * m),   new Color(0.2f, 0.82f, 0.42f, 0.68f), Mathf.RoundToInt(16f * m));
             interactButton   = CreateTapButton(parent, "InteractButton",DefaultInteractLabel,  new Vector2(1f, 0f), new Vector2(24f * m, 286f * m), new Vector2(252f * m, 100f * m), new Color(0.98f, 0.78f, 0.18f, 0.7f),  Mathf.RoundToInt(24f * m));
-            minionMenuButton = CreateTapButton(parent, "MinionsButton", Loc.T("btn_minions"), new Vector2(1f, 0f), new Vector2(107f * m, 792f * m), new Vector2(88f * m, 88f * m),   new Color(0.22f, 0.34f, 0.56f, 0.68f),Mathf.RoundToInt(14f * m));
+            minionMenuButton = CreateTapButton(parent, "MinionsButton", Loc.T("btn_minions"), new Vector2(1f, 0f), new Vector2(107f * m, 430f * m), new Vector2(88f * m, 88f * m),   new Color(0.22f, 0.34f, 0.56f, 0.68f),Mathf.RoundToInt(14f * m));
 
             removeButton     = CreateHoldButton(parent, "RemoveButton", Loc.T("btn_del"),   new Vector2(1f, 1f), new Vector2(20f * m, 20f * m),  new Vector2(68f * m, 68f * m),   new Color(0.95f, 0.2f, 0.2f, 0.68f),  Mathf.RoundToInt(16f * m));
             zoomInButton     = CreateHoldButton(parent, "ZoomInButton", "+",                new Vector2(1f, 1f), new Vector2(20f * m, 145f * m), new Vector2(64f * m, 64f * m),   new Color(0.75f, 0.75f, 0.9f, 0.68f), Mathf.RoundToInt(24f * m));
@@ -775,3 +775,5 @@ namespace SimpleVoxelSystem
         }
     }
 }
+
+

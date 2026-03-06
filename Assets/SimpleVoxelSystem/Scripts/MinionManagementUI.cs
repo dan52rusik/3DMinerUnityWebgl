@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -76,7 +76,7 @@ namespace SimpleVoxelSystem
             
             CanvasScaler cs = cGo.AddComponent<CanvasScaler>();
             cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            cs.referenceResolution = new Vector2(1920, 1080);
+            cs.referenceResolution = new Vector2(1600f, 900f);
             cs.matchWidthOrHeight = 1f;
 
             panel = RuntimeUIFactory.MakePanel("MinionManagePanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 250));

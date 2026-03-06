@@ -232,7 +232,7 @@ namespace SimpleVoxelSystem
                 txt.alignment = TextAnchor.MiddleCenter;
                 txt.fontSize  = 18;
                 txt.color     = Color.white;
-                txt.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                txt.font      = RuntimeUiFont.Get(); // единый шрифт для всего проекта
             }
 
             switcher.buttonRu = btns[0];

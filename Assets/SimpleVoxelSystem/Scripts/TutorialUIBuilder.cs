@@ -1,4 +1,4 @@
-// TutorialUIBuilder.cs — constructs all tutorial UI elements in code (no prefabs needed).
+﻿// TutorialUIBuilder.cs â€” constructs all tutorial UI elements in code (no prefabs needed).
 // Called once from OnboardingTutorial.Start via BuildUI().
 
 using UnityEngine;
@@ -6,13 +6,13 @@ using UnityEngine.UI;
 
 namespace SimpleVoxelSystem
 {
-    // ─── Value type that bundles every UI reference built by the builder ────────
+    // â”€â”€â”€ Value type that bundles every UI reference built by the builder â”€â”€â”€â”€â”€â”€â”€â”€
     internal struct TutorialUIRefs
     {
         public Canvas         Canvas;
         public RectTransform  CanvasRect;
 
-        // Spotlight dimmer — 4 panels that surround the highlight hole
+        // Spotlight dimmer â€” 4 panels that surround the highlight hole
         // [0]=Top  [1]=Bottom  [2]=Left  [3]=Right
         public Image[]         DimPanels;
         public RectTransform[] DimRects;
@@ -34,7 +34,7 @@ namespace SimpleVoxelSystem
         public LineRenderer   Beam;
     }
 
-    // ─── Builder ────────────────────────────────────────────────────────────────
+    // â”€â”€â”€ Builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     internal static class TutorialUIBuilder
     {
         /// <summary>
@@ -46,7 +46,7 @@ namespace SimpleVoxelSystem
         {
             var refs = new TutorialUIRefs();
 
-            // ── Canvas ────────────────────────────────────────────────────────
+            // â”€â”€ Canvas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             var cGo = new GameObject("OnboardingCanvas");
             cGo.transform.SetParent(owner, false);
 
@@ -58,12 +58,12 @@ namespace SimpleVoxelSystem
 
             var scaler = cGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = new Vector2(1600f, 900f);
             scaler.matchWidthOrHeight  = 0.5f;
 
             refs.CanvasRect = refs.Canvas.GetComponent<RectTransform>();
 
-            // ── Spotlight dimmer — 4 surrounding panels ───────────────────────
+            // â”€â”€ Spotlight dimmer â€” 4 surrounding panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             // Together they create a transparent "hole" over the highlighted UI
             // element so its text/icon remains perfectly readable.
             refs.DimPanels = new Image[4];
@@ -74,7 +74,7 @@ namespace SimpleVoxelSystem
                 var dGo = new GameObject(dimNames[i]);
                 dGo.transform.SetParent(cGo.transform, false);
                 var dRt = dGo.AddComponent<RectTransform>();
-                // Start as full-screen top half — will be repositioned on first frame
+                // Start as full-screen top half â€” will be repositioned on first frame
                 dRt.anchorMin = Vector2.zero;
                 dRt.anchorMax = Vector2.one;
                 dRt.offsetMin = Vector2.zero;
@@ -86,13 +86,13 @@ namespace SimpleVoxelSystem
                 refs.DimRects[i]  = dRt;
             }
 
-            // ── Info card (screen-centre) ─────────────────────────────────────
+            // â”€â”€ Info card (screen-centre) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             refs.Card = MakePanel("TutCard", cGo.transform,
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0f, 220f), new Vector2(880f, 210f),
                 new Color(0.04f, 0.06f, 0.12f, 0.95f));
             var cardRt = refs.Card.GetComponent<RectTransform>();
-            cardRt.pivot = new Vector2(0.5f, 0.5f);         // centre pivot → card is centred
+            cardRt.pivot = new Vector2(0.5f, 0.5f);         // centre pivot â†’ card is centred
             refs.Card.GetComponent<Image>().raycastTarget = false;
 
             var outline = refs.Card.AddComponent<Outline>();
@@ -119,11 +119,11 @@ namespace SimpleVoxelSystem
             refs.CardBody.raycastTarget    = false;
             refs.CardTapHint.raycastTarget = false;
 
-            // ── Highlight box ─────────────────────────────────────────────────
+            // â”€â”€ Highlight box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             refs.HlBox = MakePanel("Highlight", cGo.transform,
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(120, 60),
-                new Color(0f, 0f, 0f, 0f));   // fully transparent — only Outline border visible
+                new Color(0f, 0f, 0f, 0f));   // fully transparent â€” only Outline border visible
             refs.HlRect = refs.HlBox.GetComponent<RectTransform>();
             refs.HlBox.GetComponent<Image>().raycastTarget = false;
 
@@ -132,14 +132,14 @@ namespace SimpleVoxelSystem
             hlOutline.effectDistance = new Vector2(3f, 3f);
             refs.HlBox.SetActive(false);
 
-            // ── Arrow label ───────────────────────────────────────────────────
+            // â”€â”€ Arrow label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             var arrowGo = new GameObject("Arrow");
             arrowGo.transform.SetParent(cGo.transform, false);
             var arrowRt = arrowGo.AddComponent<RectTransform>();
             arrowRt.sizeDelta        = new Vector2(80, 36);
             arrowRt.anchorMin        = arrowRt.anchorMax = new Vector2(0.5f, 0.5f);
             refs.ArrowLabel          = arrowGo.AddComponent<Text>();
-            refs.ArrowLabel.text     = "▼";
+            refs.ArrowLabel.text     = "â–¼";
             refs.ArrowLabel.fontSize = 32;
             refs.ArrowLabel.alignment    = TextAnchor.MiddleCenter;
             refs.ArrowLabel.color        = new Color(1f, 0.9f, 0.15f, 1f);
@@ -147,7 +147,7 @@ namespace SimpleVoxelSystem
             refs.ArrowLabel.raycastTarget = false;
             arrowGo.SetActive(false);
 
-            // ── World-space beam ──────────────────────────────────────────────
+            // â”€â”€ World-space beam â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             var beamGo = new GameObject("TutBeam");
             beamGo.transform.SetParent(owner, false);
             refs.Beam = beamGo.AddComponent<LineRenderer>();
@@ -167,7 +167,7 @@ namespace SimpleVoxelSystem
             return refs;
         }
 
-        // ── Internal UI factory helpers ──────────────────────────────────────
+        // â”€â”€ Internal UI factory helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private static GameObject MakePanel(string name, Transform parent,
             Vector2 anchorMin, Vector2 anchorMax,
             Vector2 anchoredPos, Vector2 size,
