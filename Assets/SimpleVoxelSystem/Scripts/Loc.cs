@@ -246,8 +246,15 @@ namespace SimpleVoxelSystem
             Add("zone_press_sell",      ru: "Нажми <color=#FFD700><b>[{0}]</b></color> чтобы продать ресурсы",  en: "Press <color=#FFD700><b>[{0}]</b></color> to sell resources",  tr: "<color=#FFD700><b>[{0}]</b></color> tuşuna bas, kaynakları sat");
 
             // ── Статусы размещения ──────────────────────────────────────────
-            Add("status_mine_bought",   ru: "<color=yellow>Шахта куплена.</color> Иди на Остров чтобы поставить её.", en: "<color=yellow>Mine purchased.</color> Go to Island to place it.");
-            Add("status_placement",     ru: "<color=yellow>Режим размещения.</color> Выбери место и нажми ПОСТАВИТЬ.", en: "<color=yellow>Placement mode.</color> Choose position and press PLACE.");
+            Add("status_mine_bought",   ru: "<color=yellow>Шахта куплена.</color> Иди на Остров чтобы поставить её.", en: "<color=yellow>Mine purchased.</color> Go to Island to place it.", tr: "<color=yellow>Maden satin alindi.</color> Yerlestirmek icin Adaya git.");
+            Add("status_placement",     ru: "<color=yellow>Режим размещения.</color> Выбери место и нажми ПОСТАВИТЬ.", en: "<color=yellow>Placement mode.</color> Choose position and press PLACE.", tr: "<color=yellow>Yerlestirme modu.</color> Bir konum sec ve YERLESTIR'e bas.");
+            Add("status_not_enough_money_detail", ru: "Не хватает денег. Нужно {0}, у тебя {1}.", en: "Not enough money. Need {0}, have {1}.", tr: "Yeterli para yok. Gereken: {0}, sende olan: {1}.");
+            Add("status_place_mine_hint", ru: "ЛКМ чтобы поставить {0}. Esc чтобы отменить.", en: "Left click to place {0}. Esc to cancel.", tr: "{0} yerlestirmek icin sol tikla. Iptal icin Esc.");
+            Add("status_mine_placed", ru: "Шахта {0} установлена. Глубина: {1}.", en: "Mine {0} placed. Depth: {1}.", tr: "{0} madeni yerlestirildi. Derinlik: {1}.");
+            Add("status_mine_sold", ru: "Шахта продана за {0}.", en: "Mine sold for {0}.", tr: "Maden {0} karsiliginda satildi.");
+            Add("status_placement_cancelled", ru: "Размещение отменено. Деньги возвращены.", en: "Placement canceled. Money returned.", tr: "Yerlestirme iptal edildi. Para iade edildi.");
+            Add("status_spawn_saved", ru: "Точка спавна сохранена на острове.", en: "Spawn point saved on island.", tr: "Dogma noktasi adada kaydedildi.");
+            Add("status_spawn_save_failed", ru: "Нельзя сохранить спавн здесь. Встань на твердую землю острова.", en: "Can't save spawn here. Stand on solid island ground.", tr: "Burada dogma noktasi kaydedilemez. Adadaki saglam zeminde dur.");
         }
 
         // ── Инициализация ────────────────────────────────────────────────────

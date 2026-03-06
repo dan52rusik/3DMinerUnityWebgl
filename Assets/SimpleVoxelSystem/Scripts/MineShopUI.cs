@@ -213,8 +213,8 @@ namespace SimpleVoxelSystem
             {
                 bool ok = mineMarket != null && mineMarket.WellGen != null && mineMarket.WellGen.SaveCurrentIslandSpawnPoint();
                 SetStatus(ok
-                    ? "Spawn point saved on island."
-                    : "Can't save spawn here. Stand on solid island ground.");
+                    ? Loc.T("status_spawn_saved")
+                    : Loc.T("status_spawn_save_failed"));
             });
             setSpawnBtn.gameObject.SetActive(false);
 
@@ -354,13 +354,13 @@ namespace SimpleVoxelSystem
                 bool canAfford = GlobalEconomy.Money >= cap.buyPrice;
                 if (!canAfford)
                 {
-                    SetStatus($"Not enough money. Need {cap.buyPrice}, have {GlobalEconomy.Money}.");
+                    SetStatus(Loc.Tf("status_not_enough_money_detail", cap.buyPrice, GlobalEconomy.Money));
                     return;
                 }
                 if (mineMarket.TryBuyMine(cap))
                 {
                     SetPanelVisible(false);
-                    SetStatus($"Left click to place {cap.displayName}. Esc to cancel.");
+                    SetStatus(Loc.Tf("status_place_mine_hint", cap.displayName));
                 }
             });
 
@@ -399,17 +399,17 @@ namespace SimpleVoxelSystem
 
         void OnMinePlaced(MineInstance mine)
         {
-            SetStatus($"Mine {mine.shopData.displayName} placed. Depth: {mine.rolledDepth}.");
+            SetStatus(Loc.Tf("status_mine_placed", mine.shopData.displayName, mine.rolledDepth));
         }
 
         void OnMineSold(MineInstance mine)
         {
-            SetStatus($"Mine sold for {mine.SellPrice}.");
+            SetStatus(Loc.Tf("status_mine_sold", mine.SellPrice));
         }
 
         void OnPlacementCancelled()
         {
-            SetStatus("Placement canceled. Money returned.");
+            SetStatus(Loc.T("status_placement_cancelled"));
         }
 
         // ───────────────────────────────────────────────────────────────────

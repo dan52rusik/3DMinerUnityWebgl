@@ -16,6 +16,8 @@ namespace SimpleVoxelSystem
         private GameObject leftPanel;
         private GameObject rightPanel;
 
+        private Text strengthTitleText;
+        private Text backpackTitleText;
         private Text strengthLabel;
         private Text backpackLabel;
         private Text strengthPriceText;
@@ -28,6 +30,16 @@ namespace SimpleVoxelSystem
             pickaxeShopUI = FindFirstObjectByType<PickaxeShopUI>();
 
             CreateUI();
+        }
+
+        private void OnEnable()
+        {
+            Loc.OnLanguageChanged += RefreshLocalization;
+        }
+
+        private void OnDisable()
+        {
+            Loc.OnLanguageChanged -= RefreshLocalization;
         }
 
         private void Update()
@@ -88,7 +100,7 @@ namespace SimpleVoxelSystem
             
             // Header
             GameObject headerLeft = RuntimeUIFactory.MakePanel("Header", leftPanel.transform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -15), new Vector2(0, 30), headerColor);
-            RuntimeUIFactory.MakeLabel(headerLeft.transform, "Title", Loc.T("upgrade_str_title"), 14, TextAnchor.MiddleCenter, color: new Color(1, 0.8f, 0.2f));
+            strengthTitleText = RuntimeUIFactory.MakeLabel(headerLeft.transform, "Title", Loc.T("upgrade_str_title"), 14, TextAnchor.MiddleCenter, color: new Color(1, 0.8f, 0.2f));
 
             strengthLabel = RuntimeUIFactory.MakeLabel(leftPanel.transform, "Stats", "Bonus: +0", 13, TextAnchor.MiddleCenter, new Vector2(0, 5));
             
@@ -101,11 +113,11 @@ namespace SimpleVoxelSystem
             
             // Header
             GameObject headerRight = RuntimeUIFactory.MakePanel("Header", rightPanel.transform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -15), new Vector2(0, 30), headerColor);
-            RuntimeUIFactory.MakeLabel(headerRight.transform, "Title", Loc.T("upgrade_bp_title"), 14, TextAnchor.MiddleCenter, color: new Color(0.2f, 0.8f, 1f));
+            backpackTitleText = RuntimeUIFactory.MakeLabel(headerRight.transform, "Title", Loc.T("upgrade_bp_title"), 14, TextAnchor.MiddleCenter, color: new Color(0.2f, 0.8f, 1f));
 
             backpackLabel = RuntimeUIFactory.MakeLabel(rightPanel.transform, "Stats", "Slots: 10", 13, TextAnchor.MiddleCenter, new Vector2(0, 5));
             
-            Button btnCap = RuntimeUIFactory.MakeBtn(rightPanel.transform, "BtnUpgrade", "BUY", pos: new Vector2(0, -45), size: new Vector2(140, 34));
+            Button btnCap = RuntimeUIFactory.MakeBtn(rightPanel.transform, "BtnUpgrade", Loc.T("btn_buy"), pos: new Vector2(0, -45), size: new Vector2(140, 34));
             backpackPriceText = btnCap.GetComponentInChildren<Text>();
             btnCap.onClick.AddListener(OnUpgradeBackpack);
 
@@ -132,6 +144,17 @@ namespace SimpleVoxelSystem
         private void OnUpgradeBackpack()
         {
             if (upgradeManager != null) upgradeManager.UpgradeBackpackCapacity();
+        }
+
+        private void RefreshLocalization()
+        {
+            if (strengthTitleText != null)
+                strengthTitleText.text = Loc.T("upgrade_str_title");
+
+            if (backpackTitleText != null)
+                backpackTitleText.text = Loc.T("upgrade_bp_title");
+
+            UpdateLabels();
         }
     }
 }
