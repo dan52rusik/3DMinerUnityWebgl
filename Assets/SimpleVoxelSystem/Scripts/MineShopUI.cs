@@ -25,6 +25,7 @@ namespace SimpleVoxelSystem
         private GameObject shopPanel;
         private GameObject _overlay;       // dark background under the panel
         private GameObject hud;
+        private Text       shopTitleText;
         private Text       moneyText;
         private Text       panelMoneyText;
         private Text       switchWorldBtnText;
@@ -233,7 +234,7 @@ namespace SimpleVoxelSystem
             RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.50f);
 
             // Title
-            RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopTitle",
+            shopTitleText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopTitle",
                 Loc.T("mine_shop_title"), 22, TextAnchor.UpperCenter,
                 new Vector2(0, -12), new Vector2(0, 0), bold: true);
 
@@ -494,6 +495,14 @@ namespace SimpleVoxelSystem
         /// <summary>Обновить все переводимые строки после смены языка.</summary>
         private void RefreshLocalization()
         {
+            if (mineMarket != null)
+                mineMarket.ApplyLocalizationToAvailableMines();
+
+            if (shopTitleText != null)
+                shopTitleText.text = Loc.T("mine_shop_title");
+
+            UpdatePanelMoneyLabel();
+
             if (createIslandBtn != null)
             {
                 var t = createIslandBtn.GetComponentInChildren<Text>();
@@ -509,6 +518,8 @@ namespace SimpleVoxelSystem
                 var t = sellMineBtn.GetComponentInChildren<Text>();
                 if (t != null) t.text = Loc.T("btn_sell_mine");
             }
+
+            BuildShopButtons();
             // switchWorldBtnText обновляется в RefreshHUD() каждый Update
         }
 

@@ -52,7 +52,18 @@ namespace SimpleVoxelSystem
             mobileControls = MobileTouchControls.GetOrCreateIfNeeded();
 
             CreateDefaultMinesIfEmpty();
+            ApplyLocalizationToAvailableMines();
             EnsureShopUI();
+        }
+
+        void OnEnable()
+        {
+            Loc.OnLanguageChanged += ApplyLocalizationToAvailableMines;
+        }
+
+        void OnDisable()
+        {
+            Loc.OnLanguageChanged -= ApplyLocalizationToAvailableMines;
         }
 
         /// <summary>
@@ -139,6 +150,33 @@ namespace SimpleVoxelSystem
             availableMines.Add(gold);
 
             if (verboseLogs) Debug.Log("[MineMarket] Default mines created (3 types).");
+        }
+
+        public void ApplyLocalizationToAvailableMines()
+        {
+            if (availableMines == null) return;
+
+            for (int i = 0; i < availableMines.Count; i++)
+            {
+                MineShopData data = availableMines[i];
+                if (data == null) continue;
+
+                switch (data.buyPrice)
+                {
+                    case EconomyTuning.BronzeMinePrice:
+                        data.displayName = Loc.T("mine_bronze_name");
+                        data.description = Loc.T("mine_bronze_desc");
+                        break;
+                    case EconomyTuning.SilverMinePrice:
+                        data.displayName = Loc.T("mine_silver_name");
+                        data.description = Loc.T("mine_silver_desc");
+                        break;
+                    case EconomyTuning.GoldMinePrice:
+                        data.displayName = Loc.T("mine_gold_name");
+                        data.description = Loc.T("mine_gold_desc");
+                        break;
+                }
+            }
         }
 
         void Update()
@@ -411,7 +449,5 @@ namespace SimpleVoxelSystem
         }
     }
 }
-
-
 
 

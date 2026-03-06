@@ -126,11 +126,11 @@ namespace SimpleVoxelSystem
             // ── Характеристики и статусы ─────────────────────────────────────
             Add("pickaxe_shop_title", ru: "МАГАЗИН КИРОК", en: "PICKAXE SHOP", tr: "KAZMA DÜKKANI");
             Add("mining_level_format",ru: "{0}: {1} ({2} {3})", en: "{0}: {1} ({2} {3})", tr: "{0}: {1} ({2} {3})");
-            Add("lv_short",         ru: "Ур.",           en: "Lv.",           tr: "Seviye");
+            Add("lv_short",         ru: "Ур.",           en: "Lv.",           tr: "Sv.");
             Add("xp_short",         ru: "ОП",           en: "XP",           tr: "TP");
             
             Add("stats_power",      ru: "Сила",          en: "Power",        tr: "Güç");
-            Add("stats_req_lv",     ru: "Нужен Ур.",     en: "Req Lv",       tr: "Gerekli Seviye");
+            Add("stats_req_lv",     ru: "Нужен Ур.",     en: "Req Lv",       tr: "Gerekli Sv.");
             Add("stats_price",      ru: "Цена",          en: "Price",        tr: "Fiyat");
             Add("btn_buy",          ru: "КУПИТЬ",        en: "BUY",          tr: "SATIN AL");
             Add("btn_owned",        ru: "КУПЛЕНО",       en: "OWNED",        tr: "SAHİP");

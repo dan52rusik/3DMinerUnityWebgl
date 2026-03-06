@@ -14,6 +14,7 @@ namespace SimpleVoxelSystem
         private Canvas rootCanvas;
         private GameObject shopPanel;
         private GameObject overlay;
+        private Text titleText;
         private Text levelText;
         private Transform buttonContainer;
         private UpgradeManager upgradeManager;
@@ -22,6 +23,7 @@ namespace SimpleVoxelSystem
         private readonly List<PickaxeData> runtimeGeneratedPickaxes = new List<PickaxeData>();
         private readonly HashSet<int> ownedPickaxeIndices = new HashSet<int>();
         private bool buttonsDirty = true;
+        private bool usingRuntimeLocalizedPickaxes;
 
         private const string OwnedPrefsKey = "svs_pickaxe_owned_indices_v1";
         private const string EquippedPrefsKey = "svs_pickaxe_equipped_index_v1";
@@ -47,6 +49,16 @@ namespace SimpleVoxelSystem
             BuildUI();
         }
 
+        private void OnEnable()
+        {
+            Loc.OnLanguageChanged += HandleLanguageChanged;
+        }
+
+        private void OnDisable()
+        {
+            Loc.OnLanguageChanged -= HandleLanguageChanged;
+        }
+
         private void EnsureDefaultPickaxes()
         {
             if (availablePickaxes != null && availablePickaxes.Count > 0)
@@ -66,6 +78,7 @@ namespace SimpleVoxelSystem
                 CreateData(Loc.T("pickaxe_gold_name"), Loc.T("pickaxe_gold_desc"), EconomyTuning.GoldPickaxePrice, EconomyTuning.GoldPickaxePower, EconomyTuning.GoldPickaxeRequiredLevel, new Color(1f, 0.9f, 0f)),
                 CreateData(Loc.T("pickaxe_diamond_name"), Loc.T("pickaxe_diamond_desc"), EconomyTuning.DiamondPickaxePrice, EconomyTuning.DiamondPickaxePower, EconomyTuning.DiamondPickaxeRequiredLevel, new Color(0.3f, 0.9f, 1f))
             };
+            usingRuntimeLocalizedPickaxes = true;
         }
 
         private PickaxeData CreateData(string n, string d, int p, int pow, int lvl, Color c)
@@ -114,8 +127,10 @@ namespace SimpleVoxelSystem
             shopPanel = RuntimeUIFactory.MakePanel("PickaxePanel", rootCanvas.transform, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(420f, 520f), ColPanel);
             RuntimeUIFactory.EnableAdaptivePanelScale(shopPanel, 0.94f, 0.90f, 0.52f);
 
-            RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", Loc.T("pickaxe_shop_title"), 22, TextAnchor.UpperCenter).rectTransform.anchoredPosition = new Vector2(0f, -15f);
-            levelText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "LevelInfo", Loc.Tf("mining_level_format", GlobalEconomy.MiningLevel, GlobalEconomy.MiningXP), 16, TextAnchor.UpperCenter);
+            titleText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "Title", Loc.T("pickaxe_shop_title"), 22, TextAnchor.UpperCenter);
+            titleText.rectTransform.anchoredPosition = new Vector2(0f, -15f);
+
+            levelText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "LevelInfo", BuildLevelText(), 16, TextAnchor.UpperCenter);
             levelText.rectTransform.anchoredPosition = new Vector2(0f, -45f);
 
             Button closeBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseBtn", "X",
@@ -187,7 +202,7 @@ namespace SimpleVoxelSystem
         private void Update()
         {
             if (shopPanel != null && shopPanel.activeSelf && levelText != null)
-                levelText.text = Loc.Tf("mining_level_format", GlobalEconomy.MiningLevel, GlobalEconomy.MiningXP);
+                levelText.text = BuildLevelText();
         }
 
         public void Toggle()
@@ -219,6 +234,22 @@ namespace SimpleVoxelSystem
                 return;
 
             BuildUI();
+        }
+
+        private void HandleLanguageChanged()
+        {
+            if (usingRuntimeLocalizedPickaxes)
+                RebuildRuntimePickaxes();
+
+            if (titleText != null)
+                titleText.text = Loc.T("pickaxe_shop_title");
+
+            if (levelText != null)
+                levelText.text = BuildLevelText();
+
+            buttonsDirty = true;
+            if (shopPanel != null && shopPanel.activeSelf)
+                BuildButtons();
         }
 
         private void TryBuy(int index, PickaxeData data)
@@ -328,6 +359,36 @@ namespace SimpleVoxelSystem
             string json = JsonUtility.ToJson(wrapper);
             PlayerPrefs.SetString(OwnedPrefsKey, json);
             PlayerPrefs.Save();
+        }
+
+        private void RebuildRuntimePickaxes()
+        {
+            int equippedIndex = -1;
+            if (playerPickaxe != null && playerPickaxe.currentPickaxe != null && availablePickaxes != null)
+                equippedIndex = availablePickaxes.IndexOf(playerPickaxe.currentPickaxe);
+
+            for (int i = 0; i < runtimeGeneratedPickaxes.Count; i++)
+            {
+                if (runtimeGeneratedPickaxes[i] != null)
+                    Destroy(runtimeGeneratedPickaxes[i]);
+            }
+            runtimeGeneratedPickaxes.Clear();
+            availablePickaxes = null;
+
+            EnsureDefaultPickaxes();
+
+            if (playerPickaxe != null && equippedIndex >= 0 && availablePickaxes != null && equippedIndex < availablePickaxes.Count)
+                playerPickaxe.currentPickaxe = availablePickaxes[equippedIndex];
+        }
+
+        private static string BuildLevelText()
+        {
+            return Loc.Tf(
+                "mining_level_format",
+                Loc.T("lv_short"),
+                GlobalEconomy.MiningLevel,
+                GlobalEconomy.MiningXP,
+                Loc.T("xp_short"));
         }
 
         // (Helper methods removed, now using RuntimeUIFactory)
