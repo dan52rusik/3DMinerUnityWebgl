@@ -20,7 +20,7 @@ namespace SimpleVoxelSystem
         public System.Collections.Generic.HashSet<Vector3Int> minedPositions = new System.Collections.Generic.HashSet<Vector3Int>();
 
         public int originX, originZ; // placement coordinates on the island
-        public bool IsExhausted => minedBlocks >= totalBlocks;
+        public bool IsExhausted => totalBlocks > 0 && minedBlocks >= totalBlocks;
 
         /// <summary>Sale price of an exhausted mine.</summary>
         public int SellPrice => Mathf.RoundToInt(shopData.buyPrice * shopData.sellBackRatio);
@@ -72,4 +72,4 @@ namespace SimpleVoxelSystem
             && ly < voxelsData.GetLength(1)
             && lz < voxelsData.GetLength(2);
     }
-}
+}  
