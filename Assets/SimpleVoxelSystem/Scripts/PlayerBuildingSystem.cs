@@ -399,7 +399,8 @@ namespace SimpleVoxelSystem
                 return;
             }
 
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            bool mobileActive = mobileControls != null && mobileControls.IsActive;
+            if (!mobileActive && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 HidePreview();
                 return;
@@ -564,7 +565,7 @@ namespace SimpleVoxelSystem
         private Vector2 GetPointerPos()
         {
             if (mobileControls != null && mobileControls.IsActive)
-                return mobileControls.AimScreenPosition;
+                return mobileControls.StickyAimPosition;
 
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;

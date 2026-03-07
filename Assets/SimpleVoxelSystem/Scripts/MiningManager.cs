@@ -220,6 +220,11 @@ namespace SimpleVoxelSystem
         {
             if (wellGenerator == null || wellGenerator.IsInLobbyMode) return false;
             if (wellGenerator.ActiveIsland == null) return false;
+
+            // On the private island we also allow mining blocks built above the original surface.
+            if (wellGenerator.ActiveIsland == wellGenerator.PrivateIsland)
+                return gy >= 0 && gy < wellGenerator.ActiveIsland.TotalY;
+
             return gy >= wellGenerator.LobbyFloorY && gy < wellGenerator.ActiveIsland.TotalY;
         }
 
