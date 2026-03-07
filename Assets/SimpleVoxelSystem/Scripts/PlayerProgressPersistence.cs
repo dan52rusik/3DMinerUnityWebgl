@@ -225,9 +225,9 @@ namespace SimpleVoxelSystem
             mineMarket.OnPlacementCancelled += OnPlacementCancelled;
         }
 
-        private void OnMinePlaced(MineInstance _) => MarkDirty();
-        private void OnMineSold(MineInstance _) => MarkDirty();
-        private void OnPlacementCancelled() => MarkDirty();
+        private void OnMinePlaced(MineInstance _) => SaveCriticalGameplayChange();
+        private void OnMineSold(MineInstance _) => SaveCriticalGameplayChange();
+        private void OnPlacementCancelled() => SaveCriticalGameplayChange();
 
         private void Update()
         {
@@ -389,6 +389,13 @@ namespace SimpleVoxelSystem
             else
                 wellGenerator.ClearCustomIslandSpawnPoint();
 
+            // FIX: если в сохранении есть шахта(ы), остров должен быть активен ДО применения воксел шахты.
+            // После domain reload IsInLobbyMode = true, и ApplyMinesToIsland делает early return.
+            // ForceEnterMineMode() только меняет флаг и активирует острова — без спавна/генерации.
+            bool hasSavedMines = (save.mines != null && save.mines.Count > 0) || (save.hasMine && save.mine != null);
+            if (save.hasPrivateIsland && hasSavedMines)
+                wellGenerator.ForceEnterMineMode();
+
             if (save.mines != null && save.mines.Count > 0)
             {
                 List<MineInstance> restored = new List<MineInstance>();
@@ -448,6 +455,14 @@ namespace SimpleVoxelSystem
             PlayerBuildingSystem buildingSystem = FindFirstObjectByType<PlayerBuildingSystem>();
             if (buildingSystem != null)
                 buildingSystem.RestorePlacedBlocks(save.builtBlocks);
+
+            // После восстановления шахт — телепортируем игрока на остров (если он там был).
+            // Без этого после domain reload игрок остаётся на позиции лобби и может провалиться.
+            if (!wellGenerator.IsInLobbyMode && wellGenerator.PrivateIsland != null)
+            {
+                wellGenerator.SpawnPlayerAt(wellGenerator.ResolvePreferredIslandSpawnPoint());
+                AsyncGameplayEvents.PublishWorldSwitch(false);
+            }
 
             isLoaded = true;
             CaptureStateCache();
@@ -528,6 +543,15 @@ namespace SimpleVoxelSystem
         {
             dirty = true;
             nextAutosaveTime = Time.unscaledTime + AutosaveIntervalSeconds;
+        }
+
+        private void SaveCriticalGameplayChange()
+        {
+            if (!isLoaded)
+                return;
+
+            MarkDirty();
+            SaveNow(force: true);
         }
 
         public void NotifyGameplayStateChanged()

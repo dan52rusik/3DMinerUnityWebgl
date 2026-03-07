@@ -292,6 +292,21 @@ namespace SimpleVoxelSystem
             UpdateLobbyStreamingVisibility();
         }
 
+        /// <summary>
+        /// Переключает флаг режима и видимость островов без спавна игрока и без применения шахт.
+        /// Используется при восстановлении сохранения (domain reload / перекомпиляция),
+        /// чтобы IsInLobbyMode был false ДО вызова RestoreMinesFromSave → ApplyMinesToIsland.
+        /// </summary>
+        public void ForceEnterMineMode()
+        {
+            if (playerIsland == null) return;
+            IsInLobbyMode = false;
+            SetIslandActive(lobbyIsland, keepLobbyAlwaysLoaded);
+            SetIslandActive(playerIsland, true);
+            Physics.SyncTransforms();
+            UpdateLobbyStreamingVisibility();
+        }
+
         private void SetIslandActive(VoxelIsland island, bool active)
         {
             if (island == null) return;
@@ -438,7 +453,7 @@ namespace SimpleVoxelSystem
             else SpawnPlayerAt(ResolvePreferredIslandSpawnPoint());
         }
 
-        private Vector3 ResolvePreferredIslandSpawnPoint()
+        public Vector3 ResolvePreferredIslandSpawnPoint()
         {
             if (playerIsland == null) return islandSpawnPos;
             if (hasCustomIslandSpawnPos)
