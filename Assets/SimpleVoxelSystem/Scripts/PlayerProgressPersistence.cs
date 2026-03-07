@@ -37,6 +37,7 @@ namespace SimpleVoxelSystem
 
             public bool hasPrivateIsland;
             public SerializableVector3 privateIslandOffset;
+            public bool isInLobbyMode = true;
             public bool hasCustomIslandSpawnPoint;
             public SerializableVector3 customIslandSpawnPoint;
             public bool hasMine;
@@ -684,6 +685,7 @@ namespace SimpleVoxelSystem
                 miningLevel = GlobalEconomy.MiningLevel,
                 hasPrivateIsland = wellGenerator.IsIslandGenerated,
                 privateIslandOffset = new SerializableVector3(wellGenerator.privateIslandOffset),
+                isInLobbyMode = wellGenerator.IsInLobbyMode,
                 hasCustomIslandSpawnPoint = wellGenerator.HasCustomIslandSpawnPoint,
                 customIslandSpawnPoint = new SerializableVector3(wellGenerator.GetCustomIslandSpawnPoint())
             };
