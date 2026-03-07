@@ -306,7 +306,18 @@ namespace SimpleVoxelSystem
         public void EnsurePrivateIslandAtOffset(Vector3 offset)
         {
             privateIslandOffset = offset;
-            if (playerIsland == null) CreatePlayerIsland();
+            if (playerIsland == null)
+            {
+                CreatePlayerIsland();
+            }
+            else
+            {
+                playerIsland.transform.position = privateIslandOffset;
+                islandSpawnPos = playerIsland.transform.TransformPoint(new Vector3(playerIsland.TotalX / 2f, -LobbyFloorY, playerIsland.TotalZ / 2f));
+                hasIslandSpawnPos = true;
+                Physics.SyncTransforms();
+            }
+
             SetIslandActive(playerIsland, !IsInLobbyMode);
             SetIslandActive(lobbyIsland, true);
             UpdateLobbyStreamingVisibility();
@@ -530,12 +541,22 @@ namespace SimpleVoxelSystem
                 lookDir.y = 0f;
                 if (lookDir.sqrMagnitude > 0.0001f) player.rotation = Quaternion.LookRotation(lookDir.normalized, Vector3.up);
             }
-            if (cc != null) cc.enabled = true;
+            if (cc != null) StartCoroutine(ReenableCharacterControllerNextFixedUpdate(cc));
         }
 
         private float ComputePlayerSpawnY(Transform player, float groundY)
         {
             return groundY + playerSpawnHeight + Mathf.Max(0f, safeSpawnDropOffset);
+        }
+
+        private System.Collections.IEnumerator ReenableCharacterControllerNextFixedUpdate(CharacterController cc)
+        {
+            yield return new WaitForFixedUpdate();
+
+            if (cc == null)
+                yield break;
+
+            cc.enabled = true;
         }
 
         public Transform ResolveOrSpawnPlayer()

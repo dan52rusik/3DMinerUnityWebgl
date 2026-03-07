@@ -422,11 +422,12 @@ namespace SimpleVoxelSystem
                 return;
             }
 
-            Vector3 localPoint = island.transform.InverseTransformPoint(hit.point + hit.normal * hoverSurfaceEpsilon);
-            Vector3Int gridPos = new Vector3Int(
-                Mathf.FloorToInt(localPoint.x),
-                -Mathf.FloorToInt(localPoint.y),
-                Mathf.FloorToInt(localPoint.z));
+            Vector3 hitLocalPoint = island.transform.InverseTransformPoint(hit.point - hit.normal * hoverSurfaceEpsilon);
+            Vector3Int hitGridPos = new Vector3Int(
+                Mathf.FloorToInt(hitLocalPoint.x),
+                Mathf.FloorToInt(-hitLocalPoint.y),
+                Mathf.FloorToInt(hitLocalPoint.z));
+            Vector3Int gridPos = hitGridPos + NormalToPlacementOffset(hit.normal);
 
             if (!IsBuildGridAllowed(island, gridPos) || island.IsSolid(gridPos.x, gridPos.y, gridPos.z))
             {
@@ -483,6 +484,21 @@ namespace SimpleVoxelSystem
                 return false;
 
             return island.InBounds(pos.x, pos.y, pos.z);
+        }
+
+        private static Vector3Int NormalToPlacementOffset(Vector3 normal)
+        {
+            Vector3 abs = new Vector3(Mathf.Abs(normal.x), Mathf.Abs(normal.y), Mathf.Abs(normal.z));
+
+            // Use the dominant axis only. Edge/corner triangle normals are often diagonal,
+            // which made top-surface placement sometimes resolve into the current ground voxel.
+            if (abs.y >= abs.x && abs.y >= abs.z)
+                return normal.y >= 0f ? new Vector3Int(0, -1, 0) : new Vector3Int(0, 1, 0);
+
+            if (abs.x >= abs.z)
+                return normal.x >= 0f ? Vector3Int.right : Vector3Int.left;
+
+            return normal.z >= 0f ? new Vector3Int(0, 0, 1) : new Vector3Int(0, 0, -1);
         }
 
         private void ShowStatus(string text, float duration = 2f)

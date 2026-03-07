@@ -152,6 +152,7 @@ namespace SimpleVoxelSystem
 
         private void OnDisable()
         {
+            SaveNow(force: true);
             YG2.onGetSDKData -= OnSdkReady;
             GlobalEconomy.OnMoneyChanged  -= OnEconomyChanged;
             GlobalEconomy.OnXPChanged     -= OnEconomyChanged;
@@ -531,8 +532,11 @@ namespace SimpleVoxelSystem
 
         public void NotifyGameplayStateChanged()
         {
-            if (isLoaded)
-                MarkDirty();
+            if (!isLoaded)
+                return;
+
+            MarkDirty();
+            SaveNow(force: true);
         }
 
         private void SaveNow(bool force = false)
@@ -679,36 +683,36 @@ namespace SimpleVoxelSystem
                 save.upgBackpackCost = um.backpackCapacityCost;
             }
 
-            if (wellGenerator.PlacedMines == null || wellGenerator.PlacedMines.Count == 0)
-                return save;
-
-            save.hasMine = true;
-            save.mines = new List<MineSaveData>();
-            for (int i = 0; i < wellGenerator.PlacedMines.Count; i++)
+            if (wellGenerator.PlacedMines != null && wellGenerator.PlacedMines.Count > 0)
             {
-                MineInstance mine = wellGenerator.PlacedMines[i];
-                if (mine == null) continue;
-
-                MineSaveData mineSave = new MineSaveData
+                save.hasMine = true;
+                save.mines = new List<MineSaveData>();
+                for (int i = 0; i < wellGenerator.PlacedMines.Count; i++)
                 {
-                    mineDisplayName = mine.shopData != null ? mine.shopData.displayName : string.Empty,
-                    rolledDepth = mine.rolledDepth,
-                    originX = mine.originX,
-                    originZ = mine.originZ,
-                    mineIndex = ResolveMineIndex(mine.shopData)
-                };
+                    MineInstance mine = wellGenerator.PlacedMines[i];
+                    if (mine == null) continue;
 
-                if (mine.minedPositions != null)
-                {
-                    foreach (Vector3Int local in mine.minedPositions)
-                        mineSave.minedLocalPositions.Add(new SerializableVector3Int(local));
+                    MineSaveData mineSave = new MineSaveData
+                    {
+                        mineDisplayName = mine.shopData != null ? mine.shopData.displayName : string.Empty,
+                        rolledDepth = mine.rolledDepth,
+                        originX = mine.originX,
+                        originZ = mine.originZ,
+                        mineIndex = ResolveMineIndex(mine.shopData)
+                    };
+
+                    if (mine.minedPositions != null)
+                    {
+                        foreach (Vector3Int local in mine.minedPositions)
+                            mineSave.minedLocalPositions.Add(new SerializableVector3Int(local));
+                    }
+
+                    save.mines.Add(mineSave);
                 }
 
-                save.mines.Add(mineSave);
+                if (save.mines.Count > 0)
+                    save.mine = save.mines[save.mines.Count - 1];
             }
-
-            if (save.mines.Count > 0)
-                save.mine = save.mines[save.mines.Count - 1];
 
             PlayerBuildingSystem buildingSystem = FindFirstObjectByType<PlayerBuildingSystem>();
             if (buildingSystem != null)
