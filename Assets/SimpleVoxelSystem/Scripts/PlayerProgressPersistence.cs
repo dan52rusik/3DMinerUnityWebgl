@@ -37,6 +37,7 @@ namespace SimpleVoxelSystem
 
             public bool hasPrivateIsland;
             public SerializableVector3 privateIslandOffset;
+            public bool isInLobbyMode = true; // FIX: сохраняем режим явно, не выводим из наличия шахты
             public bool hasCustomIslandSpawnPoint;
             public SerializableVector3 customIslandSpawnPoint;
             public bool hasMine;
@@ -116,9 +117,6 @@ namespace SimpleVoxelSystem
         // must carry the delta forward instead of blindly overwriting.
         private bool economyTouchedBeforeLoad;
 
-        private int cachedMoney;
-        private int cachedXP;
-        private int cachedLevel;
         private int cachedMinedBlocks;
         private bool cachedHasMine;
         private bool cachedHasIsland;
@@ -389,11 +387,12 @@ namespace SimpleVoxelSystem
             else
                 wellGenerator.ClearCustomIslandSpawnPoint();
 
-            // FIX: если в сохранении есть шахта(ы), остров должен быть активен ДО применения воксел шахты.
-            // После domain reload IsInLobbyMode = true, и ApplyMinesToIsland делает early return.
-            // ForceEnterMineMode() только меняет флаг и активирует острова — без спавна/генерации.
+            // FIX: используем сохранённый флаг режима, а не выводим его из наличия шахт.
+            // Старые сейвы (без isInLobbyMode) имеют isInLobbyMode = true по умолчанию,
+            // поэтому для них смотрим на наличие шахты как раньше.
             bool hasSavedMines = (save.mines != null && save.mines.Count > 0) || (save.hasMine && save.mine != null);
-            if (save.hasPrivateIsland && hasSavedMines)
+            bool shouldBeOnIsland = save.hasPrivateIsland && hasSavedMines && !save.isInLobbyMode;
+            if (shouldBeOnIsland)
                 wellGenerator.ForceEnterMineMode();
 
             if (save.mines != null && save.mines.Count > 0)
@@ -684,6 +683,7 @@ namespace SimpleVoxelSystem
                 miningLevel = GlobalEconomy.MiningLevel,
                 hasPrivateIsland = wellGenerator.IsIslandGenerated,
                 privateIslandOffset = new SerializableVector3(wellGenerator.privateIslandOffset),
+                isInLobbyMode = wellGenerator.IsInLobbyMode, // FIX: сохраняем явно
                 hasCustomIslandSpawnPoint = wellGenerator.HasCustomIslandSpawnPoint,
                 customIslandSpawnPoint = new SerializableVector3(wellGenerator.GetCustomIslandSpawnPoint())
             };
