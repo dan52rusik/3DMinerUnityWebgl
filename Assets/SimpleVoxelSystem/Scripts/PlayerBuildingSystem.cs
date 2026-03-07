@@ -231,14 +231,14 @@ namespace SimpleVoxelSystem
             scaler.referenceResolution = new Vector2(1600f, 900f);
             scaler.matchWidthOrHeight = 1f;
 
-            controlsPanel = RuntimeUIFactory.MakePanel("BuildControlsPanel", canvas.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -210f), new Vector2(184f, 84f), new Color(0f, 0f, 0f, 0f));
+            controlsPanel = RuntimeUIFactory.MakePanel("BuildControlsPanel", canvas.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-12f, -290f), new Vector2(184f, 84f), new Color(0f, 0f, 0f, 0f));
             panel = RuntimeUIFactory.MakePanel("BuildInventoryPanel", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(540f, 128f), new Color(0.06f, 0.08f, 0.12f, 0.9f));
             statusPanel = RuntimeUIFactory.MakePanel("BuildStatusPanel", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 154f), new Vector2(460f, 36f), new Color(0.06f, 0.08f, 0.12f, 0.82f));
 
             titleLabel = RuntimeUIFactory.MakeLabel(panel.transform, "Title", string.Empty, 14, TextAnchor.UpperCenter, new Vector2(10f, -6f), new Vector2(-10f, -74f), bold: true);
             statusLabel = RuntimeUIFactory.MakeLabel(statusPanel.transform, "Status", string.Empty, 12, TextAnchor.MiddleCenter, new Vector2(12f, 0f), new Vector2(-12f, 0f), color: new Color(1f, 0.95f, 0.65f, 1f));
 
-            modeButton = RuntimeUIFactory.MakeBtn(controlsPanel.transform, "ModeButton", string.Empty, new Color(0.16f, 0.48f, 0.86f, 0.96f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-94f, -42f), new Vector2(84f, 84f));
+            modeButton = RuntimeUIFactory.MakeBtn(controlsPanel.transform, "ModeButton", string.Empty, new Color(0.16f, 0.48f, 0.86f, 0.96f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-94f, 0f), new Vector2(84f, 84f));
             modeButtonLabel = modeButton.GetComponentInChildren<Text>();
             modeButton.onClick.AddListener(ToggleBuildMode);
             if (modeButtonLabel != null)
@@ -247,7 +247,7 @@ namespace SimpleVoxelSystem
                 modeButtonLabel.alignment = TextAnchor.MiddleCenter;
             }
 
-            inventoryButton = RuntimeUIFactory.MakeBtn(controlsPanel.transform, "InventoryButton", string.Empty, new Color(0.14f, 0.24f, 0.36f, 0.96f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-6f, -42f), new Vector2(84f, 84f));
+            inventoryButton = RuntimeUIFactory.MakeBtn(controlsPanel.transform, "InventoryButton", string.Empty, new Color(0.14f, 0.24f, 0.36f, 0.96f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-6f, 0f), new Vector2(84f, 84f));
             inventoryButtonLabel = inventoryButton.GetComponentInChildren<Text>();
             inventoryButton.onClick.AddListener(ToggleInventoryPanel);
             if (inventoryButtonLabel != null)
