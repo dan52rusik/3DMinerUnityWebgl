@@ -372,7 +372,7 @@ namespace SimpleVoxelSystem
 
         public int GetBlockCount(BlockType type)
         {
-            switch (type)
+            switch (NormalizeInventoryBlockType(type))
             {
                 case BlockType.Dirt: return dirtCount;
                 case BlockType.Stone: return stoneCount;
@@ -384,6 +384,7 @@ namespace SimpleVoxelSystem
 
         public bool TryConsumeResourceBlock(BlockType type, bool notify = true)
         {
+            type = NormalizeInventoryBlockType(type);
             if (GetBlockCount(type) <= 0)
                 return false;
 
@@ -396,6 +397,7 @@ namespace SimpleVoxelSystem
 
         public bool TryAddResourceBlock(BlockType type, bool ignoreCapacity = false, bool notify = true)
         {
+            type = NormalizeInventoryBlockType(type);
             if (!ignoreCapacity && currentBackpackLoad >= maxBackpackCapacity)
                 return false;
 
@@ -419,7 +421,7 @@ namespace SimpleVoxelSystem
 
         private void AddCount(BlockType type, int delta)
         {
-            switch (type)
+            switch (NormalizeInventoryBlockType(type))
             {
                 case BlockType.Dirt:
                     dirtCount = Mathf.Max(0, dirtCount + delta);
@@ -434,6 +436,14 @@ namespace SimpleVoxelSystem
                     goldCount = Mathf.Max(0, goldCount + delta);
                     break;
             }
+        }
+
+        private static BlockType NormalizeInventoryBlockType(BlockType type)
+        {
+            if (type == BlockType.Grass)
+                return BlockType.Dirt;
+
+            return type;
         }
 
         private void RecalculateBackpackStateFromCounts()
