@@ -591,6 +591,13 @@ namespace SimpleVoxelSystem
 
         public static void ResetStoredProgressToNewPlayer()
         {
+            PlayerProgressPersistence instance = FindFirstObjectByType<PlayerProgressPersistence>();
+            if (instance != null)
+            {
+                instance.ResetProgressToNewPlayer();
+                return;
+            }
+
             ResetTutorialProgressFlags();
 
             string json = BuildDefaultResetJson();

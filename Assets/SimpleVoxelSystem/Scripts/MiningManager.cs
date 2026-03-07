@@ -177,6 +177,8 @@ namespace SimpleVoxelSystem
             if (TryGetMineForCell(gx, gz, out MineInstance mine))
             {
                 mine.RegisterMinedBlock(gx, gy, gz);
+                if (mine.IsExhausted)
+                    RemoveMineRuntime(mine);
             }
         }
 
@@ -362,13 +364,24 @@ namespace SimpleVoxelSystem
         public void ApplyMinesToIsland()
         {
             if (wellGenerator == null || wellGenerator.IsInLobbyMode) return;
-            
-            foreach (var m in placedMines)
+
+            CleanupStaleElevators();
+
+            for (int i = placedMines.Count - 1; i >= 0; i--)
             {
+                MineInstance m = placedMines[i];
+                if (m == null || m.shopData == null || m.IsExhausted)
+                {
+                    placedMines.RemoveAt(i);
+                    continue;
+                }
+
                 ApplyMineVoxels(m);
                 CreateElevator(m.originX - (m.shopData.wellWidth / 2) - m.shopData.padding,
                                m.originZ - (m.shopData.wellLength / 2) - m.shopData.padding);
             }
+
+            ActiveMine = placedMines.Count > 0 ? placedMines[placedMines.Count - 1] : null;
             mineAppliedToIsland = placedMines.Count > 0;
         }
 
@@ -377,6 +390,46 @@ namespace SimpleVoxelSystem
             ActiveMine = null;
             placedMines.Clear();
             mineAppliedToIsland = false;
+        }
+
+        private void RemoveMineRuntime(MineInstance mine)
+        {
+            if (mine == null)
+                return;
+
+            int sx = mine.originX - (mine.shopData.wellWidth / 2) - mine.shopData.padding;
+            int sz = mine.originZ - (mine.shopData.wellLength / 2) - mine.shopData.padding;
+
+            SimpleElevator[] elevators = GetComponentsInChildren<SimpleElevator>();
+            for (int i = 0; i < elevators.Length; i++)
+            {
+                SimpleElevator elev = elevators[i];
+                if (elev == null) continue;
+                if (elev.shaftGridX == sx && elev.shaftGridZ == sz)
+                    Destroy(elev.gameObject);
+            }
+
+            placedMines.Remove(mine);
+            if (ActiveMine == mine)
+                ActiveMine = placedMines.Count > 0 ? placedMines[placedMines.Count - 1] : null;
+
+            mineAppliedToIsland = placedMines.Count > 0;
+            FindFirstObjectByType<PlayerProgressPersistence>()?.NotifyGameplayStateChanged();
+        }
+
+        private void CleanupStaleElevators()
+        {
+            SimpleElevator[] elevators = GetComponentsInChildren<SimpleElevator>();
+            for (int i = 0; i < elevators.Length; i++)
+            {
+                SimpleElevator elev = elevators[i];
+                if (elev == null)
+                    continue;
+
+                MineInstance mine = FindMineByShaft(elev.shaftGridX, elev.shaftGridZ);
+                if (mine == null || mine.IsExhausted)
+                    Destroy(elev.gameObject);
+            }
         }
 
         public void CreateElevator(int gx, int gz)

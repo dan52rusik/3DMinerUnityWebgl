@@ -40,6 +40,7 @@ namespace SimpleVoxelSystem
         public GameObject playerPrefab;
         public Transform playerToPlace;
         public float playerSpawnHeight = 1.05f;
+        public float safeSpawnDropOffset = 2.5f;
         [Tooltip("Don't teleport player to the center of the mine when placing it.")]
         public bool keepPlayerPositionWhenPlacingMine = true;
         [Tooltip("When returning from lobby to island, return player to their last position on the island.")]
@@ -443,6 +444,35 @@ namespace SimpleVoxelSystem
             }
             float centerX = playerIsland.TotalX / 2f;
             float centerZ = playerIsland.TotalZ / 2f;
+
+            int maxRadius = Mathf.CeilToInt(Mathf.Max(playerIsland.TotalX, playerIsland.TotalZ) * 0.5f);
+            float islandBaseY = playerIsland.transform.position.y - playerIsland.TotalY;
+
+            for (int radius = 0; radius <= maxRadius; radius++)
+            {
+                for (int dx = -radius; dx <= radius; dx++)
+                {
+                    for (int dz = -radius; dz <= radius; dz++)
+                    {
+                        if (radius > 0 && Mathf.Abs(dx) != radius && Mathf.Abs(dz) != radius)
+                            continue;
+
+                        float candidateGridX = centerX + dx;
+                        float candidateGridZ = centerZ + dz;
+                        Vector3 candidatePoint = playerIsland.transform.TransformPoint(new Vector3(candidateGridX, -LobbyFloorY, candidateGridZ));
+
+                        if (!TryGetSurfaceYAtOnActiveIsland(candidatePoint.x, candidatePoint.z, out float candidateGroundY))
+                            continue;
+
+                        // Ignore points deep inside the mine shaft and prefer actual top-side ground.
+                        if (candidateGroundY <= islandBaseY + 2f)
+                            continue;
+
+                        return new Vector3(candidatePoint.x, candidateGroundY, candidatePoint.z);
+                    }
+                }
+            }
+
             Vector3 defaultPoint = playerIsland.transform.TransformPoint(new Vector3(centerX, -LobbyFloorY, centerZ));
             if (TryGetSurfaceYAtOnActiveIsland(defaultPoint.x, defaultPoint.z, out float dgY))
                 return new Vector3(defaultPoint.x, dgY, defaultPoint.z);
@@ -453,6 +483,18 @@ namespace SimpleVoxelSystem
         {
             groundY = 0f;
             if (ActiveIsland == null) return false;
+
+            MeshCollider c = ActiveIsland.GetComponent<MeshCollider>();
+            if (c != null && c.enabled)
+            {
+                Ray r = new Ray(new Vector3(worldX, ActiveIsland.transform.position.y + ActiveIsland.TotalY + 10f, worldZ), Vector3.down);
+                if (c.Raycast(r, out RaycastHit h, ActiveIsland.TotalY + 40f))
+                {
+                    groundY = h.point.y;
+                    return true;
+                }
+            }
+
             Vector3 local = ActiveIsland.transform.InverseTransformPoint(new Vector3(worldX, ActiveIsland.transform.position.y, worldZ));
             int gx = Mathf.FloorToInt(local.x);
             int gz = Mathf.FloorToInt(local.z);
@@ -466,12 +508,6 @@ namespace SimpleVoxelSystem
                         return true;
                     }
                 }
-            }
-            MeshCollider c = ActiveIsland.GetComponent<MeshCollider>();
-            if (c != null && c.enabled)
-            {
-                Ray r = new Ray(new Vector3(worldX, ActiveIsland.transform.position.y + ActiveIsland.TotalY + 10f, worldZ), Vector3.down);
-                if (c.Raycast(r, out RaycastHit h, ActiveIsland.TotalY + 40f)) { groundY = h.point.y; return true; }
             }
             return false;
         }
@@ -499,9 +535,7 @@ namespace SimpleVoxelSystem
 
         private float ComputePlayerSpawnY(Transform player, float groundY)
         {
-            CharacterController cc = player.GetComponent<CharacterController>();
-            if (cc != null) return groundY + 1.0f - (cc.center.y - (cc.height * 0.5f) + cc.skinWidth);
-            return groundY + playerSpawnHeight;
+            return groundY + playerSpawnHeight + Mathf.Max(0f, safeSpawnDropOffset);
         }
 
         public Transform ResolveOrSpawnPlayer()
