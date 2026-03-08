@@ -725,6 +725,7 @@ namespace SimpleVoxelSystem
             {
                 IsHeld = false;
                 lastScreenPos = Vector2.zero;
+                HasPointerPosition = false;
             }
 
             public Vector2 ConsumeDelta()

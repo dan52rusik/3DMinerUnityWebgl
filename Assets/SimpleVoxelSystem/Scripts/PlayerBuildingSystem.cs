@@ -317,7 +317,7 @@ namespace SimpleVoxelSystem
                 titleLabel.text = Loc.T("build_inventory");
 
             if (modeButtonLabel != null)
-                modeButtonLabel.text = IsBuildMode ? Loc.T("btn_build_off") : Loc.T("btn_build");
+                modeButtonLabel.text = IsBuildMode ? Loc.T("btn_mine") : Loc.T("btn_build");
 
             if (inventoryButtonLabel != null)
                 inventoryButtonLabel.text = (mobileControls != null && mobileControls.IsActive) ? Loc.T("build_inventory_toggle") : "I";
@@ -422,12 +422,14 @@ namespace SimpleVoxelSystem
                 return;
             }
 
-            Vector3 hitLocalPoint = island.transform.InverseTransformPoint(hit.point - hit.normal * hoverSurfaceEpsilon);
+            Vector3 hitSurfaceLocalPoint = island.transform.InverseTransformPoint(hit.point);
+            Vector3 hitLocalPoint = island.transform.InverseTransformPoint(hit.point + ray.direction * hoverSurfaceEpsilon);
+            Vector3 localRayDirection = island.transform.InverseTransformDirection(ray.direction).normalized;
             Vector3Int hitGridPos = new Vector3Int(
                 Mathf.FloorToInt(hitLocalPoint.x),
-                Mathf.FloorToInt(-hitLocalPoint.y),
+                Mathf.CeilToInt(-hitLocalPoint.y),
                 Mathf.FloorToInt(hitLocalPoint.z));
-            Vector3Int gridPos = hitGridPos + NormalToPlacementOffset(hit.normal);
+            Vector3Int gridPos = hitGridPos + GetPlacementOffsetFromSurfacePoint(hitGridPos, hitSurfaceLocalPoint, localRayDirection);
 
             if (!IsBuildGridAllowed(island, gridPos) || island.IsSolid(gridPos.x, gridPos.y, gridPos.z))
             {
@@ -486,19 +488,81 @@ namespace SimpleVoxelSystem
             return island.InBounds(pos.x, pos.y, pos.z);
         }
 
-        private static Vector3Int NormalToPlacementOffset(Vector3 normal)
+        private static Vector3Int GetPlacementOffsetFromSurfacePoint(Vector3Int hitGridPos, Vector3 localSurfacePoint, Vector3 localRayDirection)
         {
-            Vector3 abs = new Vector3(Mathf.Abs(normal.x), Mathf.Abs(normal.y), Mathf.Abs(normal.z));
+            float minX = hitGridPos.x;
+            float maxX = hitGridPos.x + 1f;
+            float maxY = -hitGridPos.y + 1f;
+            float minY = -hitGridPos.y;
+            float minZ = hitGridPos.z;
+            float maxZ = hitGridPos.z + 1f;
 
-            // Use the dominant axis only. Edge/corner triangle normals are often diagonal,
-            // which made top-surface placement sometimes resolve into the current ground voxel.
-            if (abs.y >= abs.x && abs.y >= abs.z)
-                return normal.y >= 0f ? new Vector3Int(0, -1, 0) : new Vector3Int(0, 1, 0);
+            float distLeft = Mathf.Abs(localSurfacePoint.x - minX);
+            float distRight = Mathf.Abs(localSurfacePoint.x - maxX);
+            float distTop = Mathf.Abs(localSurfacePoint.y - maxY);
+            float distBottom = Mathf.Abs(localSurfacePoint.y - minY);
+            float distBack = Mathf.Abs(localSurfacePoint.z - minZ);
+            float distFront = Mathf.Abs(localSurfacePoint.z - maxZ);
+            const float faceEpsilon = 0.04f;
 
-            if (abs.x >= abs.z)
-                return normal.x >= 0f ? Vector3Int.right : Vector3Int.left;
+            FaceCandidate[] candidates =
+            {
+                new FaceCandidate(distTop,    new Vector3(0f,  1f,  0f), new Vector3Int(0, -1,  0)),
+                new FaceCandidate(distBottom, new Vector3(0f, -1f,  0f), new Vector3Int(0,  1,  0)),
+                new FaceCandidate(distRight,  new Vector3(1f,  0f,  0f), Vector3Int.right),
+                new FaceCandidate(distLeft,   new Vector3(-1f, 0f,  0f), Vector3Int.left),
+                new FaceCandidate(distFront,  new Vector3(0f,  0f,  1f), new Vector3Int(0,  0,  1)),
+                new FaceCandidate(distBack,   new Vector3(0f,  0f, -1f), new Vector3Int(0,  0, -1))
+            };
 
-            return normal.z >= 0f ? new Vector3Int(0, 0, 1) : new Vector3Int(0, 0, -1);
+            bool foundNearFace = false;
+            float bestFacingDot = float.PositiveInfinity;
+            Vector3Int bestOffset = new Vector3Int(0, -1, 0);
+
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                FaceCandidate candidate = candidates[i];
+                if (candidate.distance > faceEpsilon)
+                    continue;
+
+                float facingDot = Vector3.Dot(candidate.normal, localRayDirection);
+                if (!foundNearFace || facingDot < bestFacingDot)
+                {
+                    foundNearFace = true;
+                    bestFacingDot = facingDot;
+                    bestOffset = candidate.offset;
+                }
+            }
+
+            if (foundNearFace)
+                return bestOffset;
+
+            float minDist = candidates[0].distance;
+            bestOffset = candidates[0].offset;
+            for (int i = 1; i < candidates.Length; i++)
+            {
+                if (candidates[i].distance < minDist)
+                {
+                    minDist = candidates[i].distance;
+                    bestOffset = candidates[i].offset;
+                }
+            }
+
+            return bestOffset;
+        }
+
+        private readonly struct FaceCandidate
+        {
+            public readonly float distance;
+            public readonly Vector3 normal;
+            public readonly Vector3Int offset;
+
+            public FaceCandidate(float distance, Vector3 normal, Vector3Int offset)
+            {
+                this.distance = distance;
+                this.normal = normal;
+                this.offset = offset;
+            }
         }
 
         private void ShowStatus(string text, float duration = 2f)

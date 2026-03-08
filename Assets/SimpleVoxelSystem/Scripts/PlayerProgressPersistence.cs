@@ -165,13 +165,13 @@ namespace SimpleVoxelSystem
         {
             // срабатывает при любом изменении денег/XP/уровня — один центральный обработчик
             if (isLoaded)
-                MarkDirty();
+                SaveCriticalGameplayChange();
         }
 
         private void OnInventoryChanged()
         {
             if (isLoaded)
-                MarkDirty();
+                SaveCriticalGameplayChange();
         }
 
         private void OnDestroy()

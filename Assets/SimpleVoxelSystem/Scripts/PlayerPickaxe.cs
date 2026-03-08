@@ -96,6 +96,9 @@ namespace SimpleVoxelSystem
 
         public bool TryMineGridTarget(int gx, int gy, int gz, VoxelIsland islandOverride = null)
         {
+            if (PlayerBuildingSystem.IsBuildModeActiveGlobal)
+                return false;
+
             if (OnboardingTutorial.IsGameplayInputBlocked || GameUIWindow.IsAnyWindowActive())
                 return false;
 
@@ -109,7 +112,7 @@ namespace SimpleVoxelSystem
             if (island == null)
             {
                 if (wellGenerator != null)
-                    island = wellGenerator.GetComponent<VoxelIsland>();
+                    island = wellGenerator.ActiveIsland;
 
                 if (island == null)
                     island = FindFirstObjectByType<VoxelIsland>();
@@ -195,7 +198,7 @@ namespace SimpleVoxelSystem
             Vector3 localHit = island.transform.InverseTransformPoint(hit.point - hit.normal * 0.5f);
 
             int gx = Mathf.FloorToInt(localHit.x);
-            int gy = -Mathf.FloorToInt(localHit.y);
+            int gy = Mathf.FloorToInt(-localHit.y);
             int gz = Mathf.FloorToInt(localHit.z);
 
             if (!island.TryGetBlockType(gx, gy, gz, out BlockType blockType))

@@ -180,6 +180,8 @@ namespace SimpleVoxelSystem
                 if (mine.IsExhausted)
                     RemoveMineRuntime(mine);
             }
+
+            FindFirstObjectByType<PlayerProgressPersistence>()?.NotifyGameplayStateChanged();
         }
 
         public void DemolishMine()

@@ -268,6 +268,8 @@ namespace SimpleVoxelSystem
             miningManager.ApplyMinesToIsland();
             SpawnPlayerAt(ResolvePreferredIslandSpawnPoint());
 
+            FindFirstObjectByType<PlayerProgressPersistence>()?.NotifyGameplayStateChanged();
+
             OnWorldSwitch?.Invoke(false);
             AsyncGameplayEvents.PublishWorldSwitch(false);
             UpdateLobbyStreamingVisibility();
@@ -286,6 +288,8 @@ namespace SimpleVoxelSystem
             float cx = lobbyWidth / 2f;
             float cz = lobbyLength / 2f;
             SpawnPlayerAt(new Vector3(cx, -LobbyFloorY, cz));
+
+            FindFirstObjectByType<PlayerProgressPersistence>()?.NotifyGameplayStateChanged();
 
             OnWorldSwitch?.Invoke(true);
             AsyncGameplayEvents.PublishWorldSwitch(true);
