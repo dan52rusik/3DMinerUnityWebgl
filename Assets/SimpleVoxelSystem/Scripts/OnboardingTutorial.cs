@@ -324,6 +324,18 @@ namespace SimpleVoxelSystem
 
         void UpdateStep()
         {
+            if (step < Step.Mining
+                && wellGen != null
+                && wellGen.PlacedMines != null
+                && wellGen.PlacedMines.Count > 0)
+            {
+                PlayerPrefs.SetInt(KeyMobileDone, 1);
+                PlayerPrefs.SetInt(KeyPcShown, 1);
+                PlayerPrefs.Save();
+                GoStep(Step.Done);
+                return;
+            }
+
             float elapsed = Time.unscaledTime - stepTime;
 
             switch (step)
@@ -363,8 +375,13 @@ namespace SimpleVoxelSystem
                     if (Time.frameCount % 15 == 0)
                         SetHighlight(GetCreateIslandRect(), arrow: true);
 
-                    if (wellGen != null && !wellGen.IsInLobbyMode && wellGen.IsIslandGenerated)
-                        GoStep(Step.MobOnIsland);
+                    if (wellGen != null && wellGen.IsIslandGenerated)
+                    {
+                        if (wellGen.IsInLobbyMode)
+                            GoStep(Step.MobBuyMine);
+                        else
+                            GoStep(Step.MobOnIsland);
+                    }
                     break;
 
                 // ─────────────────────────────────────────────────────────────
@@ -392,6 +409,9 @@ namespace SimpleVoxelSystem
                         && mineMarket.IsMineGenerated()
                         && wellGen != null && !wellGen.IsInLobbyMode)
                     {
+                        PlayerPrefs.SetInt(KeyMobileDone, 1);
+                        PlayerPrefs.SetInt(KeyPcShown, 1);
+                        PlayerPrefs.Save();
                         GoStep(Step.Mining);
                     }
                     break;

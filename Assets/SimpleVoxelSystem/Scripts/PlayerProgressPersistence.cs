@@ -12,6 +12,7 @@ namespace SimpleVoxelSystem
     {
         private const string LocalSaveKey = "svs_progress_v1";
         private const float AutosaveIntervalSeconds = 30f;
+        private const float CloudSaveMinIntervalSeconds = 15f;
         private const int ResetMoneyValue = EconomyTuning.StartMoney;
         private const int ResetXpValue = EconomyTuning.StartMiningXP;
         private const int ResetLevelValue = EconomyTuning.StartMiningLevel;
@@ -110,6 +111,9 @@ namespace SimpleVoxelSystem
         private bool dirty;
         private float nextAutosaveTime;
         private float sdkWaitStartTime;
+        private float nextCloudSaveTime;
+        private bool hasPendingCloudSave;
+        private string pendingCloudSaveJson;
 
         // Tracks the money value on the frame BEFORE any load completes.
         // If GlobalEconomy.Money differs from StartMoney when ApplyLoadedState
@@ -153,7 +157,7 @@ namespace SimpleVoxelSystem
 
         private void OnDisable()
         {
-            SaveNow(force: true);
+            SaveNow(force: true, flushCloudNow: true);
             YG2.onGetSDKData -= OnSdkReady;
             GlobalEconomy.OnMoneyChanged  -= OnEconomyChanged;
             GlobalEconomy.OnXPChanged     -= OnEconomyChanged;
@@ -233,6 +237,7 @@ namespace SimpleVoxelSystem
         private void Update()
         {
             TryFallbackLocalLoadOnSdkTimeout();
+            TryFlushPendingCloudSave();
 
             if (!isLoaded || wellGenerator == null)
                 return;
@@ -246,12 +251,12 @@ namespace SimpleVoxelSystem
         private void OnApplicationPause(bool pause)
         {
             if (pause)
-                SaveNow(force: true);
+                SaveNow(force: true, flushCloudNow: true);
         }
 
         private void OnApplicationQuit()
         {
-            SaveNow(force: true);
+            SaveNow(force: true, flushCloudNow: true);
         }
 
         private void OnSdkReady()
@@ -564,7 +569,7 @@ namespace SimpleVoxelSystem
             SaveNow(force: true);
         }
 
-        private void SaveNow(bool force = false)
+        private void SaveNow(bool force = false, bool flushCloudNow = false)
         {
             if (!isLoaded || wellGenerator == null)
                 return;
@@ -579,11 +584,7 @@ namespace SimpleVoxelSystem
 
             PlayerPrefs.SetString(LocalSaveKey, json);
             PlayerPrefs.Save();
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-            if (YandexCloud_IsReady() == 1)
-                YandexCloud_Save(json);
-#endif
+            QueueCloudSave(json, flushCloudNow);
 
             dirty = false;
             nextAutosaveTime = Time.unscaledTime + AutosaveIntervalSeconds;
@@ -648,10 +649,47 @@ namespace SimpleVoxelSystem
 
             PlayerPrefs.SetString(LocalSaveKey, json);
             PlayerPrefs.Save();
+            QueueCloudSave(json, forceImmediate: true);
+        }
 
+        private void QueueCloudSave(string json, bool forceImmediate)
+        {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if (YandexCloud_IsReady() == 1)
-                YandexCloud_Save(json);
+            pendingCloudSaveJson = json;
+            hasPendingCloudSave = true;
+
+            if (!forceImmediate && Time.unscaledTime < nextCloudSaveTime)
+                return;
+
+            FlushPendingCloudSave();
+#endif
+        }
+
+        private void TryFlushPendingCloudSave()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (!hasPendingCloudSave)
+                return;
+
+            if (Time.unscaledTime < nextCloudSaveTime)
+                return;
+
+            FlushPendingCloudSave();
+#endif
+        }
+
+        private void FlushPendingCloudSave()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (!hasPendingCloudSave)
+                return;
+
+            if (YandexCloud_IsReady() != 1)
+                return;
+
+            YandexCloud_Save(pendingCloudSaveJson);
+            hasPendingCloudSave = false;
+            nextCloudSaveTime = Time.unscaledTime + CloudSaveMinIntervalSeconds;
 #endif
         }
 
