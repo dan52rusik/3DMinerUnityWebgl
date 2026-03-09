@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using YG;
@@ -30,6 +31,95 @@ namespace SimpleVoxelSystem
         public const string LangRu = "ru";
         public const string LangEn = "en";
         public const string LangTr = "tr";
+        public const string LangAr = "ar";
+        public const string LangAz = "az";
+        public const string LangBe = "be";
+        public const string LangBg = "bg";
+        public const string LangCa = "ca";
+        public const string LangCs = "cs";
+        public const string LangDe = "de";
+        public const string LangEs = "es";
+        public const string LangFa = "fa";
+        public const string LangFr = "fr";
+        public const string LangHe = "he";
+        public const string LangHi = "hi";
+        public const string LangHu = "hu";
+        public const string LangHy = "hy";
+        public const string LangId = "id";
+        public const string LangIt = "it";
+        public const string LangJa = "ja";
+        public const string LangKa = "ka";
+        public const string LangKk = "kk";
+        public const string LangNl = "nl";
+        public const string LangPl = "pl";
+        public const string LangPt = "pt";
+        public const string LangRo = "ro";
+        public const string LangSk = "sk";
+        public const string LangSr = "sr";
+        public const string LangTh = "th";
+        public const string LangTk = "tk";
+        public const string LangUk = "uk";
+        public const string LangUz = "uz";
+        public const string LangVi = "vi";
+        public const string LangZh = "zh";
+
+        public readonly struct LanguageInfo
+        {
+            public LanguageInfo(string code, string nativeName, string fallbackLanguage)
+            {
+                Code = code;
+                NativeName = nativeName;
+                FallbackLanguage = fallbackLanguage;
+            }
+
+            public string Code { get; }
+            public string NativeName { get; }
+            public string FallbackLanguage { get; }
+        }
+
+        private static readonly ReadOnlyCollection<LanguageInfo> _supportedLanguages =
+            Array.AsReadOnly(new[]
+            {
+                new LanguageInfo(LangRu, "Русский", LangRu),
+                new LanguageInfo(LangEn, "English", LangEn),
+                new LanguageInfo(LangTr, "Türkçe", LangTr),
+                new LanguageInfo(LangAr, "العربية", LangEn),
+                new LanguageInfo(LangAz, "Azərbaycanca", LangEn),
+                new LanguageInfo(LangBe, "Беларуская", LangRu),
+                new LanguageInfo(LangBg, "Български", LangEn),
+                new LanguageInfo(LangCa, "Català", LangEn),
+                new LanguageInfo(LangCs, "Čeština", LangEn),
+                new LanguageInfo(LangDe, "Deutsch", LangEn),
+                new LanguageInfo(LangEs, "Español", LangEn),
+                new LanguageInfo(LangFa, "فارسی", LangEn),
+                new LanguageInfo(LangFr, "Français", LangEn),
+                new LanguageInfo(LangHe, "עברית", LangEn),
+                new LanguageInfo(LangHi, "हिन्दी", LangEn),
+                new LanguageInfo(LangHu, "Magyar", LangEn),
+                new LanguageInfo(LangHy, "Հայերեն", LangEn),
+                new LanguageInfo(LangId, "Bahasa Indonesia", LangEn),
+                new LanguageInfo(LangIt, "Italiano", LangEn),
+                new LanguageInfo(LangJa, "日本語", LangEn),
+                new LanguageInfo(LangKa, "ქართული", LangEn),
+                new LanguageInfo(LangKk, "Қазақша", LangRu),
+                new LanguageInfo(LangNl, "Nederlands", LangEn),
+                new LanguageInfo(LangPl, "Polski", LangEn),
+                new LanguageInfo(LangPt, "Português", LangEn),
+                new LanguageInfo(LangRo, "Română", LangEn),
+                new LanguageInfo(LangSk, "Slovenčina", LangEn),
+                new LanguageInfo(LangSr, "Српски", LangEn),
+                new LanguageInfo(LangTh, "ไทย", LangEn),
+                new LanguageInfo(LangTk, "Türkmençe", LangEn),
+                new LanguageInfo(LangUk, "Українська", LangRu),
+                new LanguageInfo(LangUz, "O'zbek", LangRu),
+                new LanguageInfo(LangVi, "Tiếng Việt", LangEn),
+                new LanguageInfo(LangZh, "中文", LangEn)
+            });
+
+        private static readonly Dictionary<string, LanguageInfo> _languageInfoByCode =
+            new Dictionary<string, LanguageInfo>(StringComparer.OrdinalIgnoreCase);
+
+        public static IReadOnlyList<LanguageInfo> SupportedLanguages => _supportedLanguages;
 
         private const string LangPrefKey = "svs_ui_language";
         private const string YgLangPrefKey = "langYG";
@@ -51,6 +141,9 @@ namespace SimpleVoxelSystem
         // ── Статический конструктор — заполняем все строки ───────────────────
         static Loc()
         {
+            foreach (LanguageInfo info in _supportedLanguages)
+                _languageInfoByCode[info.Code] = info;
+
             // ── HUD / Общее ──────────────────────────────────────────────────
             Add("money",            ru: "Монеты",        en: "Coins",        tr: "Altın");
             Add("level",            ru: "Уровень",       en: "Level",        tr: "Seviye");
@@ -190,6 +283,8 @@ namespace SimpleVoxelSystem
             Add("lang_ru",          ru: "Русский",       en: "Russian",      tr: "Rusça");
             Add("lang_en",          ru: "Английский",    en: "English",      tr: "İngilizce");
             Add("lang_tr",          ru: "Турецкий",      en: "Turkish",      tr: "Türkçe");
+            foreach (LanguageInfo info in _supportedLanguages)
+                Add("lang_" + info.Code, ru: info.NativeName, en: info.NativeName, tr: info.NativeName);
 
             // ── Туториал ─────────────────────────────────────────────────────
             Add("tut_controls_title",  ru: "УПРАВЛЕНИЕ",   en: "CONTROLS",     tr: "KONTROLLER");
@@ -317,6 +412,13 @@ namespace SimpleVoxelSystem
             {
                 if (langs.TryGetValue(_currentLang, out string val) && !string.IsNullOrEmpty(val))
                     return val;
+                string fallbackLang = GetFallbackLanguage(_currentLang);
+                if (!string.IsNullOrEmpty(fallbackLang) &&
+                    langs.TryGetValue(fallbackLang, out string fallbackVal) &&
+                    !string.IsNullOrEmpty(fallbackVal))
+                {
+                    return fallbackVal;
+                }
                 // fallback EN
                 if (langs.TryGetValue(LangEn, out string enVal) && !string.IsNullOrEmpty(enVal))
                     return enVal;
@@ -394,6 +496,24 @@ namespace SimpleVoxelSystem
             Add(key, ru, en, tr);
         }
 
+        public static string GetLanguageNativeName(string lang)
+        {
+            return TryGetLanguageInfo(lang, out LanguageInfo info)
+                ? info.NativeName
+                : string.IsNullOrWhiteSpace(lang) ? LangEn.ToUpperInvariant() : lang.ToUpperInvariant();
+        }
+
+        public static bool TryGetLanguageInfo(string lang, out LanguageInfo info)
+        {
+            if (string.IsNullOrWhiteSpace(lang))
+            {
+                info = default;
+                return false;
+            }
+
+            return _languageInfoByCode.TryGetValue(lang.Trim(), out info);
+        }
+
         private static void EnsureBuildLocalizationKeys()
         {
             if (_buildKeysInjected)
@@ -425,7 +545,12 @@ namespace SimpleVoxelSystem
         {
             if (string.IsNullOrWhiteSpace(lang)) return false;
             lang = lang.ToLowerInvariant().Trim();
-            return lang == LangRu || lang == LangEn || lang == LangTr;
+            return _languageInfoByCode.ContainsKey(lang);
+        }
+
+        private static string GetFallbackLanguage(string lang)
+        {
+            return TryGetLanguageInfo(lang, out LanguageInfo info) ? info.FallbackLanguage : LangEn;
         }
 
         private static string GetYandexLang()

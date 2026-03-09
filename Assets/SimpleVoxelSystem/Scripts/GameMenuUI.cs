@@ -306,19 +306,56 @@ namespace SimpleVoxelSystem
             le.preferredHeight = 22f;
             le.minHeight = 22f;
 
-            // Ряд с флагами
-            var row = CreateHorizontalGroup(section.transform, "FlagRow", 10f);
-            var rlg = row.GetComponent<HorizontalLayoutGroup>();
-            rlg.childAlignment = TextAnchor.MiddleLeft;
-            rlg.padding = new RectOffset(0, 0, 0, 0);
-            var rle = row.GetComponent<LayoutElement>();
-            rle.preferredHeight = 84f;
-            rle.minHeight = 84f;
+            var scrollRoot = new GameObject("FlagScroll");
+            scrollRoot.transform.SetParent(section.transform, false);
+            var scrollRootRt = scrollRoot.AddComponent<RectTransform>();
+            scrollRootRt.sizeDelta = new Vector2(0f, 248f);
+            var scrollLayout = scrollRoot.AddComponent<LayoutElement>();
+            scrollLayout.preferredHeight = 248f;
+            scrollLayout.minHeight = 248f;
 
-            _flagBtns = new FlagBtn[3];
-            _flagBtns[0] = BuildFlagBtn(row.transform, Loc.LangRu);
-            _flagBtns[1] = BuildFlagBtn(row.transform, Loc.LangEn);
-            _flagBtns[2] = BuildFlagBtn(row.transform, Loc.LangTr);
+            var scroll = scrollRoot.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 28f;
+
+            var viewport = new GameObject("Viewport");
+            viewport.transform.SetParent(scrollRoot.transform, false);
+            var viewportRt = viewport.AddComponent<RectTransform>();
+            viewportRt.anchorMin = Vector2.zero;
+            viewportRt.anchorMax = Vector2.one;
+            viewportRt.offsetMin = viewportRt.offsetMax = Vector2.zero;
+            var viewportImage = viewport.AddComponent<Image>();
+            viewportImage.color = new Color(1f, 1f, 1f, 0.02f);
+            viewport.AddComponent<RectMask2D>();
+
+            var content = new GameObject("Content");
+            content.transform.SetParent(viewport.transform, false);
+            var contentRt = content.AddComponent<RectTransform>();
+            contentRt.anchorMin = new Vector2(0f, 1f);
+            contentRt.anchorMax = new Vector2(1f, 1f);
+            contentRt.pivot = new Vector2(0.5f, 1f);
+            contentRt.offsetMin = Vector2.zero;
+            contentRt.offsetMax = Vector2.zero;
+
+            var grid = content.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(80f, 92f);
+            grid.spacing = new Vector2(8f, 8f);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 3;
+            grid.childAlignment = TextAnchor.UpperLeft;
+
+            var contentFitter = content.AddComponent<ContentSizeFitter>();
+            contentFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            contentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            scroll.viewport = viewportRt;
+            scroll.content = contentRt;
+
+            _flagBtns = new FlagBtn[Loc.SupportedLanguages.Count];
+            for (int i = 0; i < Loc.SupportedLanguages.Count; i++)
+                _flagBtns[i] = BuildFlagBtn(content.transform, Loc.SupportedLanguages[i].Code);
 
             RefreshFlagButtons();
         }
@@ -444,9 +481,9 @@ namespace SimpleVoxelSystem
             var go = new GameObject($"Flag_{lang.ToUpper()}");
             go.transform.SetParent(parent, false);
             var le = go.AddComponent<LayoutElement>();
-            le.preferredWidth  = 74f;
-            le.preferredHeight = 84f;
-            le.minWidth        = 74f;
+            le.preferredWidth  = 80f;
+            le.preferredHeight = 92f;
+            le.minWidth        = 80f;
 
             var container = go.AddComponent<Image>();
             container.color = LangCardBg;
@@ -464,7 +501,7 @@ namespace SimpleVoxelSystem
             frameRt.anchorMax = new Vector2(0.5f, 1f);
             frameRt.pivot = new Vector2(0.5f, 1f);
             frameRt.anchoredPosition = new Vector2(0f, -8f);
-            frameRt.sizeDelta = new Vector2(62f, 34f);
+            frameRt.sizeDelta = new Vector2(64f, 34f);
 
             // Mask — обрезает всё что выходит за границу флага (нужно для диагоналей UK)
             frameImage.color = new Color(1f, 1f, 1f, 1f); // mask требует непрозрачный Image
@@ -472,7 +509,7 @@ namespace SimpleVoxelSystem
             mask.showMaskGraphic = false; // скрыть саму рамку, показать только содержимое
 
             // Строим флаг внутри рамки.
-            BuildFlagStripes(flagFrame.transform, lang, 58f, 30f);
+            BuildFlagStripes(flagFrame.transform, lang, 60f, 30f);
 
             // Текст кода страны — через RuntimeUIFactory как весь HUD
             var code = RuntimeUIFactory.MakeLabel(go.transform, "Code",
@@ -481,6 +518,17 @@ namespace SimpleVoxelSystem
                 offsetMax: new Vector2(0f, -58f));
             code.fontStyle = FontStyle.Bold;
             code.color     = LangCodeColor;
+
+            var name = RuntimeUIFactory.MakeLabel(go.transform, "Name",
+                Loc.GetLanguageNativeName(lang), 8, TextAnchor.LowerCenter,
+                offsetMin: new Vector2(4f, 4f),
+                offsetMax: new Vector2(-4f, -68f));
+            name.color = new Color(0.92f, 0.95f, 1f, 0.92f);
+            name.horizontalOverflow = HorizontalWrapMode.Wrap;
+            name.verticalOverflow = VerticalWrapMode.Overflow;
+            name.resizeTextForBestFit = true;
+            name.resizeTextMinSize = 7;
+            name.resizeTextMaxSize = 10;
 
             var accent = new GameObject("Accent");
             accent.transform.SetParent(go.transform, false);
@@ -583,8 +631,7 @@ namespace SimpleVoxelSystem
                 return;
             }
 
-            // Fallback
-            MakeStretchRect(root.transform, "Field", Color.gray);
+            BuildPseudoFlag(root.transform, lang, h);
         }
 
         /// <summary>Повёрнутый прямоугольник (для диагональных полос флага). Центр — середина root.</summary>
@@ -646,6 +693,24 @@ namespace SimpleVoxelSystem
                 rt.anchoredPosition = new Vector2(0f, -stripeH * i);
                 rt.sizeDelta = new Vector2(0f, stripeH);
             }
+        }
+
+        private static void BuildPseudoFlag(Transform parent, string lang, float height)
+        {
+            Color[][] palettes =
+            {
+                new[] { new Color(0.81f, 0.22f, 0.26f), new Color(0.97f, 0.83f, 0.28f), new Color(0.16f, 0.50f, 0.82f) },
+                new[] { new Color(0.16f, 0.63f, 0.48f), new Color(0.95f, 0.95f, 0.95f), new Color(0.18f, 0.32f, 0.70f) },
+                new[] { new Color(0.59f, 0.33f, 0.74f), new Color(0.95f, 0.50f, 0.20f), new Color(0.15f, 0.17f, 0.28f) },
+                new[] { new Color(0.12f, 0.66f, 0.78f), new Color(0.96f, 0.96f, 0.96f), new Color(0.84f, 0.25f, 0.43f) },
+                new[] { new Color(0.27f, 0.43f, 0.17f), new Color(0.94f, 0.78f, 0.23f), new Color(0.60f, 0.18f, 0.21f) }
+            };
+
+            int paletteIndex = 0;
+            for (int i = 0; i < lang.Length; i++)
+                paletteIndex = (paletteIndex + lang[i]) % palettes.Length;
+
+            BuildHorizontalFlag(parent, height, palettes[paletteIndex]);
         }
 
         private static Sprite BuildTurkeyFlagSprite(int width, int height)
