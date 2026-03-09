@@ -30,7 +30,6 @@ namespace SimpleVoxelSystem
             try
             {
                 PlayerPrefs.SetString(ChunkPrefsKey(cx, cz), json);
-                PlayerPrefs.Save(); // FIX #14: без Save() данные не сбрасываются в IndexedDB на WebGL
                 File.WriteAllText(ChunkFilePath(cx, cz), json);
             }
             catch (System.Exception ex)

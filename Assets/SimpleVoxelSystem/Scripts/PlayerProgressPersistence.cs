@@ -11,7 +11,7 @@ namespace SimpleVoxelSystem
     public class PlayerProgressPersistence : MonoBehaviour
     {
         private const string LocalSaveKey = "svs_progress_v1";
-        private const float AutosaveIntervalSeconds = 8f;
+        private const float AutosaveIntervalSeconds = 30f;
         private const int ResetMoneyValue = EconomyTuning.StartMoney;
         private const int ResetXpValue = EconomyTuning.StartMiningXP;
         private const int ResetLevelValue = EconomyTuning.StartMiningLevel;
