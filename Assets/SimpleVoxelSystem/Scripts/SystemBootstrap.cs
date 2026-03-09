@@ -27,6 +27,7 @@ namespace SimpleVoxelSystem
             EnsureComponent<EconomyHelper>();
             EnsureComponent<MinionManagementUI>();
             EnsureComponent<OnboardingTutorial>();
+            EnsureComponent<AdsManager>();
         }
 
         private void EnsureComponent<T>() where T : Component

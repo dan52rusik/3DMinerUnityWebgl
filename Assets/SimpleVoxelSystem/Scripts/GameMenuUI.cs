@@ -44,6 +44,9 @@ namespace SimpleVoxelSystem
         private Text      _playerNameValue;
         private Text      _bestMoneyValue;
         private Text      _authButtonLabel;
+        private Text      _adsLabel;
+        private Text      _adsDescValue;
+        private Text      _rewardAdButtonLabel;
 
         // Flag button references для обновления выделения
         private FlagBtn[] _flagBtns;
@@ -102,6 +105,12 @@ namespace SimpleVoxelSystem
                 _langLabel.text = Loc.T("language") + ":";
             if (_accountLabel != null)
                 _accountLabel.text = Loc.T("account") + ":";
+            if (_adsLabel != null)
+                _adsLabel.text = Loc.T("ads_bonus_title");
+            if (_adsDescValue != null)
+                _adsDescValue.text = Loc.T("ads_bonus_desc");
+            if (_rewardAdButtonLabel != null)
+                _rewardAdButtonLabel.text = Loc.Tf("ads_bonus_btn", AdsManager.RewardCoinsAmount);
             RefreshAccountSection();
         }
 
@@ -205,6 +214,8 @@ namespace SimpleVoxelSystem
             BuildLanguageSection(panelGo.transform);
             BuildDivider(panelGo.transform);
             BuildAccountSection(panelGo.transform);
+            BuildDivider(panelGo.transform);
+            BuildAdsSection(panelGo.transform);
 
             // Скрыта изначально
             panelGo.SetActive(false);
@@ -371,6 +382,60 @@ namespace SimpleVoxelSystem
             authButton.onClick.AddListener(AuthorizationIdentitySync.TryOpenAuthDialog);
 
             RefreshAccountSection();
+        }
+
+        private void BuildAdsSection(Transform parent)
+        {
+            var section = new GameObject("AdsSection");
+            section.transform.SetParent(parent, false);
+            section.AddComponent<RectTransform>();
+            var sectionImage = section.AddComponent<Image>();
+            sectionImage.color = LangSectionBg;
+            RoundCorners(sectionImage);
+
+            var sectionLayout = section.AddComponent<VerticalLayoutGroup>();
+            sectionLayout.padding = new RectOffset(12, 12, 10, 12);
+            sectionLayout.spacing = 8f;
+            sectionLayout.childAlignment = TextAnchor.UpperLeft;
+            sectionLayout.childControlWidth = true;
+            sectionLayout.childControlHeight = true;
+            sectionLayout.childForceExpandWidth = true;
+            sectionLayout.childForceExpandHeight = false;
+
+            var sectionFit = section.AddComponent<ContentSizeFitter>();
+            sectionFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            _adsLabel = CreateText(section.transform, "AdsLabel", Loc.T("ads_bonus_title"));
+            _adsLabel.fontSize = 15;
+            _adsLabel.fontStyle = FontStyle.Bold;
+            _adsLabel.color = new Color(0.82f, 0.86f, 0.95f, 0.95f);
+            _adsLabel.alignment = TextAnchor.MiddleLeft;
+            var adsTitleLayout = _adsLabel.GetComponent<LayoutElement>();
+            adsTitleLayout.preferredHeight = 22f;
+            adsTitleLayout.minHeight = 22f;
+
+            _adsDescValue = CreateText(section.transform, "AdsDescValue", Loc.T("ads_bonus_desc"));
+            _adsDescValue.fontSize = 13;
+            _adsDescValue.color = new Color(0.92f, 0.95f, 1f, 0.92f);
+            _adsDescValue.alignment = TextAnchor.UpperLeft;
+            _adsDescValue.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _adsDescValue.verticalOverflow = VerticalWrapMode.Overflow;
+            var adsDescLayout = _adsDescValue.GetComponent<LayoutElement>();
+            adsDescLayout.preferredHeight = 36f;
+            adsDescLayout.minHeight = 36f;
+
+            var rewardButton = RuntimeUIFactory.MakeBtn(section.transform, "RewardAdsButton",
+                Loc.Tf("ads_bonus_btn", AdsManager.RewardCoinsAmount),
+                color: new Color(0.88f, 0.60f, 0.16f, 1f), size: new Vector2(0f, 36f));
+            var rewardLayout = rewardButton.gameObject.GetComponent<LayoutElement>();
+            if (rewardLayout == null)
+                rewardLayout = rewardButton.gameObject.AddComponent<LayoutElement>();
+            rewardLayout.preferredHeight = 36f;
+            rewardLayout.minHeight = 36f;
+            rewardLayout.preferredWidth = 0f;
+
+            _rewardAdButtonLabel = rewardButton.GetComponentInChildren<Text>();
+            rewardButton.onClick.AddListener(AdsManager.ShowRewardedCoins);
         }
 
         // ── Одна кнопка-флаг ────────────────────────────────────────────────

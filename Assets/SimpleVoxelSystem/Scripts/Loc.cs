@@ -135,6 +135,9 @@ namespace SimpleVoxelSystem
             Add("auth_sign_in",     ru: "Войти",         en: "Sign In",      tr: "Giris Yap");
             Add("auth_connected",   ru: "Подключено",    en: "Connected",    tr: "Baglandi");
             Add("guest_player",     ru: "Гость",         en: "Guest",        tr: "Misafir");
+            Add("ads_bonus_title",  ru: "Бонус за рекламу", en: "Ad Bonus", tr: "Reklam Bonusu");
+            Add("ads_bonus_desc",   ru: "Посмотри rewarded-рекламу и получи монеты.", en: "Watch a rewarded ad and get bonus coins.", tr: "Odullu reklam izle ve bonus altin kazan.");
+            Add("ads_bonus_btn",    ru: "Смотреть: +${0}", en: "Watch: +${0}", tr: "Izle: +${0}");
 
             // ── Ресурсы / Блоки ──────────────────────────────────────────────
             Add("block_dirt",       ru: "Земля",         en: "Dirt",         tr: "Toprak");
