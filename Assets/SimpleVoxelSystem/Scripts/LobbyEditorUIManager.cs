@@ -21,22 +21,7 @@ namespace SimpleVoxelSystem
 
         private GameObject dialogPanel;
         private InputField inputSizeX, inputSizeY, inputSizeZ;
-
-        private static readonly Color[] BtnColors =
-        {
-            new Color(0.55f, 0.27f, 0.07f),
-            new Color(0.50f, 0.50f, 0.50f),
-            new Color(0.65f, 0.44f, 0.40f),
-            new Color(1.00f, 0.84f, 0.00f),
-        };
-        private static readonly BlockType[] BtnTypes =
-        {
-            BlockType.Dirt, BlockType.Stone, BlockType.Iron, BlockType.Gold
-        };
-        private static readonly string[] BtnLabels =
-        {
-            "Dirt", "Stone", "Iron", "Gold"
-        };
+        private readonly IReadOnlyList<BlockType> editableBlockTypes = BlockTypeCatalog.GetEditableTypes();
 
         public bool IsDialogOpen => dialogPanel != null;
 
@@ -68,7 +53,7 @@ namespace SimpleVoxelSystem
             // Tools panel
             editorPanel = RuntimeUIFactory.MakePanel("LobbyEditorPanel", rootCanvasTrans,
                 new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
-                new Vector2(-10f, 0f), new Vector2(168f, 580f),
+                new Vector2(-10f, 0f), new Vector2(176f, 640f),
                 new Color(0.07f, 0.07f, 0.11f, 0.93f));
 
             RuntimeUIFactory.MakeLabel(editorPanel.transform, "EdTitle",
@@ -83,18 +68,19 @@ namespace SimpleVoxelSystem
             float stepY = 46f;
 
             // Block tools
-            for (int i = 0; i < BtnTypes.Length; i++)
+            for (int i = 0; i < editableBlockTypes.Count; i++)
             {
                 int idx = i;
-                Color c = BtnColors[i];
+                BlockType blockType = editableBlockTypes[i];
+                Color c = BlockTypeCatalog.GetColor(blockType);
                 Button btn = RuntimeUIFactory.MakeBtn(editorPanel.transform, $"BType_{i}",
-                    BtnLabels[i],
+                    BlockTypeCatalog.GetEditorLabel(blockType),
                     new Color(c.r * 0.65f, c.g * 0.65f, c.b * 0.65f, 1f),
                     new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                     new Vector2(0f, currentY), new Vector2(148f, 38f));
                 btn.onClick.AddListener(() =>
                 {
-                    setBlockAction(BtnTypes[idx]);
+                    setBlockAction(editableBlockTypes[idx]);
                     setToolAction(EditorToolMode.Block);
                 });
                 typeButtons.Add(btn);
@@ -155,11 +141,11 @@ namespace SimpleVoxelSystem
                                            : new Color(0.25f, 0.65f, 0.25f, 1f);
             }
 
-            for (int i = 0; i < typeButtons.Count && i < BtnTypes.Length; i++)
+            for (int i = 0; i < typeButtons.Count && i < editableBlockTypes.Count; i++)
             {
-                bool sel = toolMode == EditorToolMode.Block && BtnTypes[i] == selectedBlockType;
+                bool sel = toolMode == EditorToolMode.Block && editableBlockTypes[i] == selectedBlockType;
                 var img = typeButtons[i].GetComponent<Image>();
-                Color c = BtnColors[i];
+                Color c = BlockTypeCatalog.GetColor(editableBlockTypes[i]);
                 if (img != null) img.color = sel ? Color.white : new Color(c.r*0.65f, c.g*0.65f, c.b*0.65f, 1f);
                 var txt = typeButtons[i].GetComponentInChildren<Text>();
                 if (txt != null) txt.color = sel ? Color.black : Color.white;

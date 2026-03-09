@@ -1,4 +1,11 @@
 Authorization v1.022
+BannerAdv v1.0
+Flags v1.001
+InterstitialAdv v1.01
 Leaderboards v1.01
 Localization v1.02
 MultiplayerSessions v1.0
+OpenURL v1.002
+Payments v1.01
+RewardedAdv v1.011
+StickyAdv v1.0
