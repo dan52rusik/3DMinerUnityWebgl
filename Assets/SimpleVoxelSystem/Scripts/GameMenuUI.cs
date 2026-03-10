@@ -78,6 +78,7 @@ namespace SimpleVoxelSystem
         private Canvas    _canvas;
         private Image     _backdrop;
         private RectTransform _panel;
+        private CanvasGroup _panelCanvasGroup;
         private Button    _menuBtn;
         private bool      _isOpen;
         private Coroutine _anim;
@@ -220,15 +221,18 @@ namespace SimpleVoxelSystem
             var panelGo = new GameObject("MenuPanel");
             panelGo.transform.SetParent(_canvas.transform, false);
             _panel = panelGo.AddComponent<RectTransform>();
-            _panel.anchorMin = _panel.anchorMax = new Vector2(0f, 1f);
-            _panel.pivot = new Vector2(0f, 1f);
+            _panel.anchorMin = _panel.anchorMax = new Vector2(0.5f, 0.5f);
+            _panel.pivot = new Vector2(0.5f, 0.5f);
             // панель прямо под кнопкой: -150 - 44 - 6 = -200
-            _panel.anchoredPosition = new Vector2(-340f, -200f);
-            _panel.sizeDelta = new Vector2(290f, 0f);
+            _panel.anchoredPosition = Vector2.zero;
+            _panel.sizeDelta = new Vector2(720f, 760f);
 
             var panelImg = panelGo.AddComponent<Image>();
             panelImg.color = panelBgColor;
             RoundCorners(panelImg);
+            _panelCanvasGroup = panelGo.AddComponent<CanvasGroup>();
+            _panelCanvasGroup.alpha = 0f;
+            _panel.localScale = Vector3.one * 0.94f;
 
             // Тень
             var shadow = panelGo.AddComponent<Shadow>();
@@ -243,9 +247,6 @@ namespace SimpleVoxelSystem
             layout.childForceExpandHeight = false;
             layout.childControlHeight = true;
 
-            var csf = panelGo.AddComponent<ContentSizeFitter>();
-            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
             // ── Строка заголовка меню ─────────────────────────────────────────
             BuildHeaderRow(panelGo.transform);
 
@@ -253,11 +254,56 @@ namespace SimpleVoxelSystem
             BuildDivider(panelGo.transform);
 
             // ── Секция языка ──────────────────────────────────────────────────
-            BuildLanguageSection(panelGo.transform);
-            BuildDivider(panelGo.transform);
-            BuildAccountSection(panelGo.transform);
-            BuildDivider(panelGo.transform);
-            BuildAdsSection(panelGo.transform);
+            var bodyScrollRoot = new GameObject("BodyScroll");
+            bodyScrollRoot.transform.SetParent(panelGo.transform, false);
+            var bodyLayout = bodyScrollRoot.AddComponent<LayoutElement>();
+            bodyLayout.flexibleHeight = 1f;
+            bodyLayout.minHeight = 220f;
+
+            var bodyScroll = bodyScrollRoot.AddComponent<ScrollRect>();
+            bodyScroll.horizontal = false;
+            bodyScroll.vertical = true;
+            bodyScroll.movementType = ScrollRect.MovementType.Clamped;
+            bodyScroll.scrollSensitivity = 30f;
+
+            var viewport = new GameObject("Viewport");
+            viewport.transform.SetParent(bodyScrollRoot.transform, false);
+            var viewportRt = viewport.AddComponent<RectTransform>();
+            viewportRt.anchorMin = Vector2.zero;
+            viewportRt.anchorMax = Vector2.one;
+            viewportRt.offsetMin = viewportRt.offsetMax = Vector2.zero;
+            viewport.AddComponent<RectMask2D>();
+
+            var content = new GameObject("Content");
+            content.transform.SetParent(viewport.transform, false);
+            var contentRt = content.AddComponent<RectTransform>();
+            contentRt.anchorMin = new Vector2(0f, 1f);
+            contentRt.anchorMax = new Vector2(1f, 1f);
+            contentRt.pivot = new Vector2(0.5f, 1f);
+            contentRt.offsetMin = Vector2.zero;
+            contentRt.offsetMax = Vector2.zero;
+
+            var contentLayout = content.AddComponent<VerticalLayoutGroup>();
+            contentLayout.padding = new RectOffset(0, 0, 0, 2);
+            contentLayout.spacing = 12f;
+            contentLayout.childAlignment = TextAnchor.UpperLeft;
+            contentLayout.childControlWidth = true;
+            contentLayout.childControlHeight = true;
+            contentLayout.childForceExpandWidth = true;
+            contentLayout.childForceExpandHeight = false;
+
+            var contentFitter = content.AddComponent<ContentSizeFitter>();
+            contentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            bodyScroll.viewport = viewportRt;
+            bodyScroll.content = contentRt;
+
+            BuildLanguageSection(content.transform);
+            BuildDivider(content.transform);
+            BuildAccountSection(content.transform);
+            BuildDivider(content.transform);
+            BuildAdsSection(content.transform);
+            UpdatePanelLayout();
 
             // Скрыта изначально
             panelGo.SetActive(false);
@@ -268,7 +314,11 @@ namespace SimpleVoxelSystem
         {
             var row = CreateHorizontalGroup(parent, "HeaderRow", 8f);
             var rlg = row.GetComponent<HorizontalLayoutGroup>();
-            rlg.childAlignment = TextAnchor.MiddleCenter;
+            rlg.childAlignment = TextAnchor.UpperLeft;
+            rlg.padding = new RectOffset(0, 0, 0, 0);
+            var rowLayout = row.GetComponent<LayoutElement>();
+            rowLayout.preferredHeight = 44f;
+            rowLayout.minHeight = 44f;
 
             // Заголовок
             var title = CreateText(row.transform, "Title", "⚙  МЕНЮ");
@@ -284,10 +334,10 @@ namespace SimpleVoxelSystem
             var closeGo = new GameObject("CloseBtn");
             closeGo.transform.SetParent(row.transform, false);
             var cle = closeGo.AddComponent<LayoutElement>();
-            cle.preferredWidth = 34f;
-            cle.preferredHeight = 34f;
-            cle.minWidth = 34f;
-            cle.minHeight = 34f;
+            cle.preferredWidth = 40f;
+            cle.preferredHeight = 40f;
+            cle.minWidth = 40f;
+            cle.minHeight = 40f;
 
             var cImg = closeGo.AddComponent<Image>();
             cImg.color = closeBtnColor;
@@ -299,7 +349,7 @@ namespace SimpleVoxelSystem
 
             var xt = CreateText(closeGo.transform, "X", "✕");
             xt.alignment = TextAnchor.MiddleCenter;
-            xt.fontSize = 18;
+            xt.fontSize = 16;
             xt.fontStyle = FontStyle.Bold;
             xt.color = Color.white;
             xt.GetComponent<RectTransform>().anchorMin = Vector2.zero;
@@ -563,19 +613,20 @@ namespace SimpleVoxelSystem
             le.preferredHeight = 22f;
             le.minHeight = 22f;
 
-            var scrollRoot = new GameObject("FlagScroll");
+            bool isPortrait = Screen.height > Screen.width;
+            float languageListHeight = isPortrait ? 196f : 170f;
+
+            var scrollRoot = new GameObject("LanguageScroll");
             scrollRoot.transform.SetParent(section.transform, false);
-            var scrollRootRt = scrollRoot.AddComponent<RectTransform>();
-            scrollRootRt.sizeDelta = new Vector2(0f, 248f);
             var scrollLayout = scrollRoot.AddComponent<LayoutElement>();
-            scrollLayout.preferredHeight = 248f;
-            scrollLayout.minHeight = 248f;
+            scrollLayout.preferredHeight = languageListHeight;
+            scrollLayout.minHeight = languageListHeight;
 
             var scroll = scrollRoot.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.vertical = true;
             scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 28f;
+            scroll.scrollSensitivity = 26f;
 
             var viewport = new GameObject("Viewport");
             viewport.transform.SetParent(scrollRoot.transform, false);
@@ -583,8 +634,6 @@ namespace SimpleVoxelSystem
             viewportRt.anchorMin = Vector2.zero;
             viewportRt.anchorMax = Vector2.one;
             viewportRt.offsetMin = viewportRt.offsetMax = Vector2.zero;
-            var viewportImage = viewport.AddComponent<Image>();
-            viewportImage.color = new Color(1f, 1f, 1f, 0.02f);
             viewport.AddComponent<RectMask2D>();
 
             var content = new GameObject("Content");
@@ -597,10 +646,10 @@ namespace SimpleVoxelSystem
             contentRt.offsetMax = Vector2.zero;
 
             var grid = content.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(80f, 92f);
-            grid.spacing = new Vector2(8f, 8f);
+            grid.cellSize = isPortrait ? new Vector2(64f, 74f) : new Vector2(72f, 84f);
+            grid.spacing = new Vector2(6f, 6f);
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 3;
+            grid.constraintCount = isPortrait ? 4 : 5;
             grid.childAlignment = TextAnchor.UpperLeft;
 
             var contentFitter = content.AddComponent<ContentSizeFitter>();
@@ -748,9 +797,15 @@ namespace SimpleVoxelSystem
             var go = new GameObject($"Flag_{lang.ToUpper()}");
             go.transform.SetParent(parent, false);
             var le = go.AddComponent<LayoutElement>();
-            le.preferredWidth  = 80f;
-            le.preferredHeight = 92f;
-            le.minWidth        = 80f;
+            bool isPortrait = Screen.height > Screen.width;
+            float cardWidth = isPortrait ? 64f : 72f;
+            float cardHeight = isPortrait ? 74f : 84f;
+            float flagWidth = isPortrait ? 52f : 60f;
+            float flagHeight = isPortrait ? 26f : 30f;
+
+            le.preferredWidth  = cardWidth;
+            le.preferredHeight = cardHeight;
+            le.minWidth        = cardWidth;
 
             var container = go.AddComponent<Image>();
             container.color = LangCardBg;
@@ -767,8 +822,8 @@ namespace SimpleVoxelSystem
             frameRt.anchorMin = new Vector2(0.5f, 1f);
             frameRt.anchorMax = new Vector2(0.5f, 1f);
             frameRt.pivot = new Vector2(0.5f, 1f);
-            frameRt.anchoredPosition = new Vector2(0f, -8f);
-            frameRt.sizeDelta = new Vector2(64f, 34f);
+            frameRt.anchoredPosition = new Vector2(0f, -6f);
+            frameRt.sizeDelta = new Vector2(flagWidth, flagHeight);
 
             // Mask — обрезает всё что выходит за границу флага (нужно для диагоналей UK)
             frameImage.color = new Color(1f, 1f, 1f, 1f); // mask требует непрозрачный Image
@@ -778,26 +833,26 @@ namespace SimpleVoxelSystem
             // Строим флаг внутри рамки.
             // Try load SVG from Resources, fallback to manual drawing if fails
             if (!BuildResourceFlag(flagFrame.transform, lang))
-                BuildFlagStripes(flagFrame.transform, lang, 60f, 30f);
+                BuildFlagStripes(flagFrame.transform, lang, flagWidth - 4f, flagHeight - 4f);
 
             // Текст кода страны — через RuntimeUIFactory как весь HUD
             var code = RuntimeUIFactory.MakeLabel(go.transform, "Code",
-                lang.ToUpper(), 12, TextAnchor.LowerCenter,
-                offsetMin: new Vector2(0f, 6f),
-                offsetMax: new Vector2(0f, -58f));
+                lang.ToUpper(), isPortrait ? 10 : 11, TextAnchor.LowerCenter,
+                offsetMin: new Vector2(0f, 4f),
+                offsetMax: new Vector2(0f, isPortrait ? -46f : -54f));
             code.fontStyle = FontStyle.Bold;
             code.color     = LangCodeColor;
 
             var name = RuntimeUIFactory.MakeLabel(go.transform, "Name",
-                Loc.GetLanguageNativeName(lang), 8, TextAnchor.LowerCenter,
-                offsetMin: new Vector2(4f, 4f),
-                offsetMax: new Vector2(-4f, -68f));
+                Loc.GetLanguageNativeName(lang), isPortrait ? 7 : 8, TextAnchor.LowerCenter,
+                offsetMin: new Vector2(3f, 2f),
+                offsetMax: new Vector2(-3f, isPortrait ? -54f : -62f));
             name.color = new Color(0.92f, 0.95f, 1f, 0.92f);
             name.horizontalOverflow = HorizontalWrapMode.Wrap;
             name.verticalOverflow = VerticalWrapMode.Overflow;
             name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = 7;
-            name.resizeTextMaxSize = 10;
+            name.resizeTextMinSize = 6;
+            name.resizeTextMaxSize = isPortrait ? 8 : 10;
 
             var accent = new GameObject("Accent");
             accent.transform.SetParent(go.transform, false);
@@ -848,6 +903,7 @@ public void ToggleMenu()
         {
             if (_isOpen) return;
             _isOpen = true;
+            UpdatePanelLayout();
             _panel.gameObject.SetActive(true);
             _backdrop.gameObject.SetActive(true);
 
@@ -871,8 +927,11 @@ public void ToggleMenu()
         private IEnumerator AnimatePanel(bool open)
         {
             float t = 0f;
-            float startX  = _panel.anchoredPosition.x;
+            float startScale = _panel.localScale.x;
             float targetX = open ? 10f : -340f; // 340 = ширина 290 + запас
+            float targetScale = open ? 1f : 0.94f;
+            float startPanelAlpha = _panelCanvasGroup != null ? _panelCanvasGroup.alpha : 1f;
+            float targetPanelAlpha = open ? 1f : 0f;
             float startA  = _backdrop.color.a;
             float targetA = open ? backdropColor.a : 0f;
 
@@ -881,12 +940,17 @@ public void ToggleMenu()
                 t += Time.unscaledDeltaTime;
                 float p = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / animDuration));
 
-                _panel.anchoredPosition = new Vector2(Mathf.Lerp(startX, targetX, p), _panel.anchoredPosition.y);
+                float scale = Mathf.Lerp(startScale, targetScale, p);
+                _panel.localScale = Vector3.one * scale;
+                if (_panelCanvasGroup != null)
+                    _panelCanvasGroup.alpha = Mathf.Lerp(startPanelAlpha, targetPanelAlpha, p);
                 _backdrop.color = new Color(0f, 0f, 0f, Mathf.Lerp(startA, targetA, p));
                 yield return null;
             }
 
-            _panel.anchoredPosition = new Vector2(targetX, _panel.anchoredPosition.y);
+            _panel.localScale = Vector3.one * targetScale;
+            if (_panelCanvasGroup != null)
+                _panelCanvasGroup.alpha = targetPanelAlpha;
             _backdrop.color = new Color(0f, 0f, 0f, targetA);
 
             if (!open)
@@ -941,6 +1005,20 @@ public void ToggleMenu()
         // ═════════════════════════════════════════════════════════════════════
         // Builder helpers
         // ═════════════════════════════════════════════════════════════════════
+
+        private void UpdatePanelLayout()
+        {
+            if (_panel == null || _canvas == null)
+                return;
+
+            var canvasRect = _canvas.GetComponent<RectTransform>();
+            if (canvasRect == null)
+                return;
+
+            float width = Mathf.Clamp(canvasRect.rect.width - 32f, 320f, 720f);
+            float height = Mathf.Clamp(canvasRect.rect.height - 48f, 320f, 760f);
+            _panel.sizeDelta = new Vector2(width, height);
+        }
 
         private void OnBestMoneyChanged(int _)
         {
@@ -1006,11 +1084,13 @@ public void ToggleMenu()
             var lg = go.AddComponent<HorizontalLayoutGroup>();
             lg.spacing = spacing;
             lg.childForceExpandWidth  = false;
-            lg.childForceExpandHeight = true;
+            lg.childForceExpandHeight = false;
             lg.childControlHeight = true;
-            lg.childControlWidth = false;
+            lg.childControlWidth = true;
+            lg.childAlignment = TextAnchor.MiddleLeft;
             var le = go.AddComponent<LayoutElement>();
             le.preferredHeight = 40f;
+            le.flexibleWidth = 1f;
             return go;
         }
 
@@ -1054,11 +1134,11 @@ public void ToggleMenu()
             img.preserveAspect = false;
 
             var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.5f, 1f);
-            rt.anchorMax = new Vector2(0.5f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0f, -2f);
-            rt.sizeDelta = new Vector2(60f, 30f);
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(52f, 26f);
             return true;
         }
 
