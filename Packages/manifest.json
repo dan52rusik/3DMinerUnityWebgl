@@ -7,6 +7,7 @@
     "com.unity.inputsystem": "1.18.0",
     "com.unity.render-pipelines.universal": "17.3.0",
     "com.unity.ugui": "2.0.0",
+    "com.unity.vectorgraphics": "file:Packages/com.unity.vectorgraphics-master",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",

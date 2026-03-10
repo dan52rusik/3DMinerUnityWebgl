@@ -20,7 +20,7 @@
             return;
         }
 
-        ysdk.getPlayer({ scopes: true }).then(function (player) {
+        ysdk.getPlayer({ scopes: false }).then(function (player) {
             if (!player || typeof player.getData !== 'function') {
                 sendResult('');
                 return;
@@ -49,7 +49,7 @@
             return;
         }
 
-        ysdk.getPlayer({ scopes: true }).then(function (player) {
+        ysdk.getPlayer({ scopes: false }).then(function (player) {
             if (!player || typeof player.setData !== 'function') {
                 try {
                     localStorage.setItem('svs_progress_v1', json);

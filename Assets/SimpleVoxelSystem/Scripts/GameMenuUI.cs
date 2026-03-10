@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -32,6 +33,46 @@ namespace SimpleVoxelSystem
         private static readonly Color LangCodeColor = new Color(0.82f, 0.86f, 0.95f, 0.86f);
         private static readonly Color LangCodeSelectedColor = new Color(0.98f, 0.99f, 1f, 1f);
         private static readonly Color LangAccent = new Color(0.35f, 0.88f, 0.59f, 1f);
+        private static readonly Dictionary<string, string> LanguageFlagMap =
+            new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
+            {
+                [Loc.LangRu] = "ru",
+                [Loc.LangEn] = "us", // Using US flag for English
+                [Loc.LangTr] = "tr",
+                [Loc.LangAr] = "arab",
+                [Loc.LangAz] = "az",
+                [Loc.LangBe] = "by",
+                [Loc.LangBg] = "bg",
+                [Loc.LangCa] = "es-ct",
+                [Loc.LangCs] = "cz",
+                [Loc.LangDe] = "de",
+                [Loc.LangEs] = "es",
+                [Loc.LangFa] = "ir",
+                [Loc.LangFr] = "fr",
+                [Loc.LangHe] = "il",
+                [Loc.LangHi] = "in",
+                [Loc.LangHu] = "hu",
+                [Loc.LangHy] = "am",
+                [Loc.LangId] = "id",
+                [Loc.LangIt] = "it",
+                [Loc.LangJa] = "jp",
+                [Loc.LangKa] = "ge",
+                [Loc.LangKk] = "kz",
+                [Loc.LangNl] = "nl",
+                [Loc.LangPl] = "pl",
+                [Loc.LangPt] = "pt",
+                [Loc.LangRo] = "ro",
+                [Loc.LangSk] = "sk",
+                [Loc.LangSr] = "rs",
+                [Loc.LangTh] = "th",
+                [Loc.LangTk] = "tm",
+                [Loc.LangUk] = "ua",
+                [Loc.LangUz] = "uz",
+                [Loc.LangVi] = "vn",
+                [Loc.LangZh] = "cn"
+            };
+        private static readonly Dictionary<string, Sprite> FlagSpriteCache =
+            new Dictionary<string, Sprite>(System.StringComparer.OrdinalIgnoreCase);
 
         // ── Runtime ───────────────────────────────────────────────────────────
         private Canvas    _canvas;
@@ -43,6 +84,7 @@ namespace SimpleVoxelSystem
         private Text      _accountLabel;
         private Text      _playerNameValue;
         private Text      _bestMoneyValue;
+        private Text      _authHintValue;
         private Text      _authButtonLabel;
         private Text      _adsLabel;
         private Text      _adsDescValue;
@@ -276,6 +318,221 @@ namespace SimpleVoxelSystem
             le.minHeight = 1f;
         }
 
+        // ── Строит полосы флага (Fallback) ───────────────────────────────────
+        private void BuildFlagStripes(Transform parent, string lang, float w, float h)
+        {
+            var root = new GameObject("FlagArt_Fallback");
+            root.transform.SetParent(parent, false);
+            var rootRt = root.AddComponent<RectTransform>();
+            rootRt.anchorMin = new Vector2(0.5f, 1f);
+            rootRt.anchorMax = new Vector2(0.5f, 1f);
+            rootRt.pivot = new Vector2(0.5f, 1f);
+            rootRt.anchoredPosition = new Vector2(0f, -2f);
+            rootRt.sizeDelta = new Vector2(w, h);
+
+            if (lang == Loc.LangRu)
+            {
+                BuildHorizontalFlag(root.transform, h, new[]
+                {
+                    new Color(1.00f, 1.00f, 1.00f),
+                    new Color(0.05f, 0.24f, 0.73f),
+                    new Color(0.83f, 0.11f, 0.13f)
+                });
+                return;
+            }
+
+            if (lang == Loc.LangEn)
+            {
+                MakeStretchRect(root.transform, "Field", new Color(0.02f, 0.16f, 0.55f));
+                MakeRotatedRect(root.transform, "DiagW1", Color.white,  45f, new Vector2(w * 2f, h * 0.30f));
+                MakeRotatedRect(root.transform, "DiagW2", Color.white, -45f, new Vector2(w * 2f, h * 0.30f));
+                MakeRotatedRect(root.transform, "DiagR1", new Color(0.78f, 0.06f, 0.14f),  45f, new Vector2(w * 2f, h * 0.13f));
+                MakeRotatedRect(root.transform, "DiagR2", new Color(0.78f, 0.06f, 0.14f), -45f, new Vector2(w * 2f, h * 0.13f));
+                MakeStretchRect(root.transform, "CrossV_W", Color.white, anchorMinX: 0.40f, anchorMaxX: 0.60f);
+                MakeStretchRect(root.transform, "CrossH_W", Color.white, anchorMinY: 0.33f, anchorMaxY: 0.67f);
+                MakeStretchRect(root.transform, "CrossV_R", new Color(0.78f, 0.06f, 0.14f), anchorMinX: 0.445f, anchorMaxX: 0.555f);
+                MakeStretchRect(root.transform, "CrossH_R", new Color(0.78f, 0.06f, 0.14f), anchorMinY: 0.405f, anchorMaxY: 0.595f);
+                return;
+            }
+
+            if (lang == Loc.LangTr)
+            {
+                var go = new GameObject("TurkeyFlag");
+                go.transform.SetParent(root.transform, false);
+                var img = go.AddComponent<Image>();
+                img.sprite = BuildTurkeyFlagSprite(Mathf.RoundToInt(w), Mathf.RoundToInt(h));
+                img.preserveAspect = false;
+                var rt = go.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = rt.offsetMax = Vector2.zero;
+                return;
+            }
+
+            if (lang == Loc.LangSr)
+            {
+                BuildHorizontalFlag(root.transform, h, new[]
+                {
+                    new Color(0.78f, 0.12f, 0.16f),
+                    new Color(0.12f, 0.24f, 0.55f),
+                    Color.white
+                });
+                return;
+            }
+
+            if (lang == Loc.LangTk)
+            {
+                MakeStretchRect(root.transform, "Field", new Color(0.00f, 0.52f, 0.24f));
+                MakeAnchoredRect(root.transform, "Stripe", new Color(0.74f, 0.10f, 0.16f),
+                    new Vector2(0.17f, 0.5f), new Vector2(w * 0.18f, h));
+                MakeAnchoredRect(root.transform, "MoonOuter", Color.white,
+                    new Vector2(0.66f, 0.40f), new Vector2(h * 0.42f, h * 0.42f));
+                MakeAnchoredRect(root.transform, "MoonInner", new Color(0.00f, 0.52f, 0.24f),
+                    new Vector2(0.69f, 0.40f), new Vector2(h * 0.34f, h * 0.34f));
+                return;
+            }
+
+            BuildPseudoFlag(root.transform, lang, h);
+        }
+
+        private static void BuildHorizontalFlag(Transform parent, float height, Color[] stripes)
+        {
+            float stripeH = height / stripes.Length;
+            for (int i = 0; i < stripes.Length; i++)
+            {
+                var stripe = new GameObject($"Stripe_{i}");
+                stripe.transform.SetParent(parent, false);
+                var img = stripe.AddComponent<Image>();
+                img.color = stripes[i];
+                var rt = stripe.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0f, 1f);
+                rt.anchorMax = new Vector2(1f, 1f);
+                rt.pivot     = new Vector2(0.5f, 1f);
+                rt.anchoredPosition = new Vector2(0f, -stripeH * i);
+                rt.sizeDelta = new Vector2(0f, stripeH);
+            }
+        }
+
+        private static void BuildPseudoFlag(Transform parent, string lang, float height)
+        {
+            Color[][] palettes =
+            {
+                new[] { new Color(0.81f, 0.22f, 0.26f), new Color(0.97f, 0.83f, 0.28f), new Color(0.16f, 0.50f, 0.82f) },
+                new[] { new Color(0.16f, 0.63f, 0.48f), new Color(0.95f, 0.95f, 0.95f), new Color(0.18f, 0.32f, 0.70f) },
+                new[] { new Color(0.59f, 0.33f, 0.74f), new Color(0.95f, 0.50f, 0.20f), new Color(0.15f, 0.17f, 0.28f) },
+                new[] { new Color(0.12f, 0.66f, 0.78f), new Color(0.96f, 0.96f, 0.96f), new Color(0.84f, 0.25f, 0.43f) },
+                new[] { new Color(0.27f, 0.43f, 0.17f), new Color(0.94f, 0.78f, 0.23f), new Color(0.60f, 0.18f, 0.21f) }
+            };
+            int paletteIndex = 0;
+            for (int i = 0; i < lang.Length; i++) paletteIndex = (paletteIndex + lang[i]) % palettes.Length;
+            BuildHorizontalFlag(parent, height, palettes[paletteIndex]);
+        }
+
+        private static void MakeAnchoredRect(Transform parent, string name, Color color, Vector2 anchorNorm, Vector2 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<Image>().color = color;
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = anchorNorm;
+            rt.anchorMax = anchorNorm;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = size;
+        }
+
+        private static void MakeRotatedRect(Transform parent, string name, Color color, float angleDeg, Vector2 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<Image>().color = color;
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot     = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = size;
+            go.transform.localEulerAngles = new Vector3(0f, 0f, angleDeg);
+        }
+
+        private static void MakeStretchRect(Transform parent, string name, Color color,
+            float anchorMinX = 0f, float anchorMaxX = 1f, float anchorMinY = 0f, float anchorMaxY = 1f)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<Image>().color = color;
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(anchorMinX, anchorMinY);
+            rt.anchorMax = new Vector2(anchorMaxX, anchorMaxY);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+        }
+
+        private static Sprite BuildTurkeyFlagSprite(int width, int height)
+        {
+            Color red = new Color(0.89f, 0.04f, 0.10f, 1f);
+            var pixels = new Color[width * height];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = red;
+            float cy = (height - 1) * 0.5f;
+            float outerCx = width * 0.38f, innerCx = width * 0.44f;
+            float outerR = height * 0.30f, innerR = height * 0.24f;
+            FillCircle(pixels, width, height, outerCx, cy, outerR, Color.white);
+            FillCircle(pixels, width, height, innerCx, cy, innerR, red);
+            Vector2 starCenter = new Vector2(width * 0.60f, cy);
+            Vector2[] star = BuildStarPoints(starCenter, height * 0.15f, height * 0.06f);
+            FillPolygon(pixels, width, height, star, Color.white);
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.SetPixels(pixels); texture.Apply();
+            return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        private static void FillCircle(Color[] pixels, int width, int height, float cx, float cy, float radius, Color color)
+        {
+            float radiusSq = radius * radius;
+            int minX = Mathf.Max(0, Mathf.FloorToInt(cx - radius)), maxX = Mathf.Min(width - 1, Mathf.CeilToInt(cx + radius));
+            int minY = Mathf.Max(0, Mathf.FloorToInt(cy - radius)), maxY = Mathf.Min(height - 1, Mathf.CeilToInt(cy + radius));
+            for (int y = minY; y <= maxY; y++)
+                for (int x = minX; x <= maxX; x++)
+                    if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= radiusSq) pixels[y * width + x] = color;
+        }
+
+        private static Vector2[] BuildStarPoints(Vector2 center, float outerRadius, float innerRadius)
+        {
+            var points = new Vector2[10];
+            for (int i = 0; i < points.Length; i++)
+            {
+                float angle = Mathf.Deg2Rad * (-90f + i * 36f);
+                float radius = (i % 2 == 0) ? outerRadius : innerRadius;
+                points[i] = new Vector2(center.x + Mathf.Cos(angle) * radius, center.y + Mathf.Sin(angle) * radius);
+            }
+            return points;
+        }
+
+        private static void FillPolygon(Color[] pixels, int width, int height, Vector2[] polygon, Color color)
+        {
+            float minXf = polygon[0].x, maxXf = polygon[0].x, minYf = polygon[0].y, maxYf = polygon[0].y;
+            for (int i = 1; i < polygon.Length; i++)
+            {
+                minXf = Mathf.Min(minXf, polygon[i].x); maxXf = Mathf.Max(maxXf, polygon[i].x);
+                minYf = Mathf.Min(minYf, polygon[i].y); maxYf = Mathf.Max(maxYf, polygon[i].y);
+            }
+            for (int y = Mathf.Max(0, Mathf.FloorToInt(minYf)); y <= Mathf.Min(height - 1, Mathf.CeilToInt(maxYf)); y++)
+                for (int x = Mathf.Max(0, Mathf.FloorToInt(minXf)); x <= Mathf.Min(width - 1, Mathf.CeilToInt(maxXf)); x++)
+                    if (IsPointInPolygon(new Vector2(x + 0.5f, y + 0.5f), polygon)) pixels[y * width + x] = color;
+        }
+
+        private static bool IsPointInPolygon(Vector2 point, Vector2[] polygon)
+        {
+            bool inside = false;
+            for (int i = 0, j = polygon.Length - 1; i < polygon.Length; j = i++)
+            {
+                bool intersects = ((polygon[i].y > point.y) != (polygon[j].y > point.y)) &&
+                    (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / ((polygon[j].y - polygon[i].y) + Mathf.Epsilon) + polygon[i].x);
+                if (intersects) inside = !inside;
+            }
+            return inside;
+        }
+
         // ── Секция выбора языка ───────────────────────────────────────────────
         private void BuildLanguageSection(Transform parent)
         {
@@ -406,6 +663,16 @@ namespace SimpleVoxelSystem
             bestLayout.preferredHeight = 22f;
             bestLayout.minHeight = 22f;
 
+            _authHintValue = CreateText(section.transform, "AuthHintValue", string.Empty);
+            _authHintValue.fontSize = 12;
+            _authHintValue.color = new Color(0.82f, 0.86f, 0.95f, 0.88f);
+            _authHintValue.alignment = TextAnchor.UpperLeft;
+            _authHintValue.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _authHintValue.verticalOverflow = VerticalWrapMode.Overflow;
+            var authHintLayout = _authHintValue.GetComponent<LayoutElement>();
+            authHintLayout.preferredHeight = 34f;
+            authHintLayout.minHeight = 34f;
+
             var authButton = RuntimeUIFactory.MakeBtn(section.transform, "AuthButton", Loc.T("auth_sign_in"),
                 color: new Color(0.20f, 0.46f, 0.87f, 1f), size: new Vector2(0f, 34f));
             var authLayout = authButton.gameObject.GetComponent<LayoutElement>();
@@ -509,7 +776,9 @@ namespace SimpleVoxelSystem
             mask.showMaskGraphic = false; // скрыть саму рамку, показать только содержимое
 
             // Строим флаг внутри рамки.
-            BuildFlagStripes(flagFrame.transform, lang, 60f, 30f);
+            // Try load SVG from Resources, fallback to manual drawing if fails
+            if (!BuildResourceFlag(flagFrame.transform, lang))
+                BuildFlagStripes(flagFrame.transform, lang, 60f, 30f);
 
             // Текст кода страны — через RuntimeUIFactory как весь HUD
             var code = RuntimeUIFactory.MakeLabel(go.transform, "Code",
@@ -569,259 +838,7 @@ namespace SimpleVoxelSystem
                 lang = lang
             };
         }
-
-        // ── Строит полосы флага ──────────────────────────────────────────────
-        private void BuildFlagStripes(Transform parent, string lang, float w, float h)
-        {
-            var root = new GameObject("FlagArt");
-            root.transform.SetParent(parent, false);
-            var rootRt = root.AddComponent<RectTransform>();
-            rootRt.anchorMin = new Vector2(0.5f, 1f);
-            rootRt.anchorMax = new Vector2(0.5f, 1f);
-            rootRt.pivot = new Vector2(0.5f, 1f);
-            rootRt.anchoredPosition = new Vector2(0f, -2f);
-            rootRt.sizeDelta = new Vector2(w, h);
-
-            if (lang == Loc.LangRu)
-            {
-                // Белый / Синий / Красный — горизонтальные полосы
-                BuildHorizontalFlag(root.transform, h, new[]
-                {
-                    new Color(1.00f, 1.00f, 1.00f),
-                    new Color(0.05f, 0.24f, 0.73f),
-                    new Color(0.83f, 0.11f, 0.13f)
-                });
-                return;
-            }
-
-            if (lang == Loc.LangEn)
-            {
-                // 1. Тёмно-синий фон
-                MakeStretchRect(root.transform, "Field", new Color(0.02f, 0.16f, 0.55f));
-
-                // 2. Белый диагональный X (крест Святого Андрея + Святого Патрика, широкий)
-                MakeRotatedRect(root.transform, "DiagW1", Color.white,  45f, new Vector2(w * 2f, h * 0.30f));
-                MakeRotatedRect(root.transform, "DiagW2", Color.white, -45f, new Vector2(w * 2f, h * 0.30f));
-
-                // 3. Красный диагональный X (крест Святого Патрика, узкий)
-                MakeRotatedRect(root.transform, "DiagR1", new Color(0.78f, 0.06f, 0.14f),  45f, new Vector2(w * 2f, h * 0.13f));
-                MakeRotatedRect(root.transform, "DiagR2", new Color(0.78f, 0.06f, 0.14f), -45f, new Vector2(w * 2f, h * 0.13f));
-
-                // 4. Белый прямой крест (крест Святого Георгия, широкий)
-                MakeStretchRect(root.transform, "CrossV_W", Color.white, anchorMinX: 0.40f, anchorMaxX: 0.60f);
-                MakeStretchRect(root.transform, "CrossH_W", Color.white, anchorMinY: 0.33f, anchorMaxY: 0.67f);
-
-                // 5. Красный прямой крест (крест Святого Георгия)
-                MakeStretchRect(root.transform, "CrossV_R", new Color(0.78f, 0.06f, 0.14f), anchorMinX: 0.445f, anchorMaxX: 0.555f);
-                MakeStretchRect(root.transform, "CrossH_R", new Color(0.78f, 0.06f, 0.14f), anchorMinY: 0.405f, anchorMaxY: 0.595f);
-                return;
-            }
-
-            if (lang == Loc.LangTr)
-            {
-                var go = new GameObject("TurkeyFlag");
-                go.transform.SetParent(root.transform, false);
-                var img = go.AddComponent<Image>();
-                img.sprite = BuildTurkeyFlagSprite(Mathf.RoundToInt(w), Mathf.RoundToInt(h));
-                img.preserveAspect = false;
-                var rt = go.GetComponent<RectTransform>();
-                rt.anchorMin = Vector2.zero;
-                rt.anchorMax = Vector2.one;
-                rt.offsetMin = rt.offsetMax = Vector2.zero;
-                return;
-            }
-
-            BuildPseudoFlag(root.transform, lang, h);
-        }
-
-        /// <summary>Повёрнутый прямоугольник (для диагональных полос флага). Центр — середина root.</summary>
-        private static void MakeRotatedRect(Transform parent, string name, Color color, float angleDeg, Vector2 size)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.AddComponent<Image>().color = color;
-            var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot     = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = size;
-            go.transform.localEulerAngles = new Vector3(0f, 0f, angleDeg);
-        }
-
-
-        /// <summary>Прямоугольник на весь родитель (stretch). Можно ограничить по одной оси через anchor.</summary>
-        private static void MakeStretchRect(Transform parent, string name, Color color,
-            float anchorMinX = 0f, float anchorMaxX = 1f,
-            float anchorMinY = 0f, float anchorMaxY = 1f)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.AddComponent<Image>().color = color;
-            var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(anchorMinX, anchorMinY);
-            rt.anchorMax = new Vector2(anchorMaxX, anchorMaxY);
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
-        }
-
-        /// <summary>Прямоугольник фиксированного размера, якорь в заданной нормализованной точке родителя.</summary>
-        private static void MakeAnchoredRect(Transform parent, string name, Color color,
-            Vector2 anchorNorm, Vector2 size)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.AddComponent<Image>().color = color;
-            var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = anchorNorm;
-            rt.pivot     = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = size;
-        }
-
-        private static void BuildHorizontalFlag(Transform parent, float height, Color[] stripes)
-        {
-            float stripeH = height / stripes.Length;
-            for (int i = 0; i < stripes.Length; i++)
-            {
-                var stripe = new GameObject($"Stripe_{i}");
-                stripe.transform.SetParent(parent, false);
-                var img = stripe.AddComponent<Image>();
-                img.color = stripes[i];
-                var rt = stripe.GetComponent<RectTransform>();
-                rt.anchorMin = new Vector2(0f, 1f);
-                rt.anchorMax = new Vector2(1f, 1f);
-                rt.pivot     = new Vector2(0.5f, 1f);
-                rt.anchoredPosition = new Vector2(0f, -stripeH * i);
-                rt.sizeDelta = new Vector2(0f, stripeH);
-            }
-        }
-
-        private static void BuildPseudoFlag(Transform parent, string lang, float height)
-        {
-            Color[][] palettes =
-            {
-                new[] { new Color(0.81f, 0.22f, 0.26f), new Color(0.97f, 0.83f, 0.28f), new Color(0.16f, 0.50f, 0.82f) },
-                new[] { new Color(0.16f, 0.63f, 0.48f), new Color(0.95f, 0.95f, 0.95f), new Color(0.18f, 0.32f, 0.70f) },
-                new[] { new Color(0.59f, 0.33f, 0.74f), new Color(0.95f, 0.50f, 0.20f), new Color(0.15f, 0.17f, 0.28f) },
-                new[] { new Color(0.12f, 0.66f, 0.78f), new Color(0.96f, 0.96f, 0.96f), new Color(0.84f, 0.25f, 0.43f) },
-                new[] { new Color(0.27f, 0.43f, 0.17f), new Color(0.94f, 0.78f, 0.23f), new Color(0.60f, 0.18f, 0.21f) }
-            };
-
-            int paletteIndex = 0;
-            for (int i = 0; i < lang.Length; i++)
-                paletteIndex = (paletteIndex + lang[i]) % palettes.Length;
-
-            BuildHorizontalFlag(parent, height, palettes[paletteIndex]);
-        }
-
-        private static Sprite BuildTurkeyFlagSprite(int width, int height)
-        {
-            Color red = new Color(0.89f, 0.04f, 0.10f, 1f);
-            var pixels = new Color[width * height];
-            for (int i = 0; i < pixels.Length; i++) pixels[i] = red;
-
-            float cy = (height - 1) * 0.5f;
-            float outerCx = width * 0.38f;
-            float innerCx = width * 0.44f;
-            float outerR = height * 0.30f;
-            float innerR = height * 0.24f;
-
-            FillCircle(pixels, width, height, outerCx, cy, outerR, Color.white);
-            FillCircle(pixels, width, height, innerCx, cy, innerR, red);
-
-            Vector2 starCenter = new Vector2(width * 0.60f, cy);
-            Vector2[] star = BuildStarPoints(starCenter, height * 0.15f, height * 0.06f);
-            FillPolygon(pixels, width, height, star, Color.white);
-
-            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            texture.filterMode = FilterMode.Point;
-            texture.wrapMode = TextureWrapMode.Clamp;
-            texture.SetPixels(pixels);
-            texture.Apply();
-
-            return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
-        }
-
-        private static void FillCircle(Color[] pixels, int width, int height, float cx, float cy, float radius, Color color)
-        {
-            float radiusSq = radius * radius;
-            int minX = Mathf.Max(0, Mathf.FloorToInt(cx - radius));
-            int maxX = Mathf.Min(width - 1, Mathf.CeilToInt(cx + radius));
-            int minY = Mathf.Max(0, Mathf.FloorToInt(cy - radius));
-            int maxY = Mathf.Min(height - 1, Mathf.CeilToInt(cy + radius));
-
-            for (int y = minY; y <= maxY; y++)
-            {
-                for (int x = minX; x <= maxX; x++)
-                {
-                    float dx = x - cx;
-                    float dy = y - cy;
-                    if (dx * dx + dy * dy <= radiusSq)
-                        pixels[y * width + x] = color;
-                }
-            }
-        }
-
-        private static Vector2[] BuildStarPoints(Vector2 center, float outerRadius, float innerRadius)
-        {
-            var points = new Vector2[10];
-            for (int i = 0; i < points.Length; i++)
-            {
-                float angle = Mathf.Deg2Rad * (-90f + i * 36f);
-                float radius = (i % 2 == 0) ? outerRadius : innerRadius;
-                points[i] = new Vector2(
-                    center.x + Mathf.Cos(angle) * radius,
-                    center.y + Mathf.Sin(angle) * radius);
-            }
-            return points;
-        }
-
-        private static void FillPolygon(Color[] pixels, int width, int height, Vector2[] polygon, Color color)
-        {
-            float minXf = polygon[0].x;
-            float maxXf = polygon[0].x;
-            float minYf = polygon[0].y;
-            float maxYf = polygon[0].y;
-            for (int i = 1; i < polygon.Length; i++)
-            {
-                minXf = Mathf.Min(minXf, polygon[i].x);
-                maxXf = Mathf.Max(maxXf, polygon[i].x);
-                minYf = Mathf.Min(minYf, polygon[i].y);
-                maxYf = Mathf.Max(maxYf, polygon[i].y);
-            }
-
-            int minX = Mathf.Max(0, Mathf.FloorToInt(minXf));
-            int maxX = Mathf.Min(width - 1, Mathf.CeilToInt(maxXf));
-            int minY = Mathf.Max(0, Mathf.FloorToInt(minYf));
-            int maxY = Mathf.Min(height - 1, Mathf.CeilToInt(maxYf));
-
-            for (int y = minY; y <= maxY; y++)
-            {
-                for (int x = minX; x <= maxX; x++)
-                {
-                    if (IsPointInPolygon(new Vector2(x + 0.5f, y + 0.5f), polygon))
-                        pixels[y * width + x] = color;
-                }
-            }
-        }
-
-        private static bool IsPointInPolygon(Vector2 point, Vector2[] polygon)
-        {
-            bool inside = false;
-            for (int i = 0, j = polygon.Length - 1; i < polygon.Length; j = i++)
-            {
-                bool intersects =
-                    ((polygon[i].y > point.y) != (polygon[j].y > point.y)) &&
-                    (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / ((polygon[j].y - polygon[i].y) + Mathf.Epsilon) + polygon[i].x);
-                if (intersects) inside = !inside;
-            }
-            return inside;
-        }
-
-        // ═════════════════════════════════════════════════════════════════════
-        // Menu open/close
-        // ═════════════════════════════════════════════════════════════════════
-
-        public void ToggleMenu()
+public void ToggleMenu()
         {
             if (_isOpen) CloseMenu();
             else OpenMenu();
@@ -944,6 +961,9 @@ namespace SimpleVoxelSystem
             if (_bestMoneyValue != null)
                 _bestMoneyValue.text = $"{Loc.T("best_money_label")}: ${GlobalEconomy.BestMoney}";
 
+            if (_authHintValue != null)
+                _authHintValue.text = PlayerIdentity.IsGuest ? Loc.T("auth_guest_hint") : Loc.T("auth_connected_hint");
+
             if (_authButtonLabel != null)
                 _authButtonLabel.text = PlayerIdentity.IsGuest ? Loc.T("auth_sign_in") : Loc.T("auth_connected");
         }
@@ -1020,6 +1040,61 @@ namespace SimpleVoxelSystem
                 c.a);
 
         // ── Внутренний класс для хранения данных кнопки-флага ────────────────
+        private static bool BuildResourceFlag(Transform parent, string lang)
+        {
+            Sprite sprite = LoadFlagSprite(lang);
+            if (sprite == null)
+                return false;
+
+            var go = new GameObject("FlagArt");
+            go.transform.SetParent(parent, false);
+            var img = go.AddComponent<Image>();
+            img.sprite = sprite;
+            img.color = Color.white;
+            img.preserveAspect = false;
+
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -2f);
+            rt.sizeDelta = new Vector2(60f, 30f);
+            return true;
+        }
+
+        private static Sprite LoadFlagSprite(string lang)
+        {
+            if (string.IsNullOrEmpty(lang))
+                return null;
+
+            if (RequiresProceduralFlag(lang))
+                return null;
+
+            if (FlagSpriteCache.TryGetValue(lang, out Sprite cached))
+                return cached;
+
+            string resourceName = ResolveFlagResourceName(lang);
+            Sprite sprite = string.IsNullOrEmpty(resourceName)
+                ? null
+                : Resources.Load<Sprite>($"Flags/1x1/{resourceName}");
+
+            FlagSpriteCache[lang] = sprite;
+            return sprite;
+        }
+
+        private static string ResolveFlagResourceName(string lang)
+        {
+            if (LanguageFlagMap.TryGetValue(lang, out string resourceName))
+                return resourceName;
+
+            return lang.ToLowerInvariant();
+        }
+
+        private static bool RequiresProceduralFlag(string lang)
+        {
+            return lang == Loc.LangSr || lang == Loc.LangTk;
+        }
+
         private class FlagBtn
         {
             public string lang;

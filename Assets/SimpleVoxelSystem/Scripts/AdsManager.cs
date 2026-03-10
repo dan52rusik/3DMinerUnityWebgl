@@ -8,11 +8,15 @@ namespace SimpleVoxelSystem
     {
         public const string RewardCoinsId = "coins_bonus";
         public const int RewardCoinsAmount = 250;
+        private const float MinSecondsBeforeFirstInterstitial = 90f;
+        private const float InterstitialCooldownSeconds = 180f;
 
         public static AdsManager Instance { get; private set; }
 
         private WellGenerator wellGenerator;
         private bool bannerShown;
+        private float sessionStartTime;
+        private float nextInterstitialAllowedTime;
 
         private void Awake()
         {
@@ -23,6 +27,8 @@ namespace SimpleVoxelSystem
             }
 
             Instance = this;
+            sessionStartTime = Time.unscaledTime;
+            nextInterstitialAllowedTime = sessionStartTime + MinSecondsBeforeFirstInterstitial;
             DontDestroyOnLoad(gameObject);
         }
 
@@ -94,7 +100,11 @@ namespace SimpleVoxelSystem
             if (!enteredLobby || !YG2.isSDKEnabled)
                 return;
 
+            if (Time.unscaledTime < nextInterstitialAllowedTime)
+                return;
+
             YG2.InterstitialAdvShow();
+            nextInterstitialAllowedTime = Time.unscaledTime + InterstitialCooldownSeconds;
         }
 
         private void OnRewardAdv(string rewardId)
