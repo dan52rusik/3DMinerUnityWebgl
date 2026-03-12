@@ -301,7 +301,7 @@ namespace SimpleVoxelSystem
             Add("auth_guest_hint",  ru: "Войдите через Яндекс, чтобы синхронизировать прогресс между устройствами.", en: "Sign in with Yandex to sync progress across devices.", tr: "Ilerlemeni cihazlar arasynda senkronize etmek icin Yandex ile giris yap.");
             Add("auth_connected_hint",  ru: "Прогресс можно сохранять и синхронизировать между устройствами.", en: "Progress can be saved and synced across devices.", tr: "Ilerleme kaydedilebilir ve cihazlar arasynda senkronize edilebilir.");
             Add("ads_bonus_title",  ru: "Бонус за рекламу", en: "Ad Bonus", tr: "Reklam Bonusu");
-            Add("ads_bonus_desc",   ru: "Посмотри rewarded-рекламу и получи монеты.", en: "Watch a rewarded ad and get bonus coins.", tr: "Odullu reklam izle ve bonus altin kazan.");
+            Add("ads_bonus_desc",   ru: "Посмотри видеорекламу и получи монеты.", en: "Watch a rewarded ad and get bonus coins.", tr: "Odullu reklam izle ve bonus altin kazan.");
             Add("ads_bonus_btn",    ru: "Смотреть рекламу: +{0} монет", en: "Watch ad: +{0} coins", tr: "Reklam izle: +{0} altin");
 
             // Multi-language core UI
@@ -1242,7 +1242,7 @@ namespace SimpleVoxelSystem
             Set("ads_bonus_desc", LangJa, "報酬付き広告を見てボーナスコインを獲得しよう。");
             Set("ads_bonus_desc", LangKa, "უყურე ჯილდოიან რეკლამას და მიიღე ბონუს მონეტები.");
             Set("ads_bonus_desc", LangKk, "Сыйақылы жарнаманы көріп, бонустық тиын ал.");
-            Set("ads_bonus_desc", LangNl, "Bekijk een rewarded advertentie en krijg bonusmunten.");
+            Set("ads_bonus_desc", LangNl, "Bekijk een beloningsadvertentie en krijg bonusmunten.");
             Set("ads_bonus_desc", LangPl, "Obejrzyj reklamę z nagrodą i zdobądź bonusowe monety.");
             Set("ads_bonus_desc", LangPt, "Assista a um anúncio recompensado e ganhe moedas bônus.");
             Set("ads_bonus_desc", LangRo, "Privește o reclamă recompensată și primește monede bonus.");
