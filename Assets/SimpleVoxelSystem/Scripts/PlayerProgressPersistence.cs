@@ -309,7 +309,13 @@ namespace SimpleVoxelSystem
         {
             string payload = json;
             if (string.IsNullOrWhiteSpace(payload))
-                payload = PlayerPrefs.GetString(LocalSaveKey, string.Empty);
+            {
+                // Cloud returned empty data (e.g. "Clear cloud data" was pressed).
+                // Clear localStorage too so progress doesn't resurrect from the local copy.
+                PlayerPrefs.DeleteKey(LocalSaveKey);
+                PlayerPrefs.Save();
+                Debug.Log("[PlayerProgressPersistence] Cloud returned empty data — local save cleared, starting fresh.");
+            }
 
             ApplyLoadedState(payload);
         }
