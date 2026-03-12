@@ -25,6 +25,13 @@ namespace SimpleVoxelSystem
         private NativeArray<byte> voxels;
         private bool isDataCreated = false;
 
+        /// <summary>
+        /// Returns true only when voxel data is properly allocated and usable.
+        /// After Domain Reload (script recompilation) NativeArray is invalidated
+        /// even though the GameObject survives — this property detects that.
+        /// </summary>
+        public bool HasValidData => isDataCreated && voxels.IsCreated && voxels.Length > 0;
+
         public Color[] blockColors = new Color[]
         {
             new Color(0.55f, 0.27f, 0.07f),

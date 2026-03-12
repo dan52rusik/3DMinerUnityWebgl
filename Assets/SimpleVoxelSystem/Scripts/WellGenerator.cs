@@ -183,6 +183,17 @@ namespace SimpleVoxelSystem
 
         private void CreatePlayerIsland()
         {
+            // FIX: Clean up any stale duplicate island GameObjects that survived
+            // Domain Reload but lost their NativeArray voxel data.
+            foreach (var old in FindObjectsByType<VoxelIsland>(FindObjectsSortMode.None))
+            {
+                if (old != null && old != lobbyIsland && old.gameObject.name == "PlayerPrivateIsland")
+                {
+                    Debug.Log($"[WellGenerator] Cleaning up stale PlayerPrivateIsland (HasValidData={old.HasValidData})");
+                    Destroy(old.gameObject);
+                }
+            }
+
             GameObject go = new GameObject("PlayerPrivateIsland");
             go.transform.SetParent(this.transform.parent);
             go.transform.position = privateIslandOffset;
@@ -252,12 +263,16 @@ namespace SimpleVoxelSystem
         {
             if (!IsInLobbyMode) return;
             IsInLobbyMode = false;
-            
-            if (playerIsland == null)
+
+            // FIX: Also recreate if voxel data was wiped by Domain Reload
+            if (playerIsland == null || !playerIsland.HasValidData)
             {
-                float rx = UnityEngine.Random.Range(500f, 2000f) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
-                float rz = UnityEngine.Random.Range(500f, 2000f) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
-                privateIslandOffset = new Vector3(rx, 0, rz);
+                if (playerIsland == null)
+                {
+                    float rx = UnityEngine.Random.Range(500f, 2000f) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
+                    float rz = UnityEngine.Random.Range(500f, 2000f) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
+                    privateIslandOffset = new Vector3(rx, 0, rz);
+                }
                 CreatePlayerIsland();
             }
 
@@ -303,7 +318,9 @@ namespace SimpleVoxelSystem
         /// </summary>
         public void ForceEnterMineMode()
         {
-            if (playerIsland == null) return;
+            // FIX: Also check HasValidData — after Domain Reload the GO may survive
+            // but its NativeArray data is gone, making the island invisible/empty.
+            if (playerIsland == null || !playerIsland.HasValidData) return;
             IsInLobbyMode = false;
             SetIslandActive(lobbyIsland, keepLobbyAlwaysLoaded);
             SetIslandActive(playerIsland, true);
@@ -325,8 +342,18 @@ namespace SimpleVoxelSystem
         public void EnsurePrivateIslandAtOffset(Vector3 offset)
         {
             privateIslandOffset = offset;
-            if (playerIsland == null)
+
+            // FIX: After Domain Reload, playerIsland reference may be null
+            // while the GO survives, OR the GO exists but NativeArray data
+            // is invalidated. In both cases — force full recreation.
+            if (playerIsland == null || !playerIsland.HasValidData)
             {
+                if (playerIsland != null)
+                {
+                    Debug.Log("[WellGenerator] EnsurePrivateIsland: island exists but has invalid data — destroying and recreating.");
+                    Destroy(playerIsland.gameObject);
+                    playerIsland = null;
+                }
                 CreatePlayerIsland();
             }
             else
@@ -514,17 +541,20 @@ namespace SimpleVoxelSystem
             groundY = 0f;
             if (ActiveIsland == null) return false;
 
-            MeshCollider c = ActiveIsland.GetComponent<MeshCollider>();
-            if (c != null && c.enabled)
+            // FIX: Use Physics.Raycast instead of MeshCollider.Raycast.
+            // The chunk-based VoxelIsland puts colliders on child VoxelChunk objects,
+            // while the parent MeshRenderer/MeshCollider is disabled (VoxelIsland.CreateChunks line 125).
+            // MeshCollider.Raycast on the parent always misses; Physics.Raycast hits chunk colliders.
+            float rayStartY = ActiveIsland.transform.position.y + ActiveIsland.TotalY + 10f;
+            float rayLength = ActiveIsland.TotalY + 40f;
+            Ray r = new Ray(new Vector3(worldX, rayStartY, worldZ), Vector3.down);
+            if (Physics.Raycast(r, out RaycastHit h, rayLength))
             {
-                Ray r = new Ray(new Vector3(worldX, ActiveIsland.transform.position.y + ActiveIsland.TotalY + 10f, worldZ), Vector3.down);
-                if (c.Raycast(r, out RaycastHit h, ActiveIsland.TotalY + 40f))
-                {
-                    groundY = h.point.y;
-                    return true;
-                }
+                groundY = h.point.y;
+                return true;
             }
 
+            // Fallback: walk the voxel grid directly if no collider hit.
             Vector3 local = ActiveIsland.transform.InverseTransformPoint(new Vector3(worldX, ActiveIsland.transform.position.y, worldZ));
             int gx = Mathf.FloorToInt(local.x);
             int gz = Mathf.FloorToInt(local.z);
