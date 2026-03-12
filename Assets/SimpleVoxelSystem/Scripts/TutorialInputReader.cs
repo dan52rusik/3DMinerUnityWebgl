@@ -79,5 +79,39 @@ namespace SimpleVoxelSystem
 #endif
             return false;
         }
+
+        public static bool TryGetTapPosition(out Vector2 position)
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (Touchscreen.current != null &&
+                Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
+            {
+                position = Touchscreen.current.primaryTouch.position.ReadValue();
+                return true;
+            }
+
+            if (Mouse.current != null &&
+                Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                position = Mouse.current.position.ReadValue();
+                return true;
+            }
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+            {
+                position = Input.GetTouch(0).position;
+                return true;
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                position = Input.mousePosition;
+                return true;
+            }
+#endif
+
+            position = Vector2.zero;
+            return false;
+        }
     }
 }

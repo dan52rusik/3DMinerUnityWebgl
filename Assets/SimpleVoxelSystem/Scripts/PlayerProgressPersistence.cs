@@ -614,6 +614,7 @@ namespace SimpleVoxelSystem
         public void ResetProgressToNewPlayer()
         {
             ResetTutorialProgressFlags();
+            Loc.ResetToAuto();
 
             if (wellGenerator == null)
                 wellGenerator = FindFirstObjectByType<WellGenerator>();
@@ -636,6 +637,7 @@ namespace SimpleVoxelSystem
             dirty = false;
             nextAutosaveTime = Time.unscaledTime + AutosaveIntervalSeconds;
             CaptureStateCache();
+            OnboardingTutorial.RestartCurrentFlow();
 
             SaveResetStateToStorage();
         }
@@ -650,6 +652,7 @@ namespace SimpleVoxelSystem
             }
 
             ResetTutorialProgressFlags();
+            Loc.ResetToAuto();
 
             string json = BuildDefaultResetJson();
             PlayerPrefs.SetString(LocalSaveKey, json);

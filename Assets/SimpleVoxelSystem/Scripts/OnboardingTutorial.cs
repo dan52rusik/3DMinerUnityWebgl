@@ -46,6 +46,14 @@ namespace SimpleVoxelSystem
             PlayerPrefs.Save();
         }
 
+        public static void RestartCurrentFlow()
+        {
+            if (Instance == null)
+                return;
+
+            Instance.RestartFlowInternal();
+        }
+
         // ─── Tutorial Steps ───────────────────────────────────────────────────
         private enum Step
         {
@@ -153,6 +161,9 @@ namespace SimpleVoxelSystem
         {
             if (Time.unscaledTime > nextRefScan) { ScanRefs(); nextRefScan = Time.unscaledTime + 0.4f; }
 
+            if (TryAdvanceByCardTap())
+                return;
+
             UpdateStep();
             AnimateDimmer();
             TrackHighlight();
@@ -190,6 +201,26 @@ namespace SimpleVoxelSystem
                 if (PlayerPrefs.GetInt(KeyPcShown, 0) == 1) { GoStep(Step.Done); return; }
                 GoStep(Step.PcControls);
             }
+        }
+
+        void RestartFlowInternal()
+        {
+            step = Step.Idle;
+            stepTime = Time.unscaledTime;
+            joystickHoldSec = 0f;
+            dimTarget = 0f;
+            dimCurrent = 0f;
+            hlTarget = null;
+            hlArrow = false;
+            beamActive = false;
+            beamZoneType = ShopZoneType.Mine;
+            mineZone = null;
+            nextZoneScan = 0f;
+            IsGameplayInputBlocked = false;
+
+            HideAll();
+            ScanRefs();
+            DetermineFlow();
         }
 
         // ═════════════════════════════════════════════════════════════════════
@@ -324,7 +355,10 @@ namespace SimpleVoxelSystem
 
         void UpdateStep()
         {
-            if (step < Step.Mining
+            // Shortcut only for players who already have a mine before reaching
+            // the "place mine" phase. Once we are on MobPlaceMine, the normal
+            // flow must continue into Mining instead of being completed early.
+            if (step < Step.MobPlaceMine
                 && wellGen != null
                 && wellGen.PlacedMines != null
                 && wellGen.PlacedMines.Count > 0)
@@ -453,6 +487,45 @@ namespace SimpleVoxelSystem
                         GoStep(Step.Done);
                     }
                     break;
+            }
+        }
+
+        bool TryAdvanceByCardTap()
+        {
+            if (step == Step.Idle || step == Step.Done || card == null)
+                return false;
+
+            if (Time.unscaledTime - stepTime < 0.2f)
+                return false;
+
+            if (!TutorialInputReader.TryGetTapPosition(out Vector2 tapPos))
+                return false;
+
+            RectTransform cardRt = card.GetComponent<RectTransform>();
+            if (cardRt == null || !RectTransformUtility.RectangleContainsScreenPoint(cardRt, tapPos, null))
+                return false;
+
+            switch (step)
+            {
+                case Step.PcControls:      GoStep(Step.MobCreateIsland);  return true;
+                case Step.MobJoystick:     GoStep(Step.MobButtons);       return true;
+                case Step.MobButtons:      GoStep(Step.MobCreateIsland);  return true;
+                case Step.MobCreateIsland: GoStep(Step.MobOnIsland);      return true;
+                case Step.MobOnIsland:     GoStep(Step.MobBuyMine);       return true;
+                case Step.MobBuyMine:      GoStep(Step.MobPlaceMine);     return true;
+                case Step.MobPlaceMine:    GoStep(Step.Mining);           return true;
+                case Step.Mining:          GoStep(Step.BackpackFull);     return true;
+                case Step.BackpackFull:    GoStep(Step.SellOre);          return true;
+                case Step.SellOre:         GoStep(Step.UpgradePickaxe);   return true;
+                case Step.UpgradePickaxe:  GoStep(Step.MinionHint);       return true;
+                case Step.MinionHint:
+                    PlayerPrefs.SetInt(KeyMobileDone, 1);
+                    PlayerPrefs.SetInt(KeyPcShown, 1);
+                    PlayerPrefs.Save();
+                    GoStep(Step.Done);
+                    return true;
+                default:
+                    return false;
             }
         }
 
