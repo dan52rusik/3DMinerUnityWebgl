@@ -799,7 +799,7 @@ namespace SimpleVoxelSystem
             var le = go.AddComponent<LayoutElement>();
             bool isPortrait = Screen.height > Screen.width;
             float cardWidth = isPortrait ? 64f : 72f;
-            float cardHeight = isPortrait ? 74f : 84f;
+            float cardHeight = isPortrait ? 82f : 92f;
             float flagWidth = isPortrait ? 52f : 60f;
             float flagHeight = isPortrait ? 26f : 30f;
 
@@ -838,15 +838,15 @@ namespace SimpleVoxelSystem
             // Текст кода страны — через RuntimeUIFactory как весь HUD
             var code = RuntimeUIFactory.MakeLabel(go.transform, "Code",
                 lang.ToUpper(), isPortrait ? 10 : 11, TextAnchor.LowerCenter,
-                offsetMin: new Vector2(0f, 4f),
-                offsetMax: new Vector2(0f, isPortrait ? -46f : -54f));
+                offsetMin: new Vector2(2f, 24f),
+                offsetMax: new Vector2(-2f, isPortrait ? -38f : -44f));
             code.fontStyle = FontStyle.Bold;
             code.color     = LangCodeColor;
 
             var name = RuntimeUIFactory.MakeLabel(go.transform, "Name",
                 Loc.GetLanguageNativeName(lang), isPortrait ? 7 : 8, TextAnchor.LowerCenter,
-                offsetMin: new Vector2(3f, 2f),
-                offsetMax: new Vector2(-3f, isPortrait ? -54f : -62f));
+                offsetMin: new Vector2(4f, 4f),
+                offsetMax: new Vector2(-4f, isPortrait ? -56f : -64f));
             name.color = new Color(0.92f, 0.95f, 1f, 0.92f);
             name.horizontalOverflow = HorizontalWrapMode.Wrap;
             name.verticalOverflow = VerticalWrapMode.Overflow;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using YG;
@@ -510,21 +511,9 @@ namespace SimpleVoxelSystem
             EnsureBuildLocalizationKeys();
             if (_strings.TryGetValue(key, out var langs))
             {
-                if (langs.TryGetValue(_currentLang, out string val) && !string.IsNullOrEmpty(val))
-                    return val;
-                string fallbackLang = GetFallbackLanguage(_currentLang);
-                if (!string.IsNullOrEmpty(fallbackLang) &&
-                    langs.TryGetValue(fallbackLang, out string fallbackVal) &&
-                    !string.IsNullOrEmpty(fallbackVal))
-                {
-                    return fallbackVal;
-                }
-                // fallback EN
-                if (langs.TryGetValue(LangEn, out string enVal) && !string.IsNullOrEmpty(enVal))
-                    return enVal;
-                // fallback RU
-                if (langs.TryGetValue(LangRu, out string ruVal))
-                    return ruVal;
+                string value = GetReadableTranslation(langs, _currentLang);
+                if (!string.IsNullOrEmpty(value))
+                    return value;
             }
             return $"[{key}]"; // отсутствующий ключ виден сразу
         }
@@ -598,9 +587,13 @@ namespace SimpleVoxelSystem
 
         public static string GetLanguageNativeName(string lang)
         {
-            return TryGetLanguageInfo(lang, out LanguageInfo info)
-                ? info.NativeName
-                : string.IsNullOrWhiteSpace(lang) ? LangEn.ToUpperInvariant() : lang.ToUpperInvariant();
+            if (!TryGetLanguageInfo(lang, out LanguageInfo info))
+                return string.IsNullOrWhiteSpace(lang) ? LangEn.ToUpperInvariant() : lang.ToUpperInvariant();
+
+            if (RuntimeUiFont.SupportsText(info.NativeName))
+                return info.NativeName;
+
+            return GetLatinLanguageName(info.Code);
         }
 
         public static bool TryGetLanguageInfo(string lang, out LanguageInfo info)
@@ -4589,6 +4582,85 @@ namespace SimpleVoxelSystem
             if (string.IsNullOrWhiteSpace(lang)) return false;
             lang = lang.ToLowerInvariant().Trim();
             return _languageInfoByCode.ContainsKey(lang);
+        }
+
+        private static string GetReadableTranslation(Dictionary<string, string> langs, string primaryLang)
+        {
+            if (TryGetDirectTranslation(langs, primaryLang, out string primaryValue) &&
+                RuntimeUiFont.SupportsText(primaryValue))
+                return primaryValue;
+
+            string fallbackLang = GetFallbackLanguage(primaryLang);
+            if (!string.IsNullOrEmpty(fallbackLang) &&
+                !string.Equals(fallbackLang, primaryLang, StringComparison.OrdinalIgnoreCase) &&
+                TryGetDirectTranslation(langs, fallbackLang, out string fallbackValue) &&
+                RuntimeUiFont.SupportsText(fallbackValue))
+            {
+                return fallbackValue;
+            }
+
+            if (!string.Equals(primaryLang, LangEn, StringComparison.OrdinalIgnoreCase) &&
+                TryGetDirectTranslation(langs, LangEn, out string enValue) &&
+                RuntimeUiFont.SupportsText(enValue))
+            {
+                return enValue;
+            }
+
+            if (!string.Equals(primaryLang, LangRu, StringComparison.OrdinalIgnoreCase) &&
+                TryGetDirectTranslation(langs, LangRu, out string ruValue) &&
+                RuntimeUiFont.SupportsText(ruValue))
+            {
+                return ruValue;
+            }
+
+            if (!string.IsNullOrEmpty(primaryValue))
+                return primaryValue;
+
+            if (!string.IsNullOrEmpty(fallbackLang) &&
+                !string.Equals(fallbackLang, primaryLang, StringComparison.OrdinalIgnoreCase) &&
+                TryGetDirectTranslation(langs, fallbackLang, out fallbackValue) &&
+                !string.IsNullOrEmpty(fallbackValue))
+            {
+                return fallbackValue;
+            }
+
+            if (TryGetDirectTranslation(langs, LangEn, out string enRaw) && !string.IsNullOrEmpty(enRaw))
+                return enRaw;
+
+            if (TryGetDirectTranslation(langs, LangRu, out string ruRaw) && !string.IsNullOrEmpty(ruRaw))
+                return ruRaw;
+
+            return null;
+        }
+
+        private static bool TryGetDirectTranslation(Dictionary<string, string> langs, string lang, out string value)
+        {
+            value = null;
+            return !string.IsNullOrEmpty(lang) &&
+                   langs.TryGetValue(lang, out value) &&
+                   !string.IsNullOrEmpty(value);
+        }
+
+        private static string GetLatinLanguageName(string lang)
+        {
+            if (string.IsNullOrWhiteSpace(lang))
+                return LangEn.ToUpperInvariant();
+
+            try
+            {
+                return CultureInfo.GetCultureInfo(lang).EnglishName;
+            }
+            catch
+            {
+                switch (lang.ToLowerInvariant())
+                {
+                    case LangZh: return "Chinese";
+                    case LangSr: return "Serbian";
+                    case LangTk: return "Turkmen";
+                    case LangUz: return "Uzbek";
+                    default:     return lang.ToUpperInvariant();
+                }
+            }
         }
 
         private static string GetFallbackLanguage(string lang)

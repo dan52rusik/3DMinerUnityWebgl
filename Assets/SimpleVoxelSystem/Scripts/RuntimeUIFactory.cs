@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 
 namespace SimpleVoxelSystem
@@ -10,8 +11,7 @@ namespace SimpleVoxelSystem
     /// </summary>
     public static class RuntimeUIFactory
     {
-        private static Font _cachedFont;
-        public static Font GetStandardFont() => _cachedFont ??= RuntimeUiFont.Get();
+        public static Font GetStandardFont() => RuntimeUiFont.Get();
 
         // Default UI Colors
         public static readonly Color PanelBG = new Color(0.08f, 0.08f, 0.12f, 0.94f);
@@ -337,35 +337,202 @@ namespace SimpleVoxelSystem
     /// </summary>
     public static class RuntimeUiFont
     {
-        private static Font cached;
+        private static readonly Dictionary<string, Font> LoadedFonts = new Dictionary<string, Font>();
+        private static Font currentFont;
+        private static string currentLanguage;
+        private static readonly Dictionary<int, bool> CharacterSupportCache = new Dictionary<int, bool>();
 
         public static Font Get()
         {
-            if (cached != null) return cached;
+            string lang = string.IsNullOrWhiteSpace(Loc.CurrentLanguage) ? Loc.LangEn : Loc.CurrentLanguage;
+            if (currentFont != null && currentLanguage == lang)
+                return currentFont;
 
-            // Preferred: bundled Unicode font with Cyrillic support.
-            cached = Resources.Load<Font>("LiberationSans");
-            if (cached != null) return cached;
+            currentLanguage = lang;
+            currentFont = ResolveFontForLanguage(lang);
+            CharacterSupportCache.Clear();
+            return currentFont;
+        }
 
-            // Try to load from Resources
-            cached = Resources.Load<Font>("Roboto-Regular");
-            if (cached != null) return cached;
+        public static void RefreshLanguageFont()
+        {
+            currentLanguage = null;
+            currentFont = null;
+            CharacterSupportCache.Clear();
+        }
 
-            // Try to create from System Fonts
+        public static bool SupportsText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return true;
+
+            Font font = Get();
+            if (font == null)
+                return true;
+
+            bool insideRichTextTag = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char ch = text[i];
+
+                if (ch == '<')
+                {
+                    insideRichTextTag = true;
+                    continue;
+                }
+
+                if (insideRichTextTag)
+                {
+                    if (ch == '>')
+                        insideRichTextTag = false;
+                    continue;
+                }
+
+                if (char.IsControl(ch) || char.IsWhiteSpace(ch))
+                    continue;
+
+                if (ch < 128)
+                    continue;
+
+                int key = ch;
+                if (!CharacterSupportCache.TryGetValue(key, out bool supported))
+                {
+                    supported = font.HasCharacter(ch);
+                    CharacterSupportCache[key] = supported;
+                }
+
+                if (!supported)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static Font ResolveFontForLanguage(string lang)
+        {
+            foreach (string resourceName in EnumerateCandidateResourceNames(lang))
+            {
+                Font loaded = LoadResourceFont(resourceName);
+                if (loaded != null)
+                    return loaded;
+            }
+
             try
             {
-                cached = Font.CreateDynamicFontFromOSFont(
+                return Font.CreateDynamicFontFromOSFont(
                     new[] { "Segoe UI", "Arial", "Roboto", "Noto Sans", "Tahoma", "Verdana" },
                     16
                 );
             }
-            catch { cached = null; }
+            catch
+            {
+                return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            }
+        }
 
-            // Fallback to Unity built-in font
-            if (cached == null)
-                cached = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        private static IEnumerable<string> EnumerateCandidateResourceNames(string lang)
+        {
+            if (!string.IsNullOrWhiteSpace(lang))
+            {
+                switch (lang.ToLowerInvariant())
+                {
+                    case "ar":
+                    case "fa":
+                        yield return "Fonts/NotoSansArabic-Regular";
+                        break;
+                    case "he":
+                        yield return "Fonts/NotoSansHebrew-Regular";
+                        break;
+                    case "hi":
+                        yield return "Fonts/NotoSansDevanagari-Regular";
+                        break;
+                    case "hy":
+                        yield return "Fonts/NotoSansArmenian-Regular";
+                        break;
+                    case "ka":
+                        yield return "Fonts/NotoSansGeorgian-Regular";
+                        break;
+                    case "th":
+                        yield return "Fonts/NotoSansThai-Regular";
+                        break;
+                    case "ja":
+                        yield return "Fonts/NotoSansCJKjp-Regular";
+                        break;
+                    case "zh":
+                        yield return "Fonts/NotoSansCJKsc-Regular";
+                        break;
+                }
+            }
 
-            return cached;
+            yield return "LiberationSans";
+            yield return "Roboto-Regular";
+        }
+
+        private static Font LoadResourceFont(string resourceName)
+        {
+            if (string.IsNullOrWhiteSpace(resourceName))
+                return null;
+
+            if (LoadedFonts.TryGetValue(resourceName, out Font cachedFont))
+                return cachedFont;
+
+            Font loaded = Resources.Load<Font>(resourceName);
+            LoadedFonts[resourceName] = loaded;
+            return loaded;
+        }
+    }
+
+    [DisallowMultipleComponent]
+    internal sealed class RuntimeUiFontSync : MonoBehaviour
+    {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void Bootstrap()
+        {
+            if (Object.FindFirstObjectByType<RuntimeUiFontSync>() != null)
+                return;
+
+            GameObject go = new GameObject("RuntimeUiFontSync");
+            Object.DontDestroyOnLoad(go);
+            go.AddComponent<RuntimeUiFontSync>();
+        }
+
+        private void OnEnable()
+        {
+            Loc.OnLanguageChanged += RefreshAllTextFonts;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            RefreshAllTextFonts();
+        }
+
+        private void OnDisable()
+        {
+            Loc.OnLanguageChanged -= RefreshAllTextFonts;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(Scene _, LoadSceneMode __)
+        {
+            RefreshAllTextFonts();
+        }
+
+        private static void RefreshAllTextFonts()
+        {
+            RuntimeUiFont.RefreshLanguageFont();
+            Font font = RuntimeUiFont.Get();
+            if (font == null)
+                return;
+
+            Text[] texts = Resources.FindObjectsOfTypeAll<Text>();
+            for (int i = 0; i < texts.Length; i++)
+            {
+                Text text = texts[i];
+                if (text == null || !text.gameObject.scene.IsValid())
+                    continue;
+
+                if (text.font != font)
+                    text.font = font;
+
+                text.SetAllDirty();
+            }
         }
     }
 }
