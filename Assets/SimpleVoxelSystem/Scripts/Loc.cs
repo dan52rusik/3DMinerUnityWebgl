@@ -304,6 +304,7 @@ namespace SimpleVoxelSystem
             Add("ads_bonus_title",  ru: "Бонус за рекламу", en: "Ad Bonus", tr: "Reklam Bonusu");
             Add("ads_bonus_desc",   ru: "Посмотри видеорекламу и получи монеты.", en: "Watch a rewarded ad and get bonus coins.", tr: "Odullu reklam izle ve bonus altin kazan.");
             Add("ads_bonus_btn",    ru: "Смотреть рекламу: +{0} монет", en: "Watch ad: +{0} coins", tr: "Reklam izle: +{0} altin");
+            Add("ads_bonus_cooldown", ru: "Доступно через {0}:{1:D2}", en: "Available in {0}:{1:D2}", tr: "{0}:{1:D2} sonra mevcut");
 
             // Multi-language core UI
             Set("settings", "ar", "الإعدادات"); Set("settings", "az", "Parametrlər"); Set("settings", "be", "Налады"); Set("settings", "bg", "Настройки");
@@ -1279,6 +1280,37 @@ namespace SimpleVoxelSystem
             Set("ads_bonus_btn", LangUz, "Reklamani ko‘rish: +{0} tanga");
             Set("ads_bonus_btn", LangVi, "Xem quảng cáo: +{0} xu");
             Set("ads_bonus_btn", LangZh, "观看广告：+{0} 金币");
+            Set("ads_bonus_cooldown", LangAr, "متاح خلال {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangAz, "{0}:{1:D2} sonra əlçatan");
+            Set("ads_bonus_cooldown", LangBe, "Даступна праз {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangBg, "Достъпно след {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangCa, "Disponible d'aquí a {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangCs, "Dostupné za {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangDe, "Verfügbar in {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangEs, "Disponible en {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangFa, "تا {0}:{1:D2} دیگر در دسترس");
+            Set("ads_bonus_cooldown", LangFr, "Disponible dans {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangHe, "זמין בעוד {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangHi, "{0}:{1:D2} में उपलब्ध");
+            Set("ads_bonus_cooldown", LangHu, "Elérhető: {0}:{1:D2} múlva");
+            Set("ads_bonus_cooldown", LangHy, "Հասանելի կլինի {0}:{1:D2}-ից հետո");
+            Set("ads_bonus_cooldown", LangId, "Tersedia dalam {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangIt, "Disponibile tra {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangJa, "{0}:{1:D2}後に利用可能");
+            Set("ads_bonus_cooldown", LangKa, "ხელმისაწვდომია {0}:{1:D2}-ში");
+            Set("ads_bonus_cooldown", LangKk, "{0}:{1:D2} кейін қолжетімді");
+            Set("ads_bonus_cooldown", LangNl, "Beschikbaar over {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangPl, "Dostępne za {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangPt, "Disponível em {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangRo, "Disponibil în {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangSk, "Dostupné o {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangSr, "Dostupno za {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangTh, "พร้อมใช้งานใน {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangTk, "{0}:{1:D2} soň elýeterli");
+            Set("ads_bonus_cooldown", LangUk, "Доступно через {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangUz, "{0}:{1:D2} dan keyin mavjud");
+            Set("ads_bonus_cooldown", LangVi, "Có sau {0}:{1:D2}");
+            Set("ads_bonus_cooldown", LangZh, "{0}:{1:D2} 后可用");
 
             Set("btn_build", LangAr, "بناء");
             Set("btn_build", LangAz, "QUR");

@@ -90,6 +90,7 @@ namespace SimpleVoxelSystem
         private Text      _adsLabel;
         private Text      _adsDescValue;
         private Text      _rewardAdButtonLabel;
+        private Button    _rewardAdButton;
 
         // Flag button references для обновления выделения
         private FlagBtn[] _flagBtns;
@@ -130,6 +131,7 @@ namespace SimpleVoxelSystem
             Loc.OnLanguageChanged += OnLangChanged;
             PlayerIdentity.OnIdentityChanged += RefreshAccountSection;
             GlobalEconomy.OnBestMoneyChanged += OnBestMoneyChanged;
+            AdsManager.OnRewardCooldownChanged += RefreshRewardButton;
         }
 
         private void OnDisable()
@@ -137,6 +139,7 @@ namespace SimpleVoxelSystem
             Loc.OnLanguageChanged -= OnLangChanged;
             PlayerIdentity.OnIdentityChanged -= RefreshAccountSection;
             GlobalEconomy.OnBestMoneyChanged -= OnBestMoneyChanged;
+            AdsManager.OnRewardCooldownChanged -= RefreshRewardButton;
         }
 
         private void OnLangChanged()
@@ -152,8 +155,7 @@ namespace SimpleVoxelSystem
                 _adsLabel.text = Loc.T("ads_bonus_title");
             if (_adsDescValue != null)
                 _adsDescValue.text = Loc.T("ads_bonus_desc");
-            if (_rewardAdButtonLabel != null)
-                _rewardAdButtonLabel.text = Loc.Tf("ads_bonus_btn", AdsManager.RewardCoinsAmount);
+            RefreshRewardButton();
             RefreshAccountSection();
         }
 
@@ -788,7 +790,9 @@ namespace SimpleVoxelSystem
             rewardLayout.preferredWidth = 0f;
 
             _rewardAdButtonLabel = rewardButton.GetComponentInChildren<Text>();
+            _rewardAdButton = rewardButton;
             rewardButton.onClick.AddListener(AdsManager.ShowRewardedCoins);
+            RefreshRewardButton();
         }
 
         // ── Одна кнопка-флаг ────────────────────────────────────────────────
@@ -1044,6 +1048,27 @@ public void ToggleMenu()
 
             if (_authButtonLabel != null)
                 _authButtonLabel.text = PlayerIdentity.IsGuest ? Loc.T("auth_sign_in") : Loc.T("auth_connected");
+        }
+
+        private void RefreshRewardButton()
+        {
+            if (_rewardAdButton == null || _rewardAdButtonLabel == null)
+                return;
+
+            var ads = AdsManager.Instance;
+            if (ads != null && ads.IsRewardedOnCooldown)
+            {
+                _rewardAdButton.interactable = false;
+                int remaining = ads.RewardedCooldownRemaining;
+                int minutes = remaining / 60;
+                int seconds = remaining % 60;
+                _rewardAdButtonLabel.text = Loc.Tf("ads_bonus_cooldown", minutes, seconds);
+            }
+            else
+            {
+                _rewardAdButton.interactable = true;
+                _rewardAdButtonLabel.text = Loc.Tf("ads_bonus_btn", AdsManager.RewardCoinsAmount);
+            }
         }
 
         private static Image CreateImage(Transform parent, string name)

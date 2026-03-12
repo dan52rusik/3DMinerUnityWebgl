@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using YG;
 
@@ -10,13 +11,27 @@ namespace SimpleVoxelSystem
         public const int RewardCoinsAmount = 250;
         private const float MinSecondsBeforeFirstInterstitial = 90f;
         private const float InterstitialCooldownSeconds = 180f;
+        private const float RewardedAdCooldownSeconds = 300f; // 5 minutes
 
         public static AdsManager Instance { get; private set; }
+
+        /// <summary>Fires whenever the rewarded-ad cooldown state changes (started, ticking, ended).</summary>
+        public static event Action OnRewardCooldownChanged;
 
         private WellGenerator wellGenerator;
         private bool bannerShown;
         private float sessionStartTime;
         private float nextInterstitialAllowedTime;
+        private float nextRewardedAllowedTime;
+
+        /// <summary>True while the rewarded ad button should be disabled.</summary>
+        public bool IsRewardedOnCooldown => Time.unscaledTime < nextRewardedAllowedTime;
+
+        /// <summary>Remaining cooldown seconds (0 when ready).</summary>
+        public int RewardedCooldownRemaining =>
+            Mathf.Max(0, Mathf.CeilToInt(nextRewardedAllowedTime - Time.unscaledTime));
+
+        private bool wasCooldownActive;
 
         private void Awake()
         {
@@ -47,6 +62,7 @@ namespace SimpleVoxelSystem
         private void Update()
         {
             TryBindWellGenerator();
+            UpdateRewardCooldown();
         }
 
         private void OnDisable()
@@ -66,6 +82,9 @@ namespace SimpleVoxelSystem
 
         public static void ShowRewardedCoins()
         {
+            if (Instance != null && Instance.IsRewardedOnCooldown)
+                return;
+
             YG2.RewardedAdvShow(RewardCoinsId);
         }
 
@@ -114,6 +133,29 @@ namespace SimpleVoxelSystem
 
             GlobalEconomy.Money += RewardCoinsAmount;
             FindFirstObjectByType<PlayerProgressPersistence>()?.NotifyGameplayStateChanged();
+
+            // Start cooldown
+            nextRewardedAllowedTime = Time.unscaledTime + RewardedAdCooldownSeconds;
+            wasCooldownActive = true;
+            OnRewardCooldownChanged?.Invoke();
+        }
+
+        private void UpdateRewardCooldown()
+        {
+            if (!wasCooldownActive)
+                return;
+
+            if (IsRewardedOnCooldown)
+            {
+                // Fire every second so UI can update the countdown
+                OnRewardCooldownChanged?.Invoke();
+            }
+            else
+            {
+                // Cooldown just ended
+                wasCooldownActive = false;
+                OnRewardCooldownChanged?.Invoke();
+            }
         }
     }
 }
