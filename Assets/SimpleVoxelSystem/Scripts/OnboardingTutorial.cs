@@ -116,6 +116,7 @@ namespace SimpleVoxelSystem
         private float  joystickHoldSec;
         private bool   isMobile;
         private float  nextRefScan;
+        private bool   suppressTutorialVisuals;
 
         // ═════════════════════════════════════════════════════════════════════
         // Unity lifecycle
@@ -161,6 +162,9 @@ namespace SimpleVoxelSystem
         {
             if (Time.unscaledTime > nextRefScan) { ScanRefs(); nextRefScan = Time.unscaledTime + 0.4f; }
 
+            if (UpdateVisualSuppression())
+                return;
+
             if (TryAdvanceByCardTap())
                 return;
 
@@ -168,6 +172,25 @@ namespace SimpleVoxelSystem
             AnimateDimmer();
             TrackHighlight();
             UpdateBeam();
+        }
+
+        bool UpdateVisualSuppression()
+        {
+            bool shouldSuppress = GameMenuUI.Instance != null && GameMenuUI.Instance.IsOpen;
+            if (shouldSuppress == suppressTutorialVisuals)
+                return shouldSuppress;
+
+            suppressTutorialVisuals = shouldSuppress;
+            if (suppressTutorialVisuals)
+            {
+                HideAll();
+                return true;
+            }
+
+            if (step != Step.Idle && step != Step.Done)
+                ApplyUI(step);
+
+            return false;
         }
 
         // ═════════════════════════════════════════════════════════════════════

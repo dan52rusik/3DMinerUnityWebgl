@@ -16,6 +16,7 @@ namespace SimpleVoxelSystem
     {
         // ── Singleton ─────────────────────────────────────────────────────────
         public static GameMenuUI Instance { get; private set; }
+        public bool IsOpen => _isOpen;
 
         // ── Настройки ─────────────────────────────────────────────────────────
         [Header("Appearance")]
@@ -349,11 +350,12 @@ namespace SimpleVoxelSystem
             SetButtonColors(closeBtn, closeBtnColor, new Color(0.95f, 0.30f, 0.30f));
             closeBtn.onClick.AddListener(CloseMenu);
 
-            var xt = CreateText(closeGo.transform, "X", "✕");
+            var xt = CreateText(closeGo.transform, "X", "X");
             xt.alignment = TextAnchor.MiddleCenter;
             xt.fontSize = 16;
             xt.fontStyle = FontStyle.Bold;
             xt.color = Color.white;
+            xt.raycastTarget = false;
             xt.GetComponent<RectTransform>().anchorMin = Vector2.zero;
             xt.GetComponent<RectTransform>().anchorMax = Vector2.one;
         }

@@ -30,6 +30,7 @@ namespace SimpleVoxelSystem
         private Text       panelMoneyText;
         private Text       switchWorldBtnText;
         private Text       cancelBtnText;
+        private Button     closeShopBtn;
 
         public bool IsVisible => shopPanel != null && shopPanel.activeSelf;
         public Button CreateIslandButton => createIslandBtn;
@@ -237,11 +238,12 @@ namespace SimpleVoxelSystem
             shopTitleText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopTitle",
                 Loc.T("mine_shop_title"), 22, TextAnchor.UpperCenter,
                 new Vector2(0, -12), new Vector2(0, 0), bold: true);
+            shopTitleText.raycastTarget = false;
 
-            Button closeShopBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseShopBtn", "X",
+            closeShopBtn = RuntimeUIFactory.MakeBtn(shopPanel.transform, "CloseShopBtn", "X",
                 new Color(0.78f, 0.22f, 0.22f, 0.95f),
                 anchor: new Vector2(1f, 1f), pivot: new Vector2(1f, 1f),
-                pos: new Vector2(-8f, -8f), size: new Vector2(34f, 34f));
+                pos: new Vector2(-8f, -8f), size: new Vector2(40f, 40f));
             closeShopBtn.onClick.AddListener(() => SetPanelVisible(false));
 
             // Subtitle with money
@@ -251,6 +253,7 @@ namespace SimpleVoxelSystem
                 panelMoneyText = RuntimeUIFactory.MakeLabel(shopPanel.transform, "ShopMoney",
                     bal + ": $0  |  [B]/[X] " + cls, 14, TextAnchor.UpperCenter,
                     new Vector2(0, -42), new Vector2(0, -22), bold: false);
+                panelMoneyText.raycastTarget = false;
             }
 
             // Horizontal Separator
@@ -258,6 +261,7 @@ namespace SimpleVoxelSystem
 
             // Container with vertical layout
             buttonContainer = RuntimeUIFactory.MakeScrollContainer(shopPanel.transform);
+            closeShopBtn.transform.SetAsLastSibling();
 
             // Turn on overlay (so it enables/disables with the panel)
             shopPanel.SetActive(false);
@@ -517,6 +521,11 @@ namespace SimpleVoxelSystem
             {
                 var t = sellMineBtn.GetComponentInChildren<Text>();
                 if (t != null) t.text = Loc.T("btn_sell_mine");
+            }
+            if (closeShopBtn != null)
+            {
+                var t = closeShopBtn.GetComponentInChildren<Text>();
+                if (t != null) t.text = "X";
             }
 
             BuildShopButtons();

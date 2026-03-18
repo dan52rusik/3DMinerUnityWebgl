@@ -232,10 +232,16 @@ namespace SimpleVoxelSystem
             scaler.matchWidthOrHeight = 1f;
 
             controlsPanel = RuntimeUIFactory.MakePanel("BuildControlsPanel", canvas.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-12f, -290f), new Vector2(184f, 84f), new Color(0f, 0f, 0f, 0f));
-            panel = RuntimeUIFactory.MakePanel("BuildInventoryPanel", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(540f, 128f), new Color(0.06f, 0.08f, 0.12f, 0.9f));
+            panel = RuntimeUIFactory.MakePanel("BuildInventoryPanel", canvas.transform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(18f, 18f), new Vector2(540f, 136f), new Color(0.06f, 0.08f, 0.12f, 0.9f));
             statusPanel = RuntimeUIFactory.MakePanel("BuildStatusPanel", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 154f), new Vector2(460f, 36f), new Color(0.06f, 0.08f, 0.12f, 0.82f));
 
-            titleLabel = RuntimeUIFactory.MakeLabel(panel.transform, "Title", string.Empty, 14, TextAnchor.UpperCenter, new Vector2(10f, -6f), new Vector2(-10f, -74f), bold: true);
+            titleLabel = RuntimeUIFactory.MakeLabelFixed(panel.transform, "Title", string.Empty,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(504f, 24f),
+                14, TextAnchor.MiddleCenter, bold: true);
+            titleLabel.resizeTextForBestFit = true;
+            titleLabel.resizeTextMinSize = 10;
+            titleLabel.resizeTextMaxSize = 14;
+            titleLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             statusLabel = RuntimeUIFactory.MakeLabel(statusPanel.transform, "Status", string.Empty, 12, TextAnchor.MiddleCenter, new Vector2(12f, 0f), new Vector2(-12f, 0f), color: new Color(1f, 0.95f, 0.65f, 1f));
 
             modeButton = RuntimeUIFactory.MakeBtn(controlsPanel.transform, "ModeButton", string.Empty, new Color(0.16f, 0.48f, 0.86f, 0.96f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-94f, 0f), new Vector2(84f, 84f));
@@ -256,12 +262,21 @@ namespace SimpleVoxelSystem
                 inventoryButtonLabel.alignment = TextAnchor.MiddleCenter;
             }
 
-            float startX = -198f;
+            float startX = -180f;
             for (int i = 0; i < BuildableBlocks.Length; i++)
             {
                 BlockType blockType = BuildableBlocks[i];
-                Button button = RuntimeUIFactory.MakeBtn(panel.transform, $"BuildBlock_{blockType}", string.Empty, new Color(0.22f, 0.26f, 0.34f, 1f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(startX + i * 132f, 16f), new Vector2(120f, 54f));
+                Button button = RuntimeUIFactory.MakeBtn(panel.transform, $"BuildBlock_{blockType}", string.Empty, new Color(0.22f, 0.26f, 0.34f, 1f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(startX + i * 120f, 14f), new Vector2(108f, 50f));
                 Text label = button.GetComponentInChildren<Text>();
+                if (label != null)
+                {
+                    label.resizeTextForBestFit = true;
+                    label.resizeTextMinSize = 10;
+                    label.resizeTextMaxSize = 13;
+                    label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    label.verticalOverflow = VerticalWrapMode.Truncate;
+                    label.alignment = TextAnchor.MiddleCenter;
+                }
                 button.onClick.AddListener(() =>
                 {
                     selectedBlockType = blockType;

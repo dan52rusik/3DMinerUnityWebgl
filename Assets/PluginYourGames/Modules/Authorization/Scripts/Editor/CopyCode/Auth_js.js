@@ -7,7 +7,7 @@ async function InitPlayer() {
             if (!ysdk)
                 return Final(NotAuthorized(false));
 
-            player = await ysdk.getPlayer();
+            player = await ysdk.getPlayer({ scopes: false });
 
             if (!player.isAuthorized())
                 return Final(NotAuthorized());
